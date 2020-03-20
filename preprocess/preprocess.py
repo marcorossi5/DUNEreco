@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import argparse
+import time
 
 from preprocessing_utils import load_files, get_planes, get_crop
 
@@ -58,6 +59,6 @@ def main(source, dir_name):
 
 if __name__ == '__main__':
     args = vars(parser.parse_args())
+    start = time.time()
     main(**args)
-
-#aggiungere creazioni delle cartelle clear_crops e clear_events in datasets
+    print('Program done in %f'%(time.time()-start))
