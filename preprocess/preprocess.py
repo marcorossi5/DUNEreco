@@ -49,14 +49,12 @@ def main(source, dir_name):
             c = clear_plane[clear_plane!=np.inf].reshape([-1, clear_plane.shape[1]])
             n = noised_plane[noised_plane!=np.inf].reshape([-1, noised_plane.shape[1]])
 
-            for clear_crop, noised_crop in get_crop(c, n, 5, (32,32)):
+            for clear_crop, noised_crop in get_crop(c, n, 500, (32,32)):
                 clear_crops.append(clear_crop)
                 noised_crops.append(noised_crop)
         np.save(os.path.join(dir_name,"clear_crops", ss), np.stack(clear_crops))
         np.save(os.path.join(dir_name,"noised_crops", ss), np.stack(noised_crops))
     
-    print(np.load(os.path.join(dir_name,"clear_crops", "train.npy")).shape)
-    print(np.load(os.path.join(dir_name,"noised_crops", "train.npy")).shape)
 
 if __name__ == '__main__':
     args = vars(parser.parse_args())
