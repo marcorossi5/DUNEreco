@@ -46,7 +46,7 @@ def crop_planes_and_dump(dir_name):
             c = clear_plane[clear_plane!=np.inf].reshape([-1, clear_plane.shape[1]])
             n = noised_plane[noised_plane!=np.inf].reshape([-1, noised_plane.shape[1]])
 
-            for clear_crop, noised_crop in get_crop(c, n, 5, (32,32)):
+            for clear_crop, noised_crop in get_crop(c, n, 500, (32,32)):
                 clear_crops.append(clear_crop)
                 noised_crops.append(noised_crop)
         np.save(os.path.join(dir_name,"clear_crops", ss), np.stack(clear_crops))
