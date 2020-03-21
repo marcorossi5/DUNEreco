@@ -1,10 +1,10 @@
 import numpy as np
 import glob
 event_step = 15360
-ada_step = 6
 collection_step = 960
 readout_step = 800
 time_len = 6000
+ada_step = event_step // (readout_step*2 + collection_step)
 import tqdm
 
 
@@ -25,46 +25,84 @@ def load_files(path_clear, path_noise):
         noised_data = np.load(f_noise)[:, 3:]
         yield clear_data, noised_data
 
+def plane_idx():
+    signal_planes = [i for i in range(ada_step)]
+
+    readout = []
+    collection = []
+    cpp = 2*readout_step+collection_step #channel per plane
+
+    for i in range(ada_step):
+        readout.extend(range(cpp*i, cpp*i + 2*readout_step))
+        collection.extend(range(cpp*i + 2*readout_step, cpp*i + 2*readout_step + collection_step))
+
+    return readout, collection
+
+def normalize_planes(clear_file, noised_file, r_idx, c_idx):
+    r_clear = clear_file[r_idx]
+    r_noised = noised_file[r_idx]
+
+    c_clear = clear_file[c_idx]
+    c_noised = noised_file[c_idx]
+
+    r_n_clear = []
+    r_n_noised = []
+
+    c_n_clear = []
+    c_n_noised = []
+
+    for i in range(int(r_clear.shape[0]/readout_step)):
+        if r_clear[i*readout_step:(i+1)*readout_step].max() == 0:
+            print('skipped')
+            continue
+        r_n_clear.append(normalize(r_clear[i*readout_step:(i+1)*readout_step]))
+        r_n_noised.append(normalize(r_noised[i*readout_step:(i+1)*readout_step]))
+
+    for i in range(int(c_clear.shape[0]/collection_step)):
+        if c_clear[i*collection_step:(i+1)*collection_step].max() == 0:
+            print('skipped')
+            continue
+        c_n_clear.append(normalize(c_clear[i*collection_step :(i+1)*collection_step]))
+        c_n_noised.append(normalize(c_noised[i*collection_step:(i+1)*collection_step]))
+
+    return np.stack(r_n_clear), np.stack(r_n_noised), np.stack(c_n_clear), np.stack(c_n_noised)
+
 def get_planes(clear_file, noised_file):
     """
         Returning the three separate nonempty planes
     """
-    signal_planes = [i for i in range(ada_step)]
+    r_idx, c_idx = plane_idx()
 
-    cpp = 2*readout_step+collection_step #channel per plane
-    steps = [0,readout_step, 2*readout_step, 2*readout_step+collection_step]
-
-
-    for i in signal_planes:
-        for j in range(len(steps)-1):
-            clear_plane = clear_file[i*cpp+steps[j]:
-                                i*cpp+steps[j+1]]
-            if clear_plane.max() == 0:
-                continue
-            noised_plane = noised_file[i*cpp+steps[j]:
-                                            i*cpp+steps[j+1]]
-            clear_plane = normalize(clear_plane)
-            noised_plane = normalize(noised_plane)
-            #pad readout planes with np.inf to build a stackable array
-            if clear_plane.shape[0] == readout_step:
-                clear_plane = np.pad(clear_plane, ((0,collection_step-readout_step), (0,0)), 'constant',constant_values=np.inf)
-                noised_plane = np.pad(noised_plane, ((0,collection_step-readout_step), (0,0)), 'constant',constant_values=np.inf)
-            yield clear_plane, noised_plane
+    return normalize_planes(clear_file, noised_file, r_idx, c_idx)
 
 def get_crop(clear_plane, noised_plane, total_crops=1000, crop_shape=(32,32), num_trials=5):
     probs = np.copy(clear_plane)
-    probs[probs==0] += probs.mean()
-    x, y = clear_plane.shape
+    z,_,_ = np.where(probs==0)
+    probs[probs==0] += probs[z].mean(-1).mean(-1)
+    n, x, y = clear_plane.shape
     c_x, c_y = crop_shape[0]//2, crop_shape[1]//2
 
     for i in range(total_crops):
-        samples = np.transpose(np.nonzero(sample_binomial(num_trials, probs)))
-        while len(samples[0]) < 1:
-            samples = np.transpose(np.nonzero(sample_binomial(num_trials, probs)))
-        sample = np.random.choice(len(samples))
+        samples = np.argwhere(sample_binomial(num_trials, probs))
+        count = 0
+        while len(np.where(np.bincount(samples[:,0])==0)[0]) > 1:
+            print('Repeating sampling time number', count)
+            count += 1
+            samples = np.argwhere(sample_binomial(num_trials, probs))
+        
+        l = np.cumsum(np.insert(np.bincount(samples[:,0]),0,0))
+
+        sample = []
+        for j in range(n):
+            sample.append(np.random.randint(l[j],l[j+1]))
         sample = samples[sample]
 
-        sample = (min(max(int(sample[0]), c_x), x-c_x), min(max(int(sample[1]), c_y),y-c_y))
-        clear_crop = clear_plane[sample[0]-c_x:sample[0]+c_x, sample[1]-c_y:sample[1]+c_y]
-        noised_crop = noised_plane[sample[0]-c_x:sample[0]+c_x, sample[1]-c_y:sample[1]+c_y]
+        sample = (np.minimum(np.maximum(sample[:,1],c_x), x-c_x), np.minimum(np.maximum(sample[:,2],c_y), y-c_y))
+        w_x = np.arange(-c_x,c_x)
+        w_y = np.arange(-c_y,c_y)
+        sample = (np.arange(n).reshape([-1,1,1]),
+                (sample[0][:,None] + w_x[None])[:,None],
+                (sample[1][:,None] + w_y[None])[:,:,None])
+        clear_crop = clear_plane[sample]
+        noised_crop = noised_plane[sample]
         yield clear_crop, noised_crop
