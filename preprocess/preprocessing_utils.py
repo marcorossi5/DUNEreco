@@ -5,6 +5,7 @@ ada_step = 6
 collection_step = 960
 readout_step = 800
 time_len = 6000
+import tqdm
 
 
 def sample_binomial(num_trials, probs):
@@ -63,7 +64,7 @@ def get_crop(clear_plane, noised_plane, total_crops=1000, crop_shape=(32,32), nu
         sample = np.random.choice(len(samples))
         sample = samples[sample]
 
-    sample = (min(max(int(sample[0]), c_x), x-c_x), min(max(int(sample[1]), c_y),y-c_y))
-    clear_crop = clear_plane[sample[0]-c_x:sample[0]+c_x, sample[1]-c_y:sample[1]+c_y]
-    noised_crop = noised_plane[sample[0]-c_x:sample[0]+c_x, sample[1]-c_y:sample[1]+c_y]
-    yield clear_crop, noised_crop
+        sample = (min(max(int(sample[0]), c_x), x-c_x), min(max(int(sample[1]), c_y),y-c_y))
+        clear_crop = clear_plane[sample[0]-c_x:sample[0]+c_x, sample[1]-c_y:sample[1]+c_y]
+        noised_crop = noised_plane[sample[0]-c_x:sample[0]+c_x, sample[1]-c_y:sample[1]+c_y]
+        yield clear_crop, noised_crop
