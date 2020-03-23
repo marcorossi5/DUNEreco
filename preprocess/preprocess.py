@@ -94,16 +94,17 @@ def main(source, dir_name, device):
     
 
 if __name__ == '__main__':
-    print('Working on device: {}\n'.format(device))
     args = vars(parser.parse_args())
     if torch.cuda.is_available():
-        if args.device == -1:
+        if args['device'] == -1:
             gpu_num = get_freer_gpu()
-            args.device = torch.device('cuda:{}'.format(gpu_num))
-        if  args.device > -1:
-            args.device = torch.device('cuda:{}'.format(args.device))
+            args['device'] = torch.device('cuda:{}'.format(gpu_num))
+        if  args['device'] > -1:
+            args['device'] = torch.device('cuda:{}'.format(args['device']))
     else:
-        args.device = torch.device('cpu')
+        args['device'] = torch.device('cpu')
+    print('Working on device: {}\n'.format(args['device']))
     start = time.time()
+    exit()
     main(**args)
     print('Program done in %f'%(time.time()-start))
