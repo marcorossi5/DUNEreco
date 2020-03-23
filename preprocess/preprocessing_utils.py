@@ -6,7 +6,6 @@ collection_step = 960
 readout_step = 800
 time_len = 6000
 ada_step = event_step // (readout_step*2 + collection_step)
-import tqdm
 
 
 def sample_binomial(num_trials, probs):
@@ -76,7 +75,7 @@ def get_planes(clear_file, noised_file):
 
     return normalize_planes(clear_file, noised_file, r_idx, c_idx)
 
-def get_crop(clear_plane, noised_plane, total_crops=1000, crop_shape=(32,32), num_trials=5, device=torch.device('cpu')):
+def get_crop(clear_plane, noised_plane, dir_name, fname, total_crops=1000, crop_shape=(32,32), num_trials=5, device=torch.device('cpu')):
     probs = torch.clone(clear_plane)
     z,_,_ = torch.where(probs==0)
     probs[probs==0] += probs[z].mean(-1).mean(-1)
@@ -84,10 +83,10 @@ def get_crop(clear_plane, noised_plane, total_crops=1000, crop_shape=(32,32), nu
     n, x, y = clear_plane.shape
     c_x, c_y = crop_shape[0]//2, crop_shape[1]//2
 
-    samples = torch.nonzero(distr.sample())
+    samples = torch.nonzero(distr.sample().to(device))
 
     l = torch.cumsum(torch.bincount(samples[:,0]*n+samples[:,1]), dim=0)
-    l = torch.cat([torch.Tensor([0],device=device).long(),l])
+    l = torch.cat([torch.Tensor([0]).long().to(device),l])
 
     diff = l[1:]-l[:-1]
     base = l[:-1]
@@ -95,13 +94,13 @@ def get_crop(clear_plane, noised_plane, total_crops=1000, crop_shape=(32,32), nu
     sample = torch.rand(total_crops*n, device=device) * diff + base
     sample = samples[sample.long()]
 
-    w_x = torch.arange(-c_x,c_x)
-    w_y = torch.arange(-c_y,c_y)
+    w_x = torch.arange(-c_x,c_x,device=device)
+    w_y = torch.arange(-c_y,c_y,device=device)
 
-    c_x = torch.Tensor([c_x]).long()
-    c_y = torch.Tensor([c_y]).long()
-    x = torch.Tensor([x]).long()
-    y = torch.Tensor([y]).long()
+    c_x = torch.Tensor([c_x],device=device).long()
+    c_y = torch.Tensor([c_y],device=device).long()
+    x = torch.Tensor([x],device=device).long()
+    y = torch.Tensor([y],device=device).long()
     sample = (torch.min(torch.max(sample[:,-2],c_x), x-c_x), torch.min(torch.max(sample[:,-1],c_y), y-c_y))
 
 
@@ -109,35 +108,6 @@ def get_crop(clear_plane, noised_plane, total_crops=1000, crop_shape=(32,32), nu
             (sample[0][:,None] + w_x[None]).reshape(total_crops*n, -1, 1),
             (sample[1][:,None] + w_y[None]).reshape(total_crops*n, 1, -1))
 
-    return clear_plane[sample], noised_plane[sample]
-'''
-
-
-
-
-    for i in range(total_crops):
-        samples = torch.nonzero(distr.sample())
-        count = 0
-        #while len(torch.where(torch.bincount(samples[:,0])==0)[0]) >= 1:
-        #    count += 1
-        #    print('Repeating sampling time number', count)
-        #    samples = torch.nonzero(distr.sample())
-        #exit()
-        
-        l = np.cumsum(np.insert(np.bincount(samples[:,0]),0,0))
-
-        sample = []
-        for j in range(n):
-            sample.append(np.random.randint(l[j],l[j+1]))
-        sample = samples[sample]
-
-        sample = (np.minimum(np.maximum(sample[:,1],c_x), x-c_x), np.minimum(np.maximum(sample[:,2],c_y), y-c_y))
-        w_x = np.arange(-c_x,c_x)
-        w_y = np.arange(-c_y,c_y)
-        sample = (np.arange(n).reshape([-1,1,1]),
-                (sample[0][:,None] + w_x[None])[:,None],
-                (sample[1][:,None] + w_y[None])[:,:,None])
-        clear_crop = clear_plane[sample]
-        noised_crop = noised_plane[sample]
-        yield clear_crop, noised_crop
-'''
+    clear_plane[sample], noised_plane[sample]
+    torch.save(clear_crops, os.path.join(dir_name,"clear_crops", fname))
+    torch.save(noised_crops, os.path.join(dir_name,"noised_crops", fname))

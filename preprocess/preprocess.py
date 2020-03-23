@@ -76,14 +76,11 @@ def get_planes_and_dump(source, dir_name):
 def crop_planes_and_dump(dir_name, device):
     for s in ['readout_', 'collection_']:
         for ss in ['train', 'val', 'test']:
-            clear_crops = []
-            noised_crops = []
             clear_plane = torch.load(os.path.join(dir_name,"clear_planes", s+ss), map_location=device)
             noised_plane = torch.load(os.path.join(dir_name,"noised_planes", s+ss), map_location=device)
 
-            clear_crops, noised_crops = get_crop(clear_plane, noised_plane, n_crops, crop_size,device=device)
-            torch.save(clear_crops, os.path.join(dir_name,"clear_crops", s+ss))
-            torch.save(noised_crops, os.path.join(dir_name,"noised_crops", s+ss))
+            get_crop(clear_plane, noised_plane,dir_name, s+ss, n_crops, crop_size,device=device)
+            
 
 
 def main(source, dir_name):
