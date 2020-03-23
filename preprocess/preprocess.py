@@ -7,14 +7,15 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument("--source", "-s", default="*", type=str, help='Source .npy file name inside clear(noised)_files directory')
 parser.add_argument("--dir_name", "-p", default="../datasets", type=str, help='Directory path to datasets')
-parser.add_argument("--device", "-d", default="-1", type=int, help="-1 (automatic)/ -2 (cpu) / gpu number")
+parser.add_argument("--device", "-d", default="-1", type=str, help="-1 (automatic)/ -2 (cpu) / gpu number")
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from preprocessing_utils import load_files, get_planes, get_crop
+import preprocessing_utils as p
 from utils.utils import get_freer_gpu
 
-crop_size = (32,32)
+crop_shape = (32,32)
 n_crops = 500
+n_max = 10 #max parallelization in 16GB memory
 
 def get_planes_and_dump(source, dir_name):
     path_clear = os.path.join(dir_name,"clear_events", source)
@@ -25,8 +26,8 @@ def get_planes_and_dump(source, dir_name):
     clear_collection_planes = []
     noised_collection_planes = []
 
-    for file_clear, file_noise in load_files(path_clear, path_noise):
-        a, b, c, d = get_planes(file_clear, file_noise)
+    for file_clear, file_noise in p.load_files(path_clear, path_noise):
+        a, b, c, d = p.get_planes(file_clear, file_noise)
         clear_readout_planes.append(a)
         noised_readout_planes.append(b)
         clear_collection_planes.append(c)
@@ -67,7 +68,19 @@ def get_planes_and_dump(source, dir_name):
 def crop_planes_and_dump(dir_name, device):
     for s in ['readout_', 'collection_']:
         for ss in ['train', 'val', 'test']:
-            get_crop(clear_plane, noised_plane,dir_name, s+ss, n_crops, crop_size,device=device)
+            
+            clear_planes = torch.load(os.path.join(dir_name,"clear_planes", s+ss))
+
+            idx_b, idx_c = p.get_crop(clear_planes,total_crops=n_crops,crop_shape=crop_shape,device=device, n_max=n_max)
+            
+            n,_,_  = clear_planes.shape
+            idx_a = torch.arange(n).repeat(n_crops).reshape(-1,1,1)
+            idx = (idx_a, idx_b, idx_c)
+            torch.save(clear_planes[idx], os.path.join(dir_name,"clear_crops", s+ss))
+            del clear_planes
+            noised_planes = torch.load(os.path.join(dir_name,"noised_planes", s+ss))
+            torch.save(noised_planes[idx], os.path.join(dir_name,"noised_crops", s+ss))
+            del noised_planes
             
 
 
@@ -95,16 +108,18 @@ def main(source, dir_name, device):
 
 if __name__ == '__main__':
     args = vars(parser.parse_args())
+    dev = 0
+
     if torch.cuda.is_available():
-        if args['device'] == -1:
+        if int(args['device']) == -1:
             gpu_num = get_freer_gpu()
-            args['device'] = torch.device('cuda:{}'.format(gpu_num))
-        if  args['device'] > -1:
-            args['device'] = torch.device('cuda:{}'.format(args['device']))
+            dev = torch.device('cuda:{}'.format(gpu_num))
+        if  int(args['device']) > -1:
+            dev = torch.device('cuda:{}'.format(args['device']))
     else:
-        args['device'] = torch.device('cpu')
+        dev = torch.device('cpu')
+    args['device'] = dev
     print('Working on device: {}\n'.format(args['device']))
     start = time.time()
-    exit()
     main(**args)
     print('Program done in %f'%(time.time()-start))
