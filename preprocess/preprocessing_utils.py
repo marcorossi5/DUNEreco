@@ -88,13 +88,13 @@ def get_crop(clear_planes, total_crops=1000, crop_shape=(32,32), num_trials=5, d
     idx_b = []
     idx_c = []
 
-    for i in range(reps):
-        z,_,_ = torch.where(clear_planes==0)
-        clear_planes[clear_planes==0] += clear_planes[z].mean(-1).mean(-1)
-        del z
-        distr = torch.distributions.binomial.Binomial(total_count=num_trials, probs=torch.repeat_interleave(clear_planes[None] ,n_max,dim=0))
-        del clear_planes
+    z,_,_ = torch.where(clear_planes==0)
+    clear_planes[clear_planes==0] += clear_planes[z].mean(-1).mean(-1)
+    del z
+    distr = torch.distributions.binomial.Binomial(total_count=num_trials, probs=torch.repeat_interleave(clear_planes[None],n_max,dim=0))
+    del clear_planes
     
+    for i in range(reps):
         samples = torch.nonzero(distr.sample().to(device))
 
         l = torch.cumsum(torch.bincount(samples[:,0]*n+samples[:,1]), dim=0)
