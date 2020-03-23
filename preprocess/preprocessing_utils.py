@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import glob
 event_step = 15360
 collection_step = 960
@@ -9,12 +10,12 @@ import tqdm
 
 
 def sample_binomial(num_trials, probs):
-	return np.random.binomial(num_trials, probs)
+    return np.random.binomial(num_trials, probs)
 
 def normalize(img):
-	if img.max() == 0:
-		return img
-	return (img-img.min())/(img.max()-img.min())
+    if img.max() == 0:
+        return img
+    return (img-img.min())/(img.max()-img.min())
 
 def load_files(path_clear, path_noise):
     clear_files = glob.glob(path_clear)
@@ -62,7 +63,7 @@ def normalize_planes(clear_file, noised_file, r_idx, c_idx):
         if c_clear[i*collection_step:(i+1)*collection_step].max() == 0:
             print('skipped')
             continue
-        c_n_clear.append(normalize(c_clear[i*collection_step :(i+1)*collection_step]))
+        c_n_clear.append(normalize(c_clear[i*collection_step:(i+1)*collection_step]))
         c_n_noised.append(normalize(c_noised[i*collection_step:(i+1)*collection_step]))
 
     return np.stack(r_n_clear), np.stack(r_n_noised), np.stack(c_n_clear), np.stack(c_n_noised)
@@ -75,20 +76,53 @@ def get_planes(clear_file, noised_file):
 
     return normalize_planes(clear_file, noised_file, r_idx, c_idx)
 
-def get_crop(clear_plane, noised_plane, total_crops=1000, crop_shape=(32,32), num_trials=5):
-    probs = np.copy(clear_plane)
-    z,_,_ = np.where(probs==0)
+def get_crop(clear_plane, noised_plane, total_crops=1000, crop_shape=(32,32), num_trials=5, device=torch.device('cpu')):
+    probs = torch.clone(clear_plane)
+    z,_,_ = torch.where(probs==0)
     probs[probs==0] += probs[z].mean(-1).mean(-1)
+    distr = torch.distributions.binomial.Binomial(total_count=num_trials, probs=torch.repeat_interleave(probs[None] ,total_crops,dim=0))
     n, x, y = clear_plane.shape
     c_x, c_y = crop_shape[0]//2, crop_shape[1]//2
 
+    samples = torch.nonzero(distr.sample())
+
+    l = torch.cumsum(torch.bincount(samples[:,0]*n+samples[:,1]), dim=0)
+    l = torch.cat([torch.Tensor([0],device=device).long(),l])
+
+    diff = l[1:]-l[:-1]
+    base = l[:-1]
+
+    sample = torch.rand(total_crops*n, device=device) * diff + base
+    sample = samples[sample.long()]
+
+    w_x = torch.arange(-c_x,c_x)
+    w_y = torch.arange(-c_y,c_y)
+
+    c_x = torch.Tensor([c_x]).long()
+    c_y = torch.Tensor([c_y]).long()
+    x = torch.Tensor([x]).long()
+    y = torch.Tensor([y]).long()
+    sample = (torch.min(torch.max(sample[:,-2],c_x), x-c_x), torch.min(torch.max(sample[:,-1],c_y), y-c_y))
+
+
+    sample = (torch.arange(n,device=device).repeat(total_crops).reshape(-1,1,1),
+            (sample[0][:,None] + w_x[None]).reshape(total_crops*n, -1, 1),
+            (sample[1][:,None] + w_y[None]).reshape(total_crops*n, 1, -1))
+
+    return clear_plane[sample], noised_plane[sample]
+'''
+
+
+
+
     for i in range(total_crops):
-        samples = np.argwhere(sample_binomial(num_trials, probs))
+        samples = torch.nonzero(distr.sample())
         count = 0
-        while len(np.where(np.bincount(samples[:,0])==0)[0]) > 1:
-            print('Repeating sampling time number', count)
-            count += 1
-            samples = np.argwhere(sample_binomial(num_trials, probs))
+        #while len(torch.where(torch.bincount(samples[:,0])==0)[0]) >= 1:
+        #    count += 1
+        #    print('Repeating sampling time number', count)
+        #    samples = torch.nonzero(distr.sample())
+        #exit()
         
         l = np.cumsum(np.insert(np.bincount(samples[:,0]),0,0))
 
@@ -106,3 +140,4 @@ def get_crop(clear_plane, noised_plane, total_crops=1000, crop_shape=(32,32), nu
         clear_crop = clear_plane[sample]
         noised_crop = noised_plane[sample]
         yield clear_crop, noised_crop
+'''

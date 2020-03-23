@@ -1,12 +1,24 @@
 import numpy as np
-import os
+import torch
+import os, sys
 import argparse
 import time
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from preprocessing_utils import load_files, get_planes, get_crop
+from utils.utils import get_freer_gpu
 
 crop_size = (32,32)
-n_crops = 2
+n_crops = 500
+
+
+if torch.cuda.is_available():
+    gpu_num = get_freer_gpu()
+    device = torch.device('cuda:{}'.format(gpu_num))
+else:
+    device = torch.device('cpu')
+
 
 
 parser = argparse.ArgumentParser()
@@ -39,13 +51,13 @@ def get_planes_and_dump(source, dir_name):
     c_r = clear_readout_planes[p]
     n_r = noised_readout_planes[p]
 
-    np.save(os.path.join(dir_name,"clear_planes", 'readout_train'), c_r[:int(s*0.6)])
-    np.save(os.path.join(dir_name,"clear_planes", 'readout_val'), c_r[int(s*0.6):int(s*0.8)])
-    np.save(os.path.join(dir_name,"clear_planes", 'readout_test'), c_r[int(s*0.8):])
+    torch.save(torch.Tensor(c_r[:int(s*0.6)]), os.path.join(dir_name,"clear_planes", 'readout_train'))
+    torch.save(torch.Tensor(c_r[int(s*0.6):int(s*0.8)]), os.path.join(dir_name,"clear_planes", 'readout_val'))
+    torch.save(torch.Tensor(c_r[int(s*0.8):]), os.path.join(dir_name,"clear_planes", 'readout_test'))
 
-    np.save(os.path.join(dir_name,"noised_planes", 'readout_train'), n_r[:int(s*0.6)])
-    np.save(os.path.join(dir_name,"noised_planes", 'readout_val'), n_r[int(s*0.6):int(s*0.8)])
-    np.save(os.path.join(dir_name,"noised_planes", 'readout_test'), n_r[int(s*0.8):])
+    torch.save(torch.Tensor(n_r[:int(s*0.6)]), os.path.join(dir_name,"noised_planes", 'readout_train'))
+    torch.save(torch.Tensor(n_r[int(s*0.6):int(s*0.8)]), os.path.join(dir_name,"noised_planes", 'readout_val'))
+    torch.save(torch.Tensor(n_r[int(s*0.8):]), os.path.join(dir_name,"noised_planes", 'readout_test'))
 
 
     s = len(clear_collection_planes)
@@ -53,34 +65,25 @@ def get_planes_and_dump(source, dir_name):
     c_c = clear_collection_planes[p]
     n_c = noised_collection_planes[p]
 
-    np.save(os.path.join(dir_name,"clear_planes", 'collection_train'), c_c[:int(s*0.6)])
-    np.save(os.path.join(dir_name,"clear_planes", 'collection_val'), c_c[int(s*0.6):int(s*0.8)])
-    np.save(os.path.join(dir_name,"clear_planes", 'collection_test'), c_c[int(s*0.8):])
+    torch.save(torch.Tensor(c_c[:int(s*0.6)]), os.path.join(dir_name,"clear_planes", 'collection_train'))
+    torch.save(torch.Tensor(c_c[int(s*0.6):int(s*0.8)]), os.path.join(dir_name,"clear_planes", 'collection_val'))
+    torch.save(torch.Tensor(c_c[int(s*0.8):]), os.path.join(dir_name,"clear_planes", 'collection_test'))
 
-    np.save(os.path.join(dir_name,"noised_planes", 'collection_train'), n_c[:int(s*0.6)])
-    np.save(os.path.join(dir_name,"noised_planes", 'collection_val'), n_c[int(s*0.6):int(s*0.8)])
-    np.save(os.path.join(dir_name,"noised_planes", 'collection_test'), n_c[int(s*0.8):])
-    #print(c_r.shape)
-    #print(n_r.shape)
-    #print(c_c.shape)
-    #print(n_c.shape)
+    torch.save(torch.Tensor(n_c[:int(s*0.6)]), os.path.join(dir_name,"noised_planes", 'collection_train'))
+    torch.save(torch.Tensor(n_c[int(s*0.6):int(s*0.8)]), os.path.join(dir_name,"noised_planes", 'collection_val'))
+    torch.save(torch.Tensor(n_c[int(s*0.8):]), os.path.join(dir_name,"noised_planes", 'collection_test'))
 
-def crop_planes_and_dump(dir_name):
+def crop_planes_and_dump(dir_name, device):
     for s in ['readout_', 'collection_']:
-        for ss in ['train.npy', 'val.npy', 'test.npy']:
+        for ss in ['train', 'val', 'test']:
             clear_crops = []
             noised_crops = []
-            clear_plane = np.load(os.path.join(dir_name,"clear_planes", s+ss))
-            noised_plane = np.load(os.path.join(dir_name,"noised_planes", s+ss))
+            clear_plane = torch.load(os.path.join(dir_name,"clear_planes", s+ss), map_location=device)
+            noised_plane = torch.load(os.path.join(dir_name,"noised_planes", s+ss), map_location=device)
 
-            for clear_crop, noised_crop in get_crop(clear_plane, noised_plane, n_crops, crop_size):
-                clear_crops.append(clear_crop)
-                noised_crops.append(noised_crop)
-            clear_crops = np.concatenate(clear_crops)
-            noised_crops = np.concatenate(noised_crops)
-            np.save(os.path.join(dir_name,"clear_crops", s+ss), clear_crops)
-            np.save(os.path.join(dir_name,"noised_crops", s+ss), noised_crops)
-            #print(clear_crops.shape, noised_crop.shape)
+            clear_crops, noised_crops = get_crop(clear_plane, noised_plane, n_crops, crop_size,device=device)
+            torch.save(clear_crops, os.path.join(dir_name,"clear_crops", s+ss))
+            torch.save(noised_crops, os.path.join(dir_name,"noised_crops", s+ss))
 
 
 def main(source, dir_name):
@@ -91,17 +94,17 @@ def main(source, dir_name):
 
     get_planes_and_dump(source, dir_name)
     for s in ['readout_', 'collection_']:
-        for ss in ['train.npy', 'val.npy', 'test.npy']:
-            print(s+ss + ' clear', np.load(os.path.join(dir_name, 'clear_planes', s+ss)).shape)
-            print(s+ss + ' noised', np.load(os.path.join(dir_name, 'noised_planes', s+ss)).shape)
+        for ss in ['train', 'val', 'test']:
+            print(s+ss + ' clear', torch.load(os.path.join(dir_name, 'clear_planes', s+ss)).shape)
+            print(s+ss + ' noised', torch.load(os.path.join(dir_name, 'noised_planes', s+ss)).shape)
     
 
-
-    crop_planes_and_dump(dir_name)
+    
+    crop_planes_and_dump(dir_name,device)
     for s in ['readout_', 'collection_']:
-        for ss in ['train.npy', 'val.npy', 'test.npy']:
-            print(s+ss + ' clear', np.load(os.path.join(dir_name, 'clear_crops', s+ss)).shape)
-            print(s+ss + ' noised', np.load(os.path.join(dir_name, 'noised_crops', s+ss)).shape)
+        for ss in ['train', 'val', 'test']:
+            print(s+ss + ' clear', torch.load(os.path.join(dir_name, 'clear_crops', s+ss)).shape)
+            print(s+ss + ' noised', torch.load(os.path.join(dir_name, 'noised_crops', s+ss)).shape)
 
     
 
