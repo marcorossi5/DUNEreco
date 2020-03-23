@@ -4,6 +4,10 @@ import os, sys
 import argparse
 import time
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--source", "-s", default="*", type=str, help='Source .npy file name inside clear(noised)_files directory')
+parser.add_argument("--dir_name", "-p", default="../datasets", type=str, help='Directory path to datasets')
+parser.add_argument("--device", "-d", default="-1", type=int, help="-1 (automatic)/ -2 (cpu) / gpu number")
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from preprocessing_utils import load_files, get_planes, get_crop
@@ -11,20 +15,6 @@ from utils.utils import get_freer_gpu
 
 crop_size = (32,32)
 n_crops = 500
-
-
-if torch.cuda.is_available():
-    gpu_num = get_freer_gpu()
-    device = torch.device('cuda:{}'.format(gpu_num))
-else:
-    device = torch.device('cpu')
-
-
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--source", "-s", default="*", type=str, help='Source .npy file name inside clear(noised)_files directory')
-parser.add_argument("--dir_name", "-d", default="../datasets", type=str, help='Directory path to datasets')
 
 def get_planes_and_dump(source, dir_name):
     path_clear = os.path.join(dir_name,"clear_events", source)
@@ -81,7 +71,7 @@ def crop_planes_and_dump(dir_name, device):
             
 
 
-def main(source, dir_name):
+def main(source, dir_name, device):
     '''
     for i in ['clear_planes', 'clear_crops', 'noised_planes', 'noised_crops']:
         if not os.path.isdir(os.path.join(dir_name,i)):
@@ -106,6 +96,14 @@ def main(source, dir_name):
 if __name__ == '__main__':
     print('Working on device: {}\n'.format(device))
     args = vars(parser.parse_args())
+    if torch.cuda.is_available():
+        if args.device == -1:
+            gpu_num = get_freer_gpu()
+            args.device = torch.device('cuda:{}'.format(gpu_num))
+        if  args.device > -1:
+            args.device = torch.device('cuda:{}'.format(args.device))
+    else:
+        args.device = torch.device('cpu')
     start = time.time()
     main(**args)
     print('Program done in %f'%(time.time()-start))
