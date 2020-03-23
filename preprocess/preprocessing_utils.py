@@ -76,7 +76,10 @@ def get_planes(clear_file, noised_file):
     return normalize_planes(clear_file, noised_file, r_idx, c_idx)
 
 def get_crop(clear_plane, noised_plane, dir_name, fname, total_crops=1000, crop_shape=(32,32), num_trials=5, device=torch.device('cpu')):
-    probs = torch.clone(clear_plane)
+    clear_plane = torch.load(os.path.join(dir_name,"clear_planes", fname))
+    noised_plane = torch.load(os.path.join(dir_name,"noised_planes", fname))
+
+    probs = torch.clone(clear_plane, device=device)
     z,_,_ = torch.where(probs==0)
     probs[probs==0] += probs[z].mean(-1).mean(-1)
     distr = torch.distributions.binomial.Binomial(total_count=num_trials, probs=torch.repeat_interleave(probs[None] ,total_crops,dim=0))
@@ -104,9 +107,9 @@ def get_crop(clear_plane, noised_plane, dir_name, fname, total_crops=1000, crop_
     sample = (torch.min(torch.max(sample[:,-2],c_x), x-c_x), torch.min(torch.max(sample[:,-1],c_y), y-c_y))
 
 
-    sample = (torch.arange(n,device=device).repeat(total_crops).reshape(-1,1,1),
-            (sample[0][:,None] + w_x[None]).reshape(total_crops*n, -1, 1),
-            (sample[1][:,None] + w_y[None]).reshape(total_crops*n, 1, -1))
+    sample = (torch.arange(n).repeat(total_crops).reshape(-1,1,1),
+            (sample[0][:,None] + w_x[None]).reshape(total_crops*n, -1, 1).to('cpu'),
+            (sample[1][:,None] + w_y[None]).reshape(total_crops*n, 1, -1).to('cpu'))
 
     clear_plane[sample], noised_plane[sample]
     torch.save(clear_crops, os.path.join(dir_name,"clear_crops", fname))

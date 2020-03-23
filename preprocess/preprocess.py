@@ -14,10 +14,11 @@ n_crops = 500
 
 
 if torch.cuda.is_available():
-    gpu_num = get_freer_gpu()
-    device = torch.device('cuda:{}'.format(gpu_num))
+    gpu_num = get_freer_gpus(3)
+    device = [torch.device('cuda:{}'.format(i)) for i in gpu_num]
 else:
     device = torch.device('cpu')
+
 
 
 
@@ -76,9 +77,6 @@ def get_planes_and_dump(source, dir_name):
 def crop_planes_and_dump(dir_name, device):
     for s in ['readout_', 'collection_']:
         for ss in ['train', 'val', 'test']:
-            clear_plane = torch.load(os.path.join(dir_name,"clear_planes", s+ss), map_location=device)
-            noised_plane = torch.load(os.path.join(dir_name,"noised_planes", s+ss), map_location=device)
-
             get_crop(clear_plane, noised_plane,dir_name, s+ss, n_crops, crop_size,device=device)
             
 
