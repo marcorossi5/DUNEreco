@@ -14,8 +14,8 @@ n_crops = 500
 
 
 if torch.cuda.is_available():
-    gpu_num = get_freer_gpus(3)
-    device = [torch.device('cuda:{}'.format(i)) for i in gpu_num]
+    gpu_num = get_freer_gpu()
+    device = torch.device('cuda:{}'.format(gpu_num))
 else:
     device = torch.device('cpu')
 
@@ -82,7 +82,7 @@ def crop_planes_and_dump(dir_name, device):
 
 
 def main(source, dir_name):
-    
+    '''
     for i in ['clear_planes', 'clear_crops', 'noised_planes', 'noised_crops']:
         if not os.path.isdir(os.path.join(dir_name,i)):
             os.mkdir(os.path.join(dir_name,i))
@@ -92,7 +92,7 @@ def main(source, dir_name):
         for ss in ['train', 'val', 'test']:
             print(s+ss + ' clear', torch.load(os.path.join(dir_name, 'clear_planes', s+ss)).shape)
             print(s+ss + ' noised', torch.load(os.path.join(dir_name, 'noised_planes', s+ss)).shape)
-    
+    '''
 
     
     crop_planes_and_dump(dir_name,device)
