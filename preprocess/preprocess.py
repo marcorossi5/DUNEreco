@@ -109,6 +109,7 @@ def main(source, dir_name):
     
 
 if __name__ == '__main__':
+    print('Working on device: {}\n'.format(device))
     args = vars(parser.parse_args())
     start = time.time()
     main(**args)
