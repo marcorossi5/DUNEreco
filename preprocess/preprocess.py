@@ -116,6 +116,8 @@ if __name__ == '__main__':
             dev = torch.device('cuda:{}'.format(gpu_num))
         if  int(args['device']) > -1:
             dev = torch.device('cuda:{}'.format(args['device']))
+        else:
+            dev = torch.device('cpu')
     else:
         dev = torch.device('cpu')
     args['device'] = dev
