@@ -80,6 +80,16 @@ def get_crop(clear_planes, total_crops=1000, crop_shape=(32,32), num_trials=5, d
     n, x, y = clear_planes.shape
     c_x, c_y = crop_shape[0]//2, crop_shape[1]//2
 
+    #setting things
+    x = torch.Tensor([x],device=device).long()
+    y = torch.Tensor([y],device=device).long()
+    w_x = torch.arange(-c_x,c_x,device=device)
+    w_y = torch.arange(-c_y,c_y,device=device)
+    c_x = torch.Tensor([c_x],device=device).long()
+    c_y = torch.Tensor([c_y],device=device).long()
+
+
+
     if total_crops > n_max:
         reps = total_crops//n_max + 1
     else:
@@ -108,18 +118,9 @@ def get_crop(clear_planes, total_crops=1000, crop_shape=(32,32), num_trials=5, d
         sample = samples[sample.long()]
         del diff,base
 
-        w_x = torch.arange(-c_x,c_x,device=device)
-        w_y = torch.arange(-c_y,c_y,device=device)
-
-        c_x = torch.Tensor([c_x],device=device).long()
-        c_y = torch.Tensor([c_y],device=device).long()
-        x = torch.Tensor([x],device=device).long()
-        y = torch.Tensor([y],device=device).long()
         sample = (torch.min(torch.max(sample[:,-2],c_x), x-c_x), torch.min(torch.max(sample[:,-1],c_y), y-c_y))
-        del c_x,c_y,x,y
 
         idx_b += [(sample[0][:,None] + w_x[None]).reshape(n_max*n, -1, 1).to('cpu').data]
         idx_c += [(sample[1][:,None] + w_y[None]).reshape(n_max*n, 1, -1).to('cpu').data]
-        del sample,w_x,w_y
     
     return torch.cat(idx_b), torch.cat(idx_c)
