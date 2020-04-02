@@ -1,12 +1,16 @@
 import os
+import glob
+
 import numpy as np
 import torch
-import glob
+
+from skimage.feature import canny
+
 event_step = 15360
 collection_step = 960
 readout_step = 800
 time_len = 6000
-ada_step = event_step // (readout_step*2 + collection_step)
+ada_step = event_step // (2*readout_step + collection_step)
 
 
 def sample_binomial(num_trials, probs):
@@ -35,7 +39,8 @@ def plane_idx():
 
     for i in range(ada_step):
         readout.extend(range(cpp*i, cpp*i + 2*readout_step))
-        collection.extend(range(cpp*i + 2*readout_step, cpp*i + 2*readout_step + collection_step))
+        collection.extend(range(cpp*i + 2*readout_step,
+                               cpp*i + 2*readout_step + collection_step))
 
     return readout, collection
 
@@ -56,17 +61,22 @@ def normalize_planes(clear_file, noised_file, r_idx, c_idx):
         if r_clear[i*readout_step:(i+1)*readout_step].max() == 0:
             print('skipped')
             continue
-        r_n_clear.append(normalize(r_clear[i*readout_step:(i+1)*readout_step]))
-        r_n_noised.append(normalize(r_noised[i*readout_step:(i+1)*readout_step]))
+        r_n_clear.append(normalize(r_clear[i*readout_step:
+                                          (i+1)*readout_step]))
+        r_n_noised.append(normalize(r_noised[i*readout_step:
+                                          (i+1)*readout_step]))
 
     for i in range(int(c_clear.shape[0]/collection_step)):
         if c_clear[i*collection_step:(i+1)*collection_step].max() == 0:
             print('skipped')
             continue
-        c_n_clear.append(normalize(c_clear[i*collection_step:(i+1)*collection_step]))
-        c_n_noised.append(normalize(c_noised[i*collection_step:(i+1)*collection_step]))
+        c_n_clear.append(normalize(c_clear[i*collection_step:
+                                          (i+1)*collection_step]))
+        c_n_noised.append(normalize(c_noised[i*collection_step:
+                                            (i+1)*collection_step]))
 
-    return np.stack(r_n_clear), np.stack(r_n_noised), np.stack(c_n_clear), np.stack(c_n_noised)
+    return np.stack(r_n_clear), np.stack(r_n_noised),\
+           np.stack(c_n_clear), np.stack(c_n_noised)
 
 def get_planes(clear_file, noised_file):
     """
@@ -76,51 +86,28 @@ def get_planes(clear_file, noised_file):
 
     return normalize_planes(clear_file, noised_file, r_idx, c_idx)
 
-def get_crop(clear_planes, total_crops=1000, crop_shape=(32,32), num_trials=5, device=torch.device('cpu'), n_max=50):
-    n, x, y = clear_planes.shape
+def get_crop(clear_plane, n_crops=1000,
+            crop_shape=(32,32), device=torch.device('cpu')):
+    x, y = clear_plane.shape
     c_x, c_y = crop_shape[0]//2, crop_shape[1]//2
 
-    #setting things
-    x = torch.Tensor([x],device=device).long()
-    y = torch.Tensor([y],device=device).long()
-    w_x = torch.arange(-c_x,c_x,device=device)
-    w_y = torch.arange(-c_y,c_y,device=device)
-    c_x = torch.Tensor([c_x],device=device).long()
-    c_y = torch.Tensor([c_y],device=device).long()
+    #does not work if clear_plane is a torch Tensor
+    clear_plane = np.array(clear_plane)
+    im = canny(clear_plane).astype(float)
+    sgn = np.transpose(np.where(im==1))
+    bkg = np.transpose(np.where(im==0))
 
+    samples = []
+    sample = np.random.choice(len(sgn), size=int(n_crops/2))
+    samples.append(sgn[sample])
 
+    sample = np.random.choice(len(bkg), size=int(n_crops/2))
+    samples.append(bkg[sample])
 
-    if total_crops > n_max:
-        reps = total_crops//n_max + 1
-    else:
-        reps = 1
-        n_max = total_crops
-    idx_b = []
-    idx_c = []
+    samples = np.concatenate(samples)
 
-    z,_,_ = torch.where(clear_planes==0)
-    clear_planes[clear_planes==0] += clear_planes[z].mean(-1).mean(-1)
-    del z
-    distr = torch.distributions.binomial.Binomial(total_count=num_trials, probs=torch.repeat_interleave(clear_planes[None],n_max,dim=0))
-    del clear_planes
-    
-    for i in range(reps):
-        samples = torch.nonzero(distr.sample().to(device))
+    w = (np.minimum(np.maximum(samples[:,0], c_x), x-c_x),
+        np.minimum(np.maximum(samples[:,1], c_y), y-c_y)) #crops centers
 
-        l = torch.cumsum(torch.bincount(samples[:,0]*n+samples[:,1]), dim=0)
-        l = torch.cat([torch.Tensor([0]).long().to(device),l])
-
-        diff = l[1:]-l[:-1]
-        base = l[:-1]
-        del l
-
-        sample = torch.rand(n_max*n, device=device) * diff.float() + base.float()
-        sample = samples[sample.long()]
-        del diff,base
-
-        sample = (torch.min(torch.max(sample[:,-2],c_x), x-c_x), torch.min(torch.max(sample[:,-1],c_y), y-c_y))
-
-        idx_b += [(sample[0][:,None] + w_x[None]).reshape(n_max*n, -1, 1).to('cpu').data]
-        idx_c += [(sample[1][:,None] + w_y[None]).reshape(n_max*n, 1, -1).to('cpu').data]
-    
-    return torch.cat(idx_b), torch.cat(idx_c)
+    return((w[0][:,None]+np.arange(-c_x,c_x)[None])[:,:,None],
+           (w[1][:,None]+np.arange(-c_y,c_y)[None])[:,None,:])    
