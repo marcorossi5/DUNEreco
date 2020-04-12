@@ -1,6 +1,7 @@
 import numpy as np
 import torch
-import os, sys
+import os
+import sys
 import argparse
 import time
 
