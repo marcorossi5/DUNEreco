@@ -30,25 +30,25 @@ def final_test(args, test_data, model):
     psnr = []
     mse = []
     print('Number of planes to be tested:', len(test_data))
-    for (clear, noise) in test_data:
+    for (clear, noised) in test_data:
         start = tm.time()
-        res = model.forward_image(noise, args.device, args.test_batch_size)
+        res = model.forward_image(noised, args.device, args.test_batch_size)
         psnr.append(compute_psnr(clear, res))
         mse.append(mse_loss(clear, res).item())
         print('Test Iteration time: %.4f'%(tm.time()-start))
     
     #printing a single plane
     fname = os.path.join(args.dir_final_test, 'final_test.png')
-    fig = plt.figure(figsize=(20,20))
+    fig = plt.figure(figsize=(20,25))
     plt.suptitle('Final test denoising example')
     ax = fig.add_subplot(311)
     ax.title.set_text('Noised image')
-    z = ax.imshow(clear[0,0])
+    z = ax.imshow(noised[0,0])
     fig.colorbar(z, ax=ax)
 
     ax = fig.add_subplot(312)
     ax.title.set_text('Clear image')
-    z = ax.imshow(noise[0,0])
+    z = ax.imshow(clear[0,0])
     fig.colorbar(z, ax=ax)
 
     ax = fig.add_subplot(313)

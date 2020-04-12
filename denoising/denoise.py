@@ -25,7 +25,6 @@ parser.add_argument("--device", "-d", default="-1", type=str,
 
 
 def main(args):
-    
     #load datasets
     train_data = torch.utils.data.DataLoader(CropLoader(args.dataset_dir),
                                         shuffle=True,
@@ -37,20 +36,13 @@ def main(args):
                                         shuffle=True,
                                         batch_size=args.batch_size,
                                         num_workers=args.num_workers)
-    #test_data = torch.utils.data.DataLoader(PlaneLoader(args.dataset_dir,
-    #                                                   'collection_test'
-    #                                                   ),
-    #                                    shuffle=True,
-    #                                    batch_size=args.batch_size,
-    #                                    num_workers=args.num_workers)
-
+    
+    #build model
     model = eval('get_' + args.model)(args.k,
                                 args.in_channels,
                                 args.hidden_channels
                                 ).to(args.device)
-    #optim = torch.optim.Adam(model.parameters())
-    #scheduler = torch.optim.lr_scheduler.LambdaLR(optim, lambda x: 0.97**x)
-
+    #train
     train.train(args, train_data, val_data, model)
 
 if __name__ == '__main__':

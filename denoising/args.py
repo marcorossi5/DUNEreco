@@ -21,7 +21,6 @@ class Args:
 
         #logs
         self.epoch_log = 1
-
         self.epoch_test_start = 1
         self.epoch_test = 5
 

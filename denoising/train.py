@@ -24,7 +24,7 @@ def train_epoch(args, train_data, model, optimizer, scheduler, mse_loss):
     return loss.item()
 
 
-def test_epoch(args, val_data, model, mse_loss):
+def test_epoch(args, epoch, val_data, model, mse_loss):
     model.eval()
     psnr = []
     mse = []
@@ -34,6 +34,27 @@ def test_epoch(args, val_data, model, mse_loss):
         psnr.append(compute_psnr(clear, res))
         mse.append(mse_loss(clear, res).item())
         print('Test Iteration time: %.4f'%(tm.time()-start))
+
+    #saving one example
+    fname = os.path.join(args.dir_testing, 'test_at_%d.png'%epoch)
+    fig = plt.figure(figsize=(20,25))
+    plt.suptitle('Test epoch: %d denoising example'%epoch)
+    ax = fig.add_subplot(311)
+    ax.title.set_text('Noised image')
+    z = ax.imshow(noised[0,0])
+    fig.colorbar(z, ax=ax)
+
+    ax = fig.add_subplot(312)
+    ax.title.set_text('Clear image')
+    z = ax.imshow(clear[0,0])
+    fig.colorbar(z, ax=ax)
+
+    ax = fig.add_subplot(313)
+    ax.title.set_text('Denoised image')
+    z = ax.imshow(res[0,0])
+    fig.colorbar(z, ax=ax)
+    plt.savefig(fname)
+    plt.close()
     return np.array([np.mean(psnr), np.std(psnr)/np.sqrt(i+1),
                 np.mean(mse), np.std(mse)/np.sqrt(i+1)])
 
@@ -83,7 +104,7 @@ def train(args, train_data, val_data, model):
         if epoch % args.epoch_test == 0 and epoch>=args.epoch_test_start:
             print('test start ...')
             test_epochs.append(epoch)
-            test_metrics.append(test_epoch(args, val_data, model, mse_loss))
+            test_metrics.append(test_epoch(args, epoch, val_data, model, mse_loss))
             print('test done ...')
 
         # save model checkpoint
