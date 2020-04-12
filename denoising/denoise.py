@@ -1,3 +1,5 @@
+import os
+import sys
 import argparse
 
 import numpy as np
@@ -12,6 +14,8 @@ from args import Args
 
 import train
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils.utils import get_freer_gpu
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dir_name", "-p", default="../datasets",
@@ -53,7 +57,7 @@ if __name__ == '__main__':
         if int(args['device']) == -1:
             gpu_num = get_freer_gpu()
             dev = torch.device('cuda:{}'.format(gpu_num))
-        if  int(args['device']) > -1:
+        elif  int(args['device']) > -1:
             dev = torch.device('cuda:{}'.format(args['device']))
         else:
             dev = torch.device('cpu')

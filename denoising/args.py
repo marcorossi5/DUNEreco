@@ -8,8 +8,8 @@ class Args:
         self.model = model
         self.device = device
 
-        self.batch_size = 32
-        self.test_batch_size = 64
+        self.batch_size = 128
+        self.test_batch_size = 128
         self.num_workers = 4
 
         #model parameters

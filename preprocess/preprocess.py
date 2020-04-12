@@ -19,7 +19,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import preprocessing_utils as putils
 from utils.utils import get_freer_gpu
 
-crop_shape = (32,32)
+crop_shape = (64,64)
 
 def get_planes_and_dump(source, dir_name):
     path_clear = os.path.join(dir_name,"clear_events", source)
@@ -150,7 +150,7 @@ if __name__ == '__main__':
         if int(args['device']) == -1:
             gpu_num = get_freer_gpu()
             dev = torch.device('cuda:{}'.format(gpu_num))
-        if  int(args['device']) > -1:
+        elif  int(args['device']) > -1:
             dev = torch.device('cuda:{}'.format(args['device']))
         else:
             dev = torch.device('cpu')

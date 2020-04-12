@@ -6,8 +6,6 @@ from model_utils import NonLocalAggregation
 from model_utils import split_img
 from model_utils import recombine_img
 
-import time as tm
-
 def get_CNN(k, input_channels, hidden_channels,
                     patch_size=(64, 64)):
 

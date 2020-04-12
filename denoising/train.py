@@ -29,11 +29,9 @@ def test_epoch(args, epoch, val_data, model, mse_loss):
     psnr = []
     mse = []
     for i, (clear, noised) in enumerate(val_data):
-        start = tm.time()
         res = model.forward_image(noised, args.device, args.test_batch_size)
         psnr.append(compute_psnr(clear, res))
         mse.append(mse_loss(clear, res).item())
-        print('Test Iteration time: %.4f'%(tm.time()-start))
 
     #saving one example
     fname = os.path.join(args.dir_testing, 'test_at_%d.png'%epoch)
@@ -104,8 +102,10 @@ def train(args, train_data, val_data, model):
         if epoch % args.epoch_test == 0 and epoch>=args.epoch_test_start:
             print('test start ...')
             test_epochs.append(epoch)
+            start = tm.time()
             test_metrics.append(test_epoch(args, epoch, val_data, model, mse_loss))
             print('test done ...')
+            print('Test time: %.4f\n'%(tm.time()-start))
 
         # save model checkpoint
         if args.save:
@@ -138,18 +138,3 @@ def train(args, train_data, val_data, model):
     test_metrics = np.stack(test_metrics,1)
     fname = os.path.join(args.dir_metrics, 'test_metrics')
     np.save(fname, test_metrics)
-
-    '''
-    #once collected and saved, these things must be analyzed
-    #with a separate script
-    fname = os.path.join(args.dir_metrics, 'loss_sum.png')
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.title.set_text('Loss summary')
-    ax.set_xlabel('Epochs')
-    ax.set_ylabel('Loss')
-    ax.plot(loss_sum)
-    plt.savefig(fname)
-    plt.close()
-    print('saved image at: %s'%fname)
-    '''

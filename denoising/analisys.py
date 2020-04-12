@@ -31,11 +31,9 @@ def final_test(args, test_data, model):
     mse = []
     print('Number of planes to be tested:', len(test_data))
     for (clear, noised) in test_data:
-        start = tm.time()
         res = model.forward_image(noised, args.device, args.test_batch_size)
         psnr.append(compute_psnr(clear, res))
         mse.append(mse_loss(clear, res).item())
-        print('Test Iteration time: %.4f'%(tm.time()-start))
     
     #printing a single plane
     fname = os.path.join(args.dir_final_test, 'final_test.png')
@@ -60,8 +58,6 @@ def final_test(args, test_data, model):
 
     return np.array([np.mean(psnr), np.std(psnr)/np.sqrt(len(psnr)),
                 np.mean(mse), np.std(mse)/np.sqrt(len(psnr))])
-
-
 
 def make_plots(args):
     fname = os.path.join(args.dir_metrics, 'loss_sum.npy')
@@ -110,7 +106,7 @@ def main(args):
                                 ).to(args.device)
     start = tm.time()
     res = final_test(args, test_data, model)
-    print('Final test time: %.4f'%(tm.time()-start))
+    print('Final test time: %.4f\n'%(tm.time()-start))
     print('Final test psnr: %.4f +/- %.4f'%(res[0], res[1]))
     print('Final test loss: %.4f +/- %.4f'%(res[2], res[3]))
 
