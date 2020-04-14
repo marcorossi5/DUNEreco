@@ -8,9 +8,9 @@ class Args:
         self.model = model
         self.device = device
 
-        self.batch_size = 128
-        self.test_batch_size = 128
-        self.num_workers = 4
+        self.batch_size = 256
+        self.test_batch_size = 256
+        self.num_workers = 8
 
         #model parameters
         self.k = 1
@@ -20,15 +20,15 @@ class Args:
         self.decay_lr = 0.97
 
         #logs
-        self.epoch_log = 1
-        self.epoch_test_start = 1
-        self.epoch_test = 5
+        self.epoch_log = 10
+        self.epoch_test_start = 50
+        self.epoch_test = 10
 
         self.load = False
-        self.load_epoch = 5
+        self.load_epoch = 25
 
         self.save = True
-        self.epoch_save = 5
+        self.epoch_save = 25
 
         #build directories
         self.dir_output = "./denoising/output"
