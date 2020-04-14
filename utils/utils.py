@@ -27,3 +27,19 @@ def compute_psnr(image, noised):
     if mse == 0:
         return 0
     return 10 * np.log10(m/mse)
+
+def smooth(smoothed, scalars, weight):#weight between 0 and 1
+    assert len(scalars) - len(smoothed) == 1
+    
+    if len(scalars)==1:
+        smoothed.append(scalars[0])
+    else:
+        smoothed.append(weight*smoothed[-1]+(1-weight)*scalars[-1])
+    
+    return smoothed
+
+def moving_average(scalars, weight):
+    smoothed = []
+    for i in range(len(scalars)):
+        smooth(smoothed, scalars[:i+1], weight)
+    return smoothed

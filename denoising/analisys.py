@@ -13,6 +13,8 @@ from model import  *
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import compute_psnr
+from utils.utils import get_freer_gpu
+from utils.utils import moving_average
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dir_name", "-p", default="../datasets",
@@ -63,6 +65,10 @@ def make_plots(args):
     fname = os.path.join(args.dir_metrics, 'loss_sum.npy')
     loss_sum = np.load(fname)
 
+    #smoothing the loss
+    weight = 2/(len(loss_sum)+1)
+    loss_avg = moving_average(loss_sum, weight)
+
     fname = os.path.join(args.dir_metrics, 'test_epochs.npy')
     test_epochs = np.load(fname)
 
@@ -75,15 +81,16 @@ def make_plots(args):
     ax.title.set_text('Metrics')
     ax.set_xlabel('Epochs')
     ax.set_ylabel('Metrics')
-    ax.plot(loss_sum, label='train_loss')
+    ax.plot(loss_avg, color='#1f77b4')
+    ax.plot(loss_sum, color='#1f77b4', alpha=0.6)
     ax.errorbar(test_epochs,test_metrics[2],
-                yerr=test_metrics[3],label='test_loss')
+                yerr=test_metrics[3], label='test_loss')
     ax.legend()
 
     ax = fig.add_subplot(122)
-    ax.title.set_text('PSNR')
+    ax.title.set_text('pSNR (over validation set)')
     ax.set_xlabel('Epochs')
-    ax.set_ylabel('PSNR [dB]')
+    ax.set_ylabel('pSNR [dB]')
     ax.errorbar(test_epochs,test_metrics[0],
                 yerr=test_metrics[1])
     plt.savefig(fname)
