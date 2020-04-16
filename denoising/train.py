@@ -16,7 +16,7 @@ def train_epoch(args, train_data, model, optimizer, scheduler, mse_loss):
         noised = noised.to(args.device)
         optimizer.zero_grad()
         denoised_diff, perceptual_loss = model(clear, noised)
-        denoised_img = torch.nn.Sigmoid(denoised_diff + noised)
+        denoised_img = model.act(denoised_diff + noised)
         loss = perceptual_loss + mse_loss(denoised_img, clear)
         loss.backward()
         optimizer.step()
