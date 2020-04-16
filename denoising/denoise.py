@@ -30,7 +30,7 @@ parser.add_argument("--device", "-d", default="-1", type=str,
 
 
 def main(args):
-	torch.cuda.set_enabled_lms(True)
+    torch.cuda.set_enabled_lms(True)
     #load datasets
     train_data = torch.utils.data.DataLoader(CropLoader(args.dataset_dir),
                                         shuffle=True,
@@ -40,7 +40,7 @@ def main(args):
                                                       'collection_val'
                                                       ),
                                         num_workers=args.num_workers),
-    			torch.utils.data.DataLoader(PlaneLoader(args.dataset_dir,
+                torch.utils.data.DataLoader(PlaneLoader(args.dataset_dir,
                                                       'readout_val'
                                                       ),
                                         num_workers=args.num_workers)]
