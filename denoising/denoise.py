@@ -9,6 +9,7 @@ import time as tm
 
 from dataloader import CropLoader
 from dataloader import PlaneLoader
+#from dataloader import load_planes
 from model import  *
 from args import Args
 
@@ -29,17 +30,20 @@ parser.add_argument("--device", "-d", default="-1", type=str,
 
 
 def main(args):
+	torch.cuda.set_enabled_lms(True)
     #load datasets
     train_data = torch.utils.data.DataLoader(CropLoader(args.dataset_dir),
                                         shuffle=True,
                                         batch_size=args.batch_size,
                                         num_workers=args.num_workers)
-    val_data = torch.utils.data.DataLoader(PlaneLoader(args.dataset_dir,
+    val_data = [torch.utils.data.DataLoader(PlaneLoader(args.dataset_dir,
                                                       'collection_val'
                                                       ),
-                                        shuffle=True,
-                                        batch_size=args.batch_size,
-                                        num_workers=args.num_workers)
+                                        num_workers=args.num_workers),
+    			torch.utils.data.DataLoader(PlaneLoader(args.dataset_dir,
+                                                      'readout_val'
+                                                      ),
+                                        num_workers=args.num_workers)]
     
     #build model
     model = eval('get_' + args.model)(args.k,

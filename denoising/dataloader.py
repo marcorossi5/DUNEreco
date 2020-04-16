@@ -41,3 +41,14 @@ class PlaneLoader(torch.utils.data.Dataset):
         return len(self.noised_planes)
     def __getitem__(self, index):
         return self.clear_planes[index], self.noised_planes[index]
+
+def load_planes(data_dir, file):
+    fname = os.path.join(data_dir, 'clear_planes/%s'%file)
+    clear_planes = torch.load(fname).unsqueeze(1)
+
+    fname = os.path.join(data_dir, 'noised_planes/%s'%file)
+    noised_planes = torch.load(fname).unsqueeze(1)
+
+    assert len(clear_planes) == len(noised_planes)
+    for i in range(len(clear_planes)):
+        yield clear_planes[i:i+1], noised_planes[i:i+1]

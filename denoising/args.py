@@ -15,8 +15,8 @@ class Args:
         #model parameters
         self.k = 1
         self.in_channels = 1
-        self.hidden_channels = 12
-        self.lr = 1e-3
+        self.hidden_channels = 32
+        self.lr = 1e-4
         self.decay_lr = 0.97
 
         #logs

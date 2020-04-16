@@ -84,6 +84,7 @@ def get_CNN(k, input_channels, hidden_channels,
                 nn.BatchNorm2d(hidden_channels),
                 nn.LeakyReLU(0.05),
             )
+            self.act = nn.Sigmoid()
 
         def fit_image(self, image):
             processed_image = torch.cat([block(image) for block in
@@ -122,7 +123,7 @@ def get_CNN(k, input_channels, hidden_channels,
             dn = torch.cat(dn)
 
             dn = recombine_img(dn, crops_shape, pad)
-            return noised_planes + dn
+            return self.act(noised_planes + dn)
 
     cnn = CNN(k, input_channels, hidden_channels, patch_size)
         

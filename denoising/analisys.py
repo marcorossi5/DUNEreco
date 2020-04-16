@@ -26,18 +26,42 @@ parser.add_argument("--model", "-m", default="CNN", type=str,
 parser.add_argument("--device", "-d", default="-1", type=str,
                     help="-1 (automatic)/ -2 (cpu) / gpu number")
 
-def final_test(args, test_data, model):
-    model.eval()
+def inference(args, model):
+    #load dataset
+    test_data = [torch.utils.data.DataLoader(PlaneLoader(args.dataset_dir,
+                                                      'readout_test'
+                                                      ),
+                                        num_workers=args.num_workers),
+                 torch.utils.data.DataLoader(PlaneLoader(args.dataset_dir,
+                                                      'readout_test'
+                                                      ),
+                                        num_workers=args.num_workers)]
+
+    #test_data = [load_planes(args.dataset_dir, 'collection_test'),
+    #             load_planes(args.dataset_dir, 'readout_test')]
+    legend = ['collection', 'readout']
+
     mse_loss = torch.nn.MSELoss()
     psnr = []
     mse = []
-    print('Number of planes to be tested:', len(test_data))
-    for (clear, noised) in test_data:
-        res = model.forward_image(noised, args.device, args.test_batch_size)
-        psnr.append(compute_psnr(clear, res))
-        mse.append(mse_loss(clear, res).item())
+    res = [[],[]]
+    labels = [[],[]]
+    #print('Number of planes to be tested:', len(test_data))
+    for i, data in enumerate(test_data):
+        for (clear, noised) in data:
+            labels[i] += [clear]
+            res[i] += [model.forward_image(noised,
+                                           args.device,
+                                           args.test_batch_size)]
+            psnr.append(compute_psnr(clear, res[i][-1]))
+            mse.append(mse_loss(clear, res[i][-1]).item())
+        labels[i] = np.concatenate(labels[i])[:,0]
+        res[i] = np.concatenate(res[i])[:,0]
+    #res[i] is a np array with shape [batch,row,col]
+    #the same for labels[i]
     
     #printing a single plane
+    '''
     fname = os.path.join(args.dir_final_test, 'final_test.png')
     fig = plt.figure(figsize=(20,25))
     plt.suptitle('Final test denoising example')
@@ -57,16 +81,56 @@ def final_test(args, test_data, model):
     fig.colorbar(z, ax=ax)
     plt.savefig(fname)
     plt.close()
+    '''
+    diff = [np.abs(res[i] - labels[i]) for i in range(len(res))]
+    #print('first', diff[0].min(), diff[0].max())
+    #print('all', diff[].min(), diff.max())
 
-    return np.array([np.mean(psnr), np.std(psnr)/np.sqrt(len(psnr)),
-                np.mean(mse), np.std(mse)/np.sqrt(len(psnr))])
+    fname = os.path.join(args.dir_final_test, 'residuals.png')
+    fig = plt.figure(figsize=(20,25))
+    plt.suptitle('Final denoising test')
+
+    ax = fig.add_subplot(311)
+    ax.title.set_text('Sample of Clear image')
+    z = ax.imshow(labels[0][0])
+    fig.colorbar(z, ax=ax)
+
+    ax = fig.add_subplot(312)
+    ax.title.set_text('Sample of |Denoised - Clear|')
+    z = ax.imshow(diff[0][0])
+    fig.colorbar(z, ax=ax)
+
+    ax = fig.add_subplot(325)
+    ax.hist([i[0].flatten() for i in diff], 100,
+             stacked=True, label=legend,
+             density=True, histtype='step')
+    ax.set_yscale('log')
+    ax.legend()
+    ax.title.set_text('Sample of histogram of |Diff|')
+
+    ax = fig.add_subplot(326)
+    ax.hist([i.flatten() for i in diff], 100,
+             stacked=True, label=legend,
+             density=True, histtype='step')
+    ax.set_yscale('log')
+    ax.legend()
+    ax.title.set_text('Histogram of all |Diff|')
+
+    plt.savefig(fname)
+    plt.close()
+
+    return np.array([np.mean(psnr),
+                    np.std(psnr)/np.sqrt(len(psnr)),
+                    np.mean(mse),
+                    np.std(mse)/np.sqrt(len(psnr))])
 
 def make_plots(args):
     fname = os.path.join(args.dir_metrics, 'loss_sum.npy')
     loss_sum = np.load(fname)
 
     #smoothing the loss
-    weight = 2/(len(loss_sum)+1)
+    weight = 0.8
+    #weight = 2/(len(loss_sum)+1)
     loss_avg = moving_average(loss_sum, weight)
 
     fname = os.path.join(args.dir_metrics, 'test_epochs.npy')
@@ -81,10 +145,11 @@ def make_plots(args):
     ax.title.set_text('Metrics')
     ax.set_xlabel('Epochs')
     ax.set_ylabel('Metrics')
-    ax.plot(loss_avg, color='#1f77b4')
-    ax.plot(loss_sum, color='#1f77b4', alpha=0.6)
+    ax.plot(loss_avg, color='#ff7f0e', label='train loss')
+    ax.plot(loss_sum, color='#ff7f0e', alpha=0.2)
     ax.errorbar(test_epochs,test_metrics[2],
-                yerr=test_metrics[3], label='test_loss')
+                yerr=test_metrics[3], label='test loss')
+    ax.set_yscale('log')
     ax.legend()
 
     ax = fig.add_subplot(122)
@@ -99,29 +164,25 @@ def make_plots(args):
 
 def main(args):
     mpl.rcParams.update({'font.size': 22})
-    #load datasets
-    test_data = torch.utils.data.DataLoader(PlaneLoader(args.dataset_dir,
-                                                      'collection_test'
-                                                      ),
-                                        shuffle=True,
-                                        batch_size=1,
-                                        num_workers=args.num_workers)
-    
+
     model = eval('get_' + args.model)(args.k,
                                 args.in_channels,
                                 args.hidden_channels
                                 ).to(args.device)
-    start = tm.time()
-    res = final_test(args, test_data, model)
-    print('Final test time: %.4f\n'%(tm.time()-start))
-    print('Final test psnr: %.4f +/- %.4f'%(res[0], res[1]))
-    print('Final test loss: %.4f +/- %.4f'%(res[2], res[3]))
+    model.eval()
 
+    #loading model
     fname = os.path.join(args.dir_final_test, 'best_model.txt')
     with open(fname, 'r') as f:
         lname = f.read()
         f.close()
     model.load_state_dict(torch.load(lname))
+
+    start = tm.time()
+    metrics = inference(args, model)
+    print('Final test time: %.4f\n'%(tm.time()-start))
+    print('Final test psnr: %.4f +/- %.4f'%(metrics[0], metrics[1]))
+    print('Final test loss: %.4f +/- %.4f'%(metrics[2], metrics[3]))
 
     make_plots(args)
 

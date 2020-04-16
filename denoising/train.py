@@ -16,7 +16,7 @@ def train_epoch(args, train_data, model, optimizer, scheduler, mse_loss):
         noised = noised.to(args.device)
         optimizer.zero_grad()
         denoised_diff, perceptual_loss = model(clear, noised)
-        denoised_img = denoised_diff + noised
+        denoised_img = torch.nn.Sigmoid(denoised_diff + noised)
         loss = perceptual_loss + mse_loss(denoised_img, clear)
         loss.backward()
         optimizer.step()
@@ -28,12 +28,22 @@ def test_epoch(args, epoch, val_data, model, mse_loss):
     model.eval()
     psnr = []
     mse = []
-    for i, (clear, noised) in enumerate(val_data):
-        res = model.forward_image(noised, args.device, args.test_batch_size)
-        psnr.append(compute_psnr(clear, res))
-        mse.append(mse_loss(clear, res).item())
-
+    res = [[],[]]
+    labels = [[],[]]
+    legend = ['collection', 'readout']
+    for i, data in enumerate(val_data):
+        for (clear, noised) in data:
+            labels[i] += [clear]
+            res[i] += [model.forward_image(noised,
+                                           args.device,
+                                           args.test_batch_size)]
+            psnr.append(compute_psnr(clear, res[i][-1]))
+            mse.append(mse_loss(clear, res[i][-1]).item())
+        labels[i] = np.concatenate(labels[i])[:,0]
+        res[i] = np.concatenate(res[i])[:,0]
+    
     #saving one example
+    '''
     fname = os.path.join(args.dir_testing, 'test_at_%d.png'%epoch)
     fig = plt.figure(figsize=(20,25))
     plt.suptitle('Test epoch: %d denoising example'%epoch)
@@ -49,10 +59,48 @@ def test_epoch(args, epoch, val_data, model, mse_loss):
 
     ax = fig.add_subplot(313)
     ax.title.set_text('Denoised image')
-    z = ax.imshow(res[0,0])
+    z = ax.imshow(res[-1][0,0])
     fig.colorbar(z, ax=ax)
     plt.savefig(fname)
     plt.close()
+    '''
+    
+    #saving diffs and hists
+    diff = [np.abs(res[i] - labels[i]) for i in range(len(res))]
+
+    fname = os.path.join(args.dir_testing, 'residuals_at_%d.png'%epoch)
+    fig = plt.figure(figsize=(20,25))
+    plt.suptitle('Final denoising test')
+
+    ax = fig.add_subplot(311)
+    ax.title.set_text('Sample of Clear image')
+    z = ax.imshow(labels[0][0])
+    fig.colorbar(z, ax=ax)
+
+    ax = fig.add_subplot(312)
+    ax.title.set_text('Sample of |Denoised - Clear|')
+    z = ax.imshow(diff[0][0])
+    fig.colorbar(z, ax=ax)
+
+    ax = fig.add_subplot(325)
+    ax.hist([i[0].flatten() for i in diff], 100,
+             stacked=True, label=legend,
+             density=True, histtype='step')
+    ax.set_yscale('log')
+    ax.legend()
+    ax.title.set_text('Sample of histogram of |Diff|')
+
+    ax = fig.add_subplot(326)
+    ax.hist([i.flatten() for i in diff], 100,
+             stacked=True, label=legend,
+             density=True, histtype='step')
+    ax.set_yscale('log')
+    ax.legend()
+    ax.title.set_text('Histogram of all |Diff|')
+
+    plt.savefig(fname)
+    plt.close()
+
     return np.array([np.mean(psnr), np.std(psnr)/np.sqrt(i+1),
                 np.mean(mse), np.std(mse)/np.sqrt(i+1)])
 
