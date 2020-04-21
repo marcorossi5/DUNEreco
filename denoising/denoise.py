@@ -51,9 +51,9 @@ def main(args):
     model = eval('get_' + args.model)(args.k,
                                       args.in_channels,
                                       args.hidden_channels,
-                                      args.crop_size
-                                      )
+                                      args.crop_size)
     model = MyDataParallel(model, device_ids=args.dev_ids)
+    model = model.to(args.device)
 
     #train
     train.train(args, train_data, val_data, model)

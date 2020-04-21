@@ -93,4 +93,4 @@ class MyDataParallel(nn.DataParallel):
         try:
             return super().__getattr__(name)
         except AttributeError:
-            return gettattr(self.module, name)
+            return getattr(self.module, name)

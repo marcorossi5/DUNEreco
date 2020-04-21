@@ -19,7 +19,7 @@ def train_epoch(args, train_data, model, optimizer, scheduler, mse_loss):
         #denoised_img = model.act(denoised_diff + noised)
         #loss = perceptual_loss + mse_loss(denoised_img, clear)
         denoised_img, loss = model(clear, noised)
-        loss.backward()
+        loss.sum().backward()
         optimizer.step()
     scheduler.step()
     return loss.item()
@@ -152,8 +152,12 @@ def train(args, train_data, val_data, model):
             print('test start ...')
             test_epochs.append(epoch)
             start = tm.time()
-            test_metrics.append(test_epoch(args, epoch, val_data, model, mse_loss))
-            print('test done ...')
+            test_metrics.append(test_epoch(args, epoch, val_data,
+                                           model, mse_loss))
+            print('Test psnr: %.5f +- %.5f, mse: %.5f +- %.5f'%(test_metrics[-1][0],
+                                                                test_metrics[-1][1],
+                                                                test_metrics[-1][2],
+                                                                test_metrics[-1][3]))
             print('Test time: %.4f\n'%(tm.time()-start))
 
         # save model checkpoint
