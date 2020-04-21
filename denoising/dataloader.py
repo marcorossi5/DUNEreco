@@ -2,17 +2,20 @@ import os
 import torch
 
 class CropLoader(torch.utils.data.Dataset):
-    def __init__(self, data_dir):
+    def __init__(self, data_dir, patch_size):
         fname = os.path.join(data_dir, 'clear_crops/readout_train')
         readout_clear = torch.load(fname)
 
-        fname = os.path.join(data_dir, 'clear_crops/collection_train')
+        fname = os.path.join(data_dir,
+                             'clear_crops/collection_train_%d'%patch_size)
         collection_clear = torch.load(fname)
 
-        fname = os.path.join(data_dir, 'noised_crops/readout_train')
+        fname = os.path.join(data_dir,
+                             'noised_crops/readout_train_%d'%patch_size)
         readout_noise = torch.load(fname)
 
-        fname = os.path.join(data_dir, 'noised_crops/collection_train')
+        fname = os.path.join(data_dir,
+                             'noised_crops/collection_train_%d'%patch_size)
         collection_noise = torch.load(fname)
 
         self.clear_crops = torch.cat([collection_clear, readout_clear])

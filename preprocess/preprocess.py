@@ -19,7 +19,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import preprocessing_utils as putils
 from utils.utils import get_freer_gpu
 
-crop_shape = (64,64)
+crop_shape = (32,32)
 
 def get_planes_and_dump(source, dir_name):
     path_clear = os.path.join(dir_name,"clear_events", source)

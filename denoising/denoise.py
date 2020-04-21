@@ -13,6 +13,8 @@ from dataloader import PlaneLoader
 from model import  *
 from args import Args
 
+from model_utils import MyDataParallel
+
 import train
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -21,7 +23,7 @@ from utils.utils import get_freer_gpu
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument("--dir_name", "-p", default="../datasets",
                     type=str, help='Directory path to datasets')
-PARSER.add_argument("--epochs", "-n", default=10, type=int,
+PARSER.add_argument("--epochs", "-n", default=60, type=int,
                     help="training epochs")
 PARSER.add_argument("--model", "-m", default="CNN", type=str,
                     help="either CNN or GCNN")
@@ -33,7 +35,8 @@ def main(args):
     """This is the main function"""
     torch.cuda.set_enabled_lms(True)
     #load datasets
-    train_data = torch.utils.data.DataLoader(CropLoader(args.dataset_dir),
+    train_data = torch.utils.data.DataLoader(CropLoader(args.dataset_dir,
+                                                        args.crop_size[0]),
                                              shuffle=True,
                                              batch_size=args.batch_size,
                                              num_workers=args.num_workers)
@@ -49,7 +52,9 @@ def main(args):
                                       args.in_channels,
                                       args.hidden_channels,
                                       args.crop_size
-                                      ).to(args.device)
+                                      )
+    model = MyDataParallel(model, device_ids=args.dev_ids)
+
     #train
     train.train(args, train_data, val_data, model)
 

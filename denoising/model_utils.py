@@ -85,3 +85,12 @@ def recombine_img(splits, splits_shape, pad):
     img = splits.reshape(-1, a_x*p_x, a_y*p_y)
 
     return img[:, pad[-2]:-pad[-1], pad[0]:-pad[1]]
+
+class MyDataParallel(nn.DataParallel):
+    """Allow calling model's attributes"""
+
+    def __getattr__(self, name):
+        try:
+            return super().__getattr__(name)
+        except AttributeError:
+            return gettattr(self.module, name)
