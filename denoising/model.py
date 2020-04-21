@@ -103,7 +103,9 @@ def get_CNN(k, input_channels, hidden_channels,
             perceptual_loss = loss_mse(processed_image, n_processed_image)\
                             + loss_mse(residual_1, n_residual_1)\
                             + loss_mse(residual_2, n_residual_2)
-            return n_answer, perceptual_loss
+            output = self.act(n_answer + noised)
+            loss = perceptual_loss + loss_mse(output, clear_image)
+            return output, loss
 
         def forward_eval(self, noised_image):
             _, _, _, answer = self.fit_image(noised_image)
