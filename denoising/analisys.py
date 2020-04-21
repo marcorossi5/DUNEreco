@@ -164,10 +164,11 @@ def make_plots(args):
 
 def main(args):
     mpl.rcParams.update({'font.size': 22})
-
+    """
     model = eval('get_' + args.model)(args.k,
                                 args.in_channels,
-                                args.hidden_channels
+                                args.hidden_channels,
+                                args.crop_size
                                 ).to(args.device)
     model.eval()
 
@@ -183,7 +184,7 @@ def main(args):
     print('Final test time: %.4f\n'%(tm.time()-start))
     print('Final test psnr: %.4f +/- %.4f'%(metrics[0], metrics[1]))
     print('Final test loss: %.4f +/- %.4f'%(metrics[2], metrics[3]))
-
+    """
     make_plots(args)
 
 if __name__ == '__main__':

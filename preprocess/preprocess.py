@@ -107,11 +107,15 @@ def crop_planes_and_dump(dir_name, n_crops, device):
             noised_crops = torch.cat(noised_crops, 0)
                 
             torch.save(clear_crops,
-                       os.path.join(dir_name,"clear_crops", s+ss))
+                       os.path.join(dir_name,
+                       				"clear_crops",
+                       				"%s%s_%d"%(s,ss,crop_shape[0])))
 
             
             torch.save(noised_crops,
-                       os.path.join(dir_name, "noised_crops", s+ss))
+                       os.path.join(dir_name,
+                       				"noised_crops",
+                       				"%s%s_%d"%(s,ss,crop_shape[0])))
             
 def main(source, dir_name, device, n_crops):
     for i in ['clear_planes', 'clear_crops', 'noised_planes', 'noised_crops']:

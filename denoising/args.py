@@ -2,6 +2,8 @@ import os
 
 class Args:
     def __init__(self, dir_name, epochs, model, device):
+        self.crop_size = (64,64)
+
         #argparser
         self.dataset_dir = dir_name
         self.epochs = epochs
@@ -31,7 +33,7 @@ class Args:
         self.epoch_save = 25
 
         #build directories
-        self.dir_output = "./denoising/output"
+        self.dir_output = "./denoising/new_output"
         self.dir_timings = self.dir_output + "/timings"
         self.dir_testing = self.dir_output + "/testing"
         self.dir_final_test = self.dir_output + "/final_test"
