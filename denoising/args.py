@@ -2,7 +2,7 @@ import os
 
 class Args:
     def __init__(self, dir_name, epochs, model, device):
-        self.crop_size = (64,64)
+        self.crop_size = (32,32)
         self.dev_ids = None
 
         #argparser

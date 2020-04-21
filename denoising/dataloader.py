@@ -3,7 +3,8 @@ import torch
 
 class CropLoader(torch.utils.data.Dataset):
     def __init__(self, data_dir, patch_size):
-        fname = os.path.join(data_dir, 'clear_crops/readout_train')
+        fname = os.path.join(data_dir,
+                             'clear_crops/readout_train_%d'%patch_size)
         readout_clear = torch.load(fname)
 
         fname = os.path.join(data_dir,
