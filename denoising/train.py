@@ -5,6 +5,9 @@ from torch import optim
 import numpy as np
 import matplotlib.pyplot as plt
 
+from model_utils import split_img
+from model_utils import recombine_img
+
 import time as tm
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,10 +22,14 @@ def train_epoch(args, train_data, model, optimizer, scheduler, mse_loss):
         #denoised_img = model.act(denoised_diff + noised)
         #loss = perceptual_loss + mse_loss(denoised_img, clear)
         denoised_img, loss = model(clear, noised)
+        c = model(clear)
+        n = model(noise)
+        loss = mse_loss(c[0], n[0]) + mse_loss(c[1], n[1])\
+               mse_loss(c[2], n[2]) + mse_loss(clear, n[3])
         loss.sum().backward()
         optimizer.step()
     scheduler.step()
-    return loss.item()
+    return loss.sum().item()
 
 
 def test_epoch(args, epoch, val_data, model, mse_loss):
@@ -32,12 +39,31 @@ def test_epoch(args, epoch, val_data, model, mse_loss):
     res = [[],[]]
     labels = [[],[]]
     legend = ['collection', 'readout']
+
+    p_x, p_y = model.patch_size
+    split_size = 32
+
     for i, data in enumerate(val_data):
         for (clear, noised) in data:
             labels[i] += [clear]
-            res[i] += [model.forward_image(noised,
-                                           args.device,
-                                           args.test_batch_size)]
+            
+            crops, crops_shape, pad = split_img(noised, (p_x,p_y))
+            loader = torch.split(crops, split_size)
+            dn = []
+            for chunk in loader:
+                answer = model(chunk.to(device))[-1].cpu().data
+                dn.append(answer)
+
+            dn = torch.cat(dn)
+
+            dn = recombine_img(dn, crops_shape, pad)
+
+            res[i] += [dn]
+
+
+            #res[i] += [model.forward_image(noised,
+            #                               args.device,
+            #                              args.test_batch_size)]
             psnr.append(compute_psnr(clear, res[i][-1]))
             mse.append(mse_loss(clear, res[i][-1]).item())
         labels[i] = np.concatenate(labels[i])[:,0]

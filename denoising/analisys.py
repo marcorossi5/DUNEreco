@@ -10,6 +10,10 @@ import time as tm
 from args import Args
 from dataloader import PlaneLoader
 from model import  *
+from model_utils import MyDataParallel
+from model_utils import split_img
+from model_utils import recombine_img
+
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import compute_psnr
@@ -46,13 +50,29 @@ def inference(args, model):
     mse = []
     res = [[],[]]
     labels = [[],[]]
+    p_x, p_y = model.patch_size
+    split_size = 32
     #print('Number of planes to be tested:', len(test_data))
     for i, data in enumerate(test_data):
         for (clear, noised) in data:
             labels[i] += [clear]
-            res[i] += [model.forward_image(noised,
-                                           args.device,
-                                           args.test_batch_size)]
+            
+            crops, crops_shape, pad = split_img(noised, (p_x,p_y))
+            loader = torch.split(crops, split_size)
+            dn = []
+            for chunk in loader:
+                answer = model(chunk.to(device))[-1].cpu().data
+                dn.append(answer)
+
+            dn = torch.cat(dn)
+
+            dn = recombine_img(dn, crops_shape, pad)
+
+            res[i] += [dn]
+
+            #res[i] += [model.forward_image(noised,
+            #                               args.device,
+            #                               args.test_batch_size)]
             psnr.append(compute_psnr(clear, res[i][-1]))
             mse.append(mse_loss(clear, res[i][-1]).item())
         labels[i] = np.concatenate(labels[i])[:,0]
@@ -164,12 +184,14 @@ def make_plots(args):
 
 def main(args):
     mpl.rcParams.update({'font.size': 22})
-    """
+    
     model = eval('get_' + args.model)(args.k,
                                 args.in_channels,
                                 args.hidden_channels,
                                 args.crop_size
-                                ).to(args.device)
+                                )
+    model = MyDataParallel(model, device_ids=args.dev_ids)
+    model = model.to(args.device)
     model.eval()
 
     #loading model
@@ -184,7 +206,7 @@ def main(args):
     print('Final test time: %.4f\n'%(tm.time()-start))
     print('Final test psnr: %.4f +/- %.4f'%(metrics[0], metrics[1]))
     print('Final test loss: %.4f +/- %.4f'%(metrics[2], metrics[3]))
-    """
+    
     make_plots(args)
 
 if __name__ == '__main__':

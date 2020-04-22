@@ -95,6 +95,13 @@ def get_CNN(k, input_channels, hidden_channels,
             result = residual_2 + result_1
             return [processed_image, residual_1, result, self.GC(result)]
 
+        def forward(self, img):
+            processed_image, residual_1,\
+            residual_2, answer = self.fit_image(img)
+            
+            return processed_image, residual_1,\
+                   residual_2 ,answer, self.act(answer+img)
+        '''
         def forward(self, clear_image, noised_image):
             processed_image, residual_1,\
             residual_2, answer = self.fit_image(clear_image)
@@ -126,7 +133,7 @@ def get_CNN(k, input_channels, hidden_channels,
 
             dn = recombine_img(dn, crops_shape, pad)
             return self.act(noised_planes + dn)
-
+        '''
     cnn = CNN(k, input_channels, hidden_channels, patch_size)
         
     return cnn
