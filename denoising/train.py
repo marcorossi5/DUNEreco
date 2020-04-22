@@ -52,7 +52,7 @@ def test_epoch(args, epoch, val_data, model, mse_loss):
             loader = torch.split(crops, split_size)
             dn = []
             for chunk in loader:
-                answer = model(chunk.to(device)).cpu().data
+                answer = model(chunk.to(args.device)).cpu().data
                 dn.append(answer)
 
             dn = torch.cat(dn)
@@ -68,7 +68,7 @@ def test_epoch(args, epoch, val_data, model, mse_loss):
             psnr.append(compute_psnr(clear, res[i][-1]))
             mse.append(mse_loss(clear, res[i][-1]).item())
         labels[i] = np.concatenate(labels[i])[:,0]
-        res[i] = np.concatenate(res[i])[:,0]
+        res[i] = np.concatenate(res[i])
     
     #saving one example
     '''
