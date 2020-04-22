@@ -14,6 +14,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import compute_psnr
 
 def train_epoch(args, train_data, model, optimizer, scheduler, mse_loss):
+    model.train()
     for i, (clear, noised) in enumerate(train_data):
         clear = clear.to(args.device)
         noised = noised.to(args.device)
@@ -21,11 +22,11 @@ def train_epoch(args, train_data, model, optimizer, scheduler, mse_loss):
         #denoised_diff, perceptual_loss = model(clear, noised)
         #denoised_img = model.act(denoised_diff + noised)
         #loss = perceptual_loss + mse_loss(denoised_img, clear)
-        denoised_img, loss = model(clear, noised)
-        c = model(clear)
-        n = model(noise)
-        loss = mse_loss(c[0], n[0]) + mse_loss(c[1], n[1])\
-               mse_loss(c[2], n[2]) + mse_loss(clear, n[3])
+        denoised_img, loss = model(noised, clear)
+        #c = model(clear)
+        #n = model(noised)
+        #loss = mse_loss(c[0], n[0]) + mse_loss(c[1], n[1])\
+        #       + mse_loss(c[2], n[2]) + mse_loss(clear, n[3])
         loss.sum().backward()
         optimizer.step()
     scheduler.step()
@@ -41,7 +42,7 @@ def test_epoch(args, epoch, val_data, model, mse_loss):
     legend = ['collection', 'readout']
 
     p_x, p_y = model.patch_size
-    split_size = 32
+    split_size = 256
 
     for i, data in enumerate(val_data):
         for (clear, noised) in data:
@@ -51,7 +52,7 @@ def test_epoch(args, epoch, val_data, model, mse_loss):
             loader = torch.split(crops, split_size)
             dn = []
             for chunk in loader:
-                answer = model(chunk.to(device))[-1].cpu().data
+                answer = model(chunk.to(device)).cpu().data
                 dn.append(answer)
 
             dn = torch.cat(dn)

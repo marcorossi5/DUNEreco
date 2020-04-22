@@ -51,7 +51,7 @@ def inference(args, model):
     res = [[],[]]
     labels = [[],[]]
     p_x, p_y = model.patch_size
-    split_size = 32
+    split_size = 256
     #print('Number of planes to be tested:', len(test_data))
     for i, data in enumerate(test_data):
         for (clear, noised) in data:
@@ -61,7 +61,7 @@ def inference(args, model):
             loader = torch.split(crops, split_size)
             dn = []
             for chunk in loader:
-                answer = model(chunk.to(device))[-1].cpu().data
+                answer = model(chunk.to(device)).cpu().data
                 dn.append(answer)
 
             dn = torch.cat(dn)

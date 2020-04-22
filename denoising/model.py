@@ -94,26 +94,32 @@ def get_CNN(k, input_channels, hidden_channels,
             residual_2 = self.residual_2(result_1)
             result = residual_2 + result_1
             return [processed_image, residual_1, result, self.GC(result)]
+        
+        def forward(self, noised_image=None, clear_image=None):
+            if self.training:
+                processed_image, residual_1,\
+                residual_2, answer = self.fit_image(clear_image)
+                n_processed_image, n_residual_1,\
+                n_residual_2, n_answer = self.fit_image(noised_image)
+                perc_loss = loss_mse(processed_image, n_processed_image)\
+                            + loss_mse(residual_1, n_residual_1)\
+                            + loss_mse(residual_2, n_residual_2)
+                output = self.act(n_answer + noised_image)
+                loss = perc_loss + loss_mse(output, clear_image)
+                return output, loss
 
-        def forward(self, img):
+            _, _, _, answer = self.fit_image(noised_image)
+            
+            return self.act(answer+noised_image)
+
+        '''
+        def forward(self, clear=None, noise=None):
             processed_image, residual_1,\
             residual_2, answer = self.fit_image(img)
             
             return processed_image, residual_1,\
                    residual_2 ,answer, self.act(answer+img)
-        '''
-        def forward(self, clear_image, noised_image):
-            processed_image, residual_1,\
-            residual_2, answer = self.fit_image(clear_image)
-            n_processed_image, n_residual_1,\
-            n_residual_2, n_answer = self.fit_image(noised_image)
-            perceptual_loss = loss_mse(processed_image, n_processed_image)\
-                            + loss_mse(residual_1, n_residual_1)\
-                            + loss_mse(residual_2, n_residual_2)
-            output = self.act(n_answer + noised_image)
-            loss = perceptual_loss + loss_mse(output, clear_image)
-            return output, loss
-
+        
         def forward_eval(self, noised_image):
             _, _, _, answer = self.fit_image(noised_image)
             return answer
