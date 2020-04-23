@@ -2,7 +2,8 @@ import os
 
 class Args:
     def __init__(self, dir_name, epochs, model, device):
-        self.crop_size = (32,32)
+        self.crop_size = (16,16)
+        self.crop_p = 0.5
         self.dev_ids = None
 
         #argparser
@@ -11,8 +12,8 @@ class Args:
         self.model = model
         self.device = device
 
-        self.batch_size = 256
-        self.test_batch_size = 256
+        self.batch_size = 2048
+        self.test_batch_size = 2048
         self.num_workers = 8
 
         #model parameters
@@ -20,10 +21,11 @@ class Args:
         self.in_channels = 1
         self.hidden_channels = 32
         self.lr = 1e-4
-        self.decay_lr = 0.97
+        self.decay_lr = 0.9
+        self.warmup_epoch = 0
 
         #logs
-        self.epoch_log = 10
+        self.epoch_log = 1
         self.epoch_test_start = 1
         self.epoch_test = 10
 
@@ -34,7 +36,7 @@ class Args:
         self.epoch_save = 25
 
         #build directories
-        self.dir_output = "./denoising/new_output"
+        self.dir_output = "./denoising/output"
         self.dir_timings = self.dir_output + "/timings"
         self.dir_testing = self.dir_output + "/testing"
         self.dir_final_test = self.dir_output + "/final_test"

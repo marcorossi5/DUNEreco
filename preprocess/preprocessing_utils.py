@@ -87,7 +87,7 @@ def get_planes(clear_file, noised_file):
     return normalize_planes(clear_file, noised_file, r_idx, c_idx)
 
 def get_crop(clear_plane, n_crops=1000,
-            crop_shape=(32,32), device=torch.device('cpu')):
+            crop_shape=(32,32), device=torch.device('cpu'), p=0.5):
     x, y = clear_plane.shape
     c_x, c_y = crop_shape[0]//2, crop_shape[1]//2
 
@@ -98,10 +98,10 @@ def get_crop(clear_plane, n_crops=1000,
     bkg = np.transpose(np.where(im==0))
 
     samples = []
-    sample = np.random.choice(len(sgn), size=int(n_crops/2))
+    sample = np.random.choice(len(sgn), size=int(n_crops*p))
     samples.append(sgn[sample])
 
-    sample = np.random.choice(len(bkg), size=int(n_crops/2))
+    sample = np.random.choice(len(bkg), size=int(n_crops*(1-p)))
     samples.append(bkg[sample])
 
     samples = np.concatenate(samples)

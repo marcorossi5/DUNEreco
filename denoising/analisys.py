@@ -27,7 +27,7 @@ parser.add_argument("--epochs", "-n", default=0, type=int,
                     help="training epochs")
 parser.add_argument("--model", "-m", default="CNN", type=str,
                     help="either CNN or GCNN")
-parser.add_argument("--device", "-d", default="-1", type=str,
+parser.add_argument("--device", "-d", default="0", type=str,
                     help="-1 (automatic)/ -2 (cpu) / gpu number")
 
 def inference(args, model):

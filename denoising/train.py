@@ -13,7 +13,7 @@ import time as tm
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import compute_psnr
 
-def train_epoch(args, train_data, model, optimizer, scheduler, mse_loss):
+def train_epoch(args, epoch, train_data, model, optimizer, scheduler, mse_loss):
     model.train()
     for i, (clear, noised) in enumerate(train_data):
         clear = clear.to(args.device)
@@ -29,7 +29,8 @@ def train_epoch(args, train_data, model, optimizer, scheduler, mse_loss):
         #       + mse_loss(c[2], n[2]) + mse_loss(clear, n[3])
         loss.sum().backward()
         optimizer.step()
-    scheduler.step()
+    if epoch > args.warmup_epoch:
+        scheduler.step()
     return loss.sum().item()
 
 
@@ -161,10 +162,10 @@ def train(args, train_data, val_data, model):
     loss_sum = []
     test_metrics = []
     test_epochs = []
-    while epoch<=args.epochs:
+    while epoch <= args.epochs:
         time_start = tm.time()
         # train
-        loss = train_epoch(args,train_data, model,
+        loss = train_epoch(args, epoch, train_data, model,
                           optimizer, scheduler, mse_loss)
         loss_sum.append(loss)
 

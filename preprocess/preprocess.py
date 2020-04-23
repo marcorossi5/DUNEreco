@@ -10,12 +10,15 @@ parser.add_argument("--source", "-s", default="*",
                     type=str, help='Source .npy file name')
 parser.add_argument("--dir_name", "-p", default="../datasets",
                     type=str, help='Directory path to datasets')
-parser.add_argument("--device", "-d", default="-1", type=str,
+parser.add_argument("--device", "-d", default="-2", type=str,
                     help="-1 (automatic)/ -2 (cpu) / gpu number")
 parser.add_argument("--n_crops", "-n", default=500, type=int,
                     help="number of crops for each plane")
 parser.add_argument("--crop_edge", "-c", default=32, type=int,
                     help="crop shape")
+parser.add_argument("--percentage", "-x", default=0.5, type=float,
+                    help="percentage of signal")
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import preprocessing_utils as putils
@@ -83,7 +86,7 @@ def get_planes_and_dump(source, dir_name):
     torch.save(torch.Tensor(n_c[int(s*0.8):]),
                os.path.join(dir_name,"noised_planes", 'collection_test'))
 
-def crop_planes_and_dump(dir_name, n_crops, device, crop_shape):
+def crop_planes_and_dump(dir_name, n_crops, device, crop_shape, p):
     for s in ['readout_', 'collection_']:
         for ss in ['train', 'val', 'test']:
             clear_planes = torch.load(os.path.join(dir_name,
@@ -99,8 +102,8 @@ def crop_planes_and_dump(dir_name, n_crops, device, crop_shape):
                 idx = putils.get_crop(clear_plane,
                                       n_crops = n_crops,
                                       crop_shape = crop_shape,
-                                      device = device
-                                     )
+                                      device = device,
+                                      p = p)
 
                 clear_crops.append(clear_plane[idx])
                 noised_crops.append(noised_plane[idx])
@@ -111,15 +114,15 @@ def crop_planes_and_dump(dir_name, n_crops, device, crop_shape):
             torch.save(clear_crops,
                        os.path.join(dir_name,
                        				"clear_crops",
-                       				"%s%s_%d"%(s,ss,crop_shape[0])))
+                       				"%s%s_%d_%f"%(s, ss, crop_shape[0], p)))
 
             
             torch.save(noised_crops,
                        os.path.join(dir_name,
                        				"noised_crops",
-                       				"%s%s_%d"%(s,ss,crop_shape[0])))
+                       				"%s%s_%d_%f"%(s, ss, crop_shape[0], p)))
             
-def main(source, dir_name, device, n_crops, crop_edge):
+def main(source, dir_name, device, n_crops, crop_edge, percentage):
     crop_shape = (crop_edge, crop_edge)
     for i in ['clear_planes', 'clear_crops', 'noised_planes', 'noised_crops']:
         if not os.path.isdir(os.path.join(dir_name,i)):
@@ -128,26 +131,28 @@ def main(source, dir_name, device, n_crops, crop_edge):
     get_planes_and_dump(source, dir_name)
     for s in ['readout_', 'collection_']:
         for ss in ['train', 'val', 'test']:
-            print(s+ss + ' clear', torch.load(os.path.join(dir_name,
-                                                           'clear_planes',
-                                                            s+ss)).shape
-                 )
-            print(s+ss + ' noised', torch.load(os.path.join(dir_name,
-                                                            'noised_planes',
-                                                            s+ss)).shape
-                 )
+            print(s+ss + ' clear planes',
+                  torch.load(os.path.join(dir_name,
+                                          'clear_planes', s+ss)).shape)
+            print(s+ss + ' noised planes',
+                  torch.load(os.path.join(dir_name,
+                                          'noised_planes', s+ss)).shape)
     
-    crop_planes_and_dump(dir_name, n_crops, device, crop_shape)
+    crop_planes_and_dump(dir_name, n_crops, device, crop_shape, percentage)
     for s in ['readout_', 'collection_']:
         for ss in ['train', 'val', 'test']:
-            print(s+ss + ' clear', torch.load(os.path.join(dir_name,
-                                                           'clear_crops',
-                                                           s+ss)).shape
-                 )
-            print(s+ss + ' noised', torch.load(os.path.join(dir_name,
-                                                            'noised_crops',
-                                                            s+ss)).shape
-                 )
+            print(s+ss + ' clear crops',
+                  torch.load(os.path.join(dir_name,
+                                          'clear_crops',
+                                          "%s%s_%d_%f"%(s, ss,
+                                                        crop_shape[0],
+                                                        percentage)).shape))
+            print(s+ss + ' noised crops',
+                  torch.load(os.path.join(dir_name,
+                                          'noised_crops',
+                                          "%s%s_%d_%f"%(s, ss,
+                                                        crop_shape[0],
+                                                        percentage)).shape))
 
 if __name__ == '__main__':
     args = vars(parser.parse_args())
