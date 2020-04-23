@@ -1,3 +1,5 @@
+import os
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -94,3 +96,12 @@ class MyDataParallel(nn.DataParallel):
             return super().__getattr__(name)
         except AttributeError:
             return getattr(self.module, name)
+
+def print_summary_file(args):
+    d = args.__dict__
+    fname = os.path.join(args.dir_output, 'readme.txt')
+    with open(fname, 'w') as f:
+        f.write('Model summary file:')
+        for k in d.keys():
+            f.writelines('\n%s     %s\n'%(str(k), str(d[k])))
+        f.close()

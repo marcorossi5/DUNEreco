@@ -14,6 +14,7 @@ from model import  *
 from args import Args
 
 from model_utils import MyDataParallel
+from model_utils import print_summary_file
 
 import train
 
@@ -34,6 +35,7 @@ PARSER.add_argument("--device", "-d", default="0", type=str,
 def main(args):
     """This is the main function"""
     #torch.cuda.set_enabled_lms(True)
+    print_summary_file(args)
     #load datasets
     train_data = torch.utils.data.DataLoader(CropLoader(args.dataset_dir,
                                                         args.crop_size[0],
