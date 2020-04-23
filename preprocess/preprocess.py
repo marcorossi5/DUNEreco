@@ -146,13 +146,13 @@ def main(source, dir_name, device, n_crops, crop_edge, percentage):
                                           'clear_crops',
                                           "%s%s_%d_%f"%(s, ss,
                                                         crop_shape[0],
-                                                        percentage)).shape))
+                                                        percentage))).shape)
             print(s+ss + ' noised crops',
                   torch.load(os.path.join(dir_name,
                                           'noised_crops',
                                           "%s%s_%d_%f"%(s, ss,
                                                         crop_shape[0],
-                                                        percentage)).shape))
+                                                        percentage))).shape)
 
 if __name__ == '__main__':
     args = vars(parser.parse_args())

@@ -101,7 +101,8 @@ def print_summary_file(args):
     d = args.__dict__
     fname = os.path.join(args.dir_output, 'readme.txt')
     with open(fname, 'w') as f:
-        f.write('Model summary file:')
+        f.writelines('Model summary file:\n')
         for k in d.keys():
-            f.writelines('\n%s     %s\n'%(str(k), str(d[k])))
+            f.writelines('\n%s     %s'%(str(k), str(d[k])))
         f.close()
+        
