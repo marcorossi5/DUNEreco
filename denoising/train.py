@@ -41,18 +41,19 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
 
     mse_loss = torch.nn.MSELoss(reduction='none')
 
-    for i, (clear, noised) in enumerate(train_data):
+    for i, (clear, noised) in enumerate(test_data):
         clear = clear.to(args.device)
         noised = noised.to(args.device)
 
         denoised_img = model(noised)
 
-        loss = mse_loss(denoised_img, clear).mean(-1).mean(-1)
+        loss = mse_loss(denoised_img, clear).mean(-1).mean(-1)[:,0]
 
         mse.append(loss.mean().cpu().item())
         m = clear.max(-1).values.max(-1).values
 
-        psnr.append(10*np.log10((m/loss).mean().cpu()))
+        res = (m/loss).mean().cpu().detach().numpy()
+        psnr.append(10*np.log10(res))
 
 
     return np.array([np.mean(psnr), np.std(psnr)/np.sqrt(i+1),
