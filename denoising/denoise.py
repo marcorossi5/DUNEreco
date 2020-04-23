@@ -40,16 +40,16 @@ def main(args):
     train_data = torch.utils.data.DataLoader(CropLoader(args.dataset_dir,
                                                         args.crop_size[0],
                                                         args.crop_p),
-                                             shuffle=True,
-                                             batch_size=args.batch_size,
-                                             num_workers=args.num_workers)
-    val_data = [torch.utils.data.DataLoader(PlaneLoader(args.dataset_dir,
-                                                        'collection_val'),
-                                            num_workers=args.num_workers),
-                torch.utils.data.DataLoader(PlaneLoader(args.dataset_dir,
-                                                        'readout_val'),
-                                            num_workers=args.num_workers)]
-
+                                            shuffle=True,
+                                            batch_size=args.batch_size,
+                                            num_workers=args.num_workers)
+    test_data = torch.utils.data.DataLoader(CropValLoader(args.dataset_dir,
+                                                          args.crop_size[0],
+                                                          args.crop_p),
+                                            shuffle=True,
+                                            batch_size=args.batch_size,
+                                            num_workers=args.num_workers)
+    
     #build model
     model = eval('get_' + args.model)(args.k,
                                       args.in_channels,
@@ -59,7 +59,7 @@ def main(args):
     model = model.to(args.device)
 
     #train
-    train.train(args, train_data, val_data, model)
+    train.train(args, train_data, test_data, model)
 
 if __name__ == '__main__':
     ARGS = vars(PARSER.parse_args())

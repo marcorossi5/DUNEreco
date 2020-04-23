@@ -34,111 +34,32 @@ def train_epoch(args, epoch, train_data, model, optimizer, scheduler, mse_loss):
     return loss.sum().item()
 
 
-def test_epoch(args, epoch, val_data, model, mse_loss):
+def test_epoch(args, epoch, test_data, model, mse_loss):
     model.eval()
-    psnr = []
     mse = []
-    res = [[],[]]
-    labels = [[],[]]
-    legend = ['collection', 'readout']
+    psnr = []
 
-    p_x, p_y = model.patch_size
-    split_size = 256
+    mse_loss = torch.nn.MSELoss(reduction='none')
 
-    for i, data in enumerate(val_data):
-        for (clear, noised) in data:
-            labels[i] += [clear]
-            
-            crops, crops_shape, pad = split_img(noised, (p_x,p_y))
-            loader = torch.split(crops, split_size)
-            dn = []
-            for chunk in loader:
-                answer = model(chunk.to(args.device)).cpu().data
-                dn.append(answer)
+    for i, (clear, noised) in enumerate(train_data):
+        clear = clear.to(args.device)
+        noised = noised.to(args.device)
 
-            dn = torch.cat(dn)
+        denoised_img = model(noised)
 
-            dn = recombine_img(dn, crops_shape, pad)
+        loss = mse_loss(denoised_img, clear).mean(-1).mean(-1)
 
-            res[i] += [dn]
+        mse.append(loss.mean().cpu().item())
+        m = clear.max(-1).values.max(-1).values
 
+        psnr.append(10*np.log10((m/loss).mean().cpu()))
 
-            #res[i] += [model.forward_image(noised,
-            #                               args.device,
-            #                              args.test_batch_size)]
-            psnr.append(compute_psnr(clear, res[i][-1]))
-            mse.append(mse_loss(clear, res[i][-1]).item())
-        labels[i] = np.concatenate(labels[i])[:,0]
-        res[i] = np.concatenate(res[i])
-    
-    #saving one example
-    '''
-    fname = os.path.join(args.dir_testing, 'test_at_%d.png'%epoch)
-    fig = plt.figure(figsize=(20,25))
-    plt.suptitle('Test epoch: %d denoising example'%epoch)
-    ax = fig.add_subplot(311)
-    ax.title.set_text('Noised image')
-    z = ax.imshow(noised[0,0])
-    fig.colorbar(z, ax=ax)
-
-    ax = fig.add_subplot(312)
-    ax.title.set_text('Clear image')
-    z = ax.imshow(clear[0,0])
-    fig.colorbar(z, ax=ax)
-
-    ax = fig.add_subplot(313)
-    ax.title.set_text('Denoised image')
-    z = ax.imshow(res[-1][0,0])
-    fig.colorbar(z, ax=ax)
-    plt.savefig(fname)
-    plt.close()
-    '''
-    
-    #saving diffs and hists
-    diff = [np.abs(res[i] - labels[i]) for i in range(len(res))]
-
-    fname = os.path.join(args.dir_testing, 'residuals_at_%d.png'%epoch)
-    fig = plt.figure(figsize=(20,25))
-    plt.suptitle('Final denoising test')
-
-    ax = fig.add_subplot(311)
-    ax.title.set_text('Sample of Clear image')
-    z = ax.imshow(labels[0][0])
-    fig.colorbar(z, ax=ax)
-
-    ax = fig.add_subplot(312)
-    ax.title.set_text('Sample of |Denoised - Clear|')
-    z = ax.imshow(diff[0][0])
-    fig.colorbar(z, ax=ax)
-
-    ax = fig.add_subplot(325)
-    ax.hist([i[0].flatten() for i in diff], 100,
-             stacked=True, label=legend,
-             density=True, histtype='step')
-    ax.set_yscale('log')
-    ax.legend()
-    ax.title.set_text('Sample of histogram of |Diff|')
-
-    ax = fig.add_subplot(326)
-    ax.hist([i.flatten() for i in diff], 100,
-             stacked=True, label=legend,
-             density=True, histtype='step')
-    ax.set_yscale('log')
-    ax.legend()
-    ax.title.set_text('Histogram of all |Diff|')
-
-    plt.savefig(fname)
-    plt.close()
 
     return np.array([np.mean(psnr), np.std(psnr)/np.sqrt(i+1),
                 np.mean(mse), np.std(mse)/np.sqrt(i+1)])
 
-#this has to be done once best model is selected
-def final_test():
-    pass
-
 ########### main train function
-def train(args, train_data, val_data, model):
+def train(args, train_data, test_data, model):
     # check if load existing model
     if args.load:
         fname = os.path.join(args.dir_saved_models,
@@ -180,7 +101,7 @@ def train(args, train_data, val_data, model):
             print('test start ...')
             test_epochs.append(epoch)
             start = tm.time()
-            test_metrics.append(test_epoch(args, epoch, val_data,
+            test_metrics.append(test_epoch(args, epoch, test_data,
                                            model, mse_loss))
             print('Test psnr: %.5f +- %.5f, mse: %.5f +- %.5f'%(test_metrics[-1][0],
                                                                 test_metrics[-1][1],

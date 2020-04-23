@@ -36,6 +36,41 @@ class CropLoader(torch.utils.data.Dataset):
     def __getitem__(self, index):
         return self.clear_crops[index], self.noised_crops[index]
 
+class CropValLoader(torch.utils.data.Dataset):
+    def __init__(self, data_dir, patch_size, p):
+        fname = os.path.join(data_dir,
+                             'clear_crops/readout_val_%d_%f'%(patch_size,
+                                                                p))
+        readout_clear = torch.load(fname)
+
+        fname = os.path.join(data_dir,
+                             'clear_crops/collection_val_%d_%f'%(patch_size,
+                                                                   p))
+        collection_clear = torch.load(fname)
+
+        fname = os.path.join(data_dir,
+                             'noised_crops/readout_val_%d_%f'%(patch_size,
+                                                                 p))
+        readout_noise = torch.load(fname)
+
+        fname = os.path.join(data_dir,
+                             'noised_crops/collection_val_%d_%f'%(patch_size,
+                                                                    p))
+        collection_noise = torch.load(fname)
+
+        self.clear_crops = torch.cat([collection_clear, readout_clear])
+        self.noised_crops = torch.cat([collection_noise, readout_noise])
+
+        #shape: (batch, #channel,width, height)
+        #with #channel==1
+        self.clear_crops = self.clear_crops.unsqueeze(1)
+        self.noised_crops = self.noised_crops.unsqueeze(1)
+     
+    def __len__(self):
+        return len(self.noised_crops)
+    def __getitem__(self, index):
+        return self.clear_crops[index], self.noised_crops[index]
+
 class PlaneLoader(torch.utils.data.Dataset):
     def __init__(self, data_dir, file):
 
