@@ -69,9 +69,27 @@ def train(args, train_data, test_data, model):
 
         args.lr = 5e-4
         epoch = args.load_epoch
+
+        fname = os.path.join(args.dir_timings, 'all_timings')
+        time_all = np.load(fname, time_all)
+
+        #loss_sum
+        fname = os.path.join(args.dir_metrics, 'loss_sum')
+        loss_sum = list(np.load(fname))
+    
+        #test_epochs
+        fname = os.path.join(args.dir_metrics, 'test_epochs')
+        test_epochs = list(np.load(fname))
+
+        #test metrics
+        fname = os.path.join(args.dir_metrics, 'test_metrics')
+        test_metrics = list(np.load(fname).T)
         print('model loaded!, lr: {}'.format(args.lr))
     else:
         epoch = 1
+        loss_sum = []
+        test_metrics = []
+        test_epochs = []
 
     # initialize optimizer
     optimizer=  optim.Adam(list(model.parameters()), lr=args.lr)
@@ -81,9 +99,7 @@ def train(args, train_data, test_data, model):
     # start main loop
     time_all = np.zeros(args.epochs)
     mse_loss = torch.nn.MSELoss()
-    loss_sum = []
-    test_metrics = []
-    test_epochs = []
+    
     while epoch <= args.epochs:
         time_start = tm.time()
         # train
