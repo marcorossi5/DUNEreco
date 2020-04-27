@@ -70,19 +70,19 @@ def train(args, train_data, test_data, model):
         args.lr = 5e-4
         epoch = args.load_epoch
 
-        fname = os.path.join(args.dir_timings, 'all_timings')
-        time_all = np.load(fname, time_all)
+        fname = os.path.join(args.dir_timings, 'all_timings.npy')
+        time_all = list(np.load(fname))
 
         #loss_sum
-        fname = os.path.join(args.dir_metrics, 'loss_sum')
+        fname = os.path.join(args.dir_metrics, 'loss_sum.npy')
         loss_sum = list(np.load(fname))
     
         #test_epochs
-        fname = os.path.join(args.dir_metrics, 'test_epochs')
+        fname = os.path.join(args.dir_metrics, 'test_epochs.npy')
         test_epochs = list(np.load(fname))
 
         #test metrics
-        fname = os.path.join(args.dir_metrics, 'test_metrics')
+        fname = os.path.join(args.dir_metrics, 'test_metrics.npy')
         test_metrics = list(np.load(fname).T)
         print('model loaded!, lr: {}'.format(args.lr))
     else:
@@ -94,7 +94,7 @@ def train(args, train_data, test_data, model):
     # initialize optimizer
     optimizer=  optim.Adam(list(model.parameters()), lr=args.lr)
     scheduler = optim.lr_scheduler.LambdaLR(optimizer,
-                                                 lambda x: args.decay_lr**x)
+                                            lambda x: args.decay_lr**x)
 
     # start main loop
     time_all = np.zeros(args.epochs)

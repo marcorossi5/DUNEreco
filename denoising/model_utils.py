@@ -28,6 +28,21 @@ class NonLocalAggregation(nn.Module):
 
         return x_new.view(b, h, w, x_new.shape[-1]).permute(0, 3, 1, 2)
 
+def pairwise_dist(arr, k):
+    """
+    arr: torch.Tensor with shape batch x h*w x features
+    """
+    r_arr = torch.sum(arr * arr, dim=2, keepdim=True) # (B,N,1)
+    mul = torch.matmul(arr, arr.permute(0,2,1))         # (B,N,N)
+    dist = - (r_arr - 2 * mul + r_arr.permute(0,2,1))       # (B,N,N)
+    return dist.topk(k=k, dim=-1)[1]
+
+
+def batched_index_select(t, dim, inds):
+    dummy = inds.unsqueeze(2).expand(inds.size(0), inds.size(1), t.size(2))
+    out = t.gather(dim, dummy) # b x e x f
+    return out
+
 def get_closest_diff(arr, k):
     """
     arr: torch.Tensor with shape batch x h * w x features

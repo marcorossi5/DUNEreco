@@ -251,15 +251,22 @@ def get_GCNN():
             return [processed_image, residual_1, result, self.GC(result)]
 
         def forward(self, clear_image, noised_image):
-            processed_image, residual_1,\
-            residual_2, answer = self.fit_image(clear_image)
-            n_processed_image, n_residual_1,\
-            n_residual_2, n_answer = self.fit_image(noised_image)
-            perceptual_loss = loss_mse(processed_image, n_processed_image)\
+            if self.training:
+                processed_image, residual_1,\
+                residual_2, answer = self.fit_image(clear_image)
+                n_processed_image, n_residual_1,\
+                n_residual_2, n_answer = self.fit_image(noised_image)
+                perc_loss = loss_mse(processed_image, n_processed_image)\
                             + loss_mse(residual_1, n_residual_1)\
                             + loss_mse(residual_2, n_residual_2)
-            return n_answer, perceptual_loss
+                output = self.act(n_answer + noised_image)
+                loss = perc_loss + loss_mse(output, clear_image)
+                return output, loss
 
+            _, _, _, answer = self.fit_image(noised_image)
+            
+            return self.act(answer+noised_image)
+        '''
         def forward_eval(self, noised_image):
             _, _, _, answer = self.fit_image(noised_image)
             return answer
@@ -278,6 +285,7 @@ def get_GCNN():
                               dim=0)
             a_x, a_y = noised_image.shape
             return torch.clamp(answer, 0, 1).view(a_x, a_y)
+        '''
     return GCNN
 
 
