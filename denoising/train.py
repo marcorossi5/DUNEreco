@@ -22,7 +22,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, scheduler, mse_loss):
         #denoised_diff, perceptual_loss = model(clear, noised)
         #denoised_img = model.act(denoised_diff + noised)
         #loss = perceptual_loss + mse_loss(denoised_img, clear)
-        denoised_img, loss = model(noised, clear)
+        denoised_img, loss, perc = model(noised, clear)
         #c = model(clear)
         #n = model(noised)
         #loss = mse_loss(c[0], n[0]) + mse_loss(c[1], n[1])\
@@ -31,7 +31,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, scheduler, mse_loss):
         optimizer.step()
     if epoch > args.warmup_epoch:
         scheduler.step()
-    return loss.sum().item()
+    return np.array([loss.sum().item(),perc.sum().item()]),
 
 
 def test_epoch(args, epoch, test_data, model, mse_loss):
@@ -75,7 +75,7 @@ def train(args, train_data, test_data, model):
 
         #loss_sum
         fname = os.path.join(args.dir_metrics, 'loss_sum.npy')
-        loss_sum = list(np.load(fname))
+        loss_sum = list(np.load(fname).T)
     
         #test_epochs
         fname = os.path.join(args.dir_metrics, 'test_epochs.npy')
@@ -110,8 +110,9 @@ def train(args, train_data, test_data, model):
         time_end = tm.time()
         time_all[epoch - 1] = time_end - time_start
         if epoch % args.epoch_log == 0:
-            print("Epoch: %d, Loss: %.5f, time: %.5f"%(epoch,
-                                                      loss_sum[-1],
+            print("Epoch: %d, Loss: %.5f, Perc Loss: %.5f, time: %.5f"%(epoch,
+                                                      loss_sum[-1][0],
+                                                      loss_sum[-1][1],
                                                       time_all[epoch - 1]))
         # test
         if epoch % args.epoch_test == 0 and epoch>=args.epoch_test_start:
@@ -120,10 +121,12 @@ def train(args, train_data, test_data, model):
             start = tm.time()
             test_metrics.append(test_epoch(args, epoch, test_data,
                                            model, mse_loss))
+            
             print('Test psnr: %.5f +- %.5f, mse: %.5f +- %.5f'%(test_metrics[-1][0],
                                                                 test_metrics[-1][1],
                                                                 test_metrics[-1][2],
                                                                 test_metrics[-1][3]))
+
             print('Test time: %.4f\n'%(tm.time()-start))
 
         # save model checkpoint
@@ -146,6 +149,7 @@ def train(args, train_data, test_data, model):
     np.save(fname, time_all)
 
     #loss_sum
+    loss_sum = np.stack(loss_sum,1)
     fname = os.path.join(args.dir_metrics, 'loss_sum')
     np.save(fname, loss_sum)
     

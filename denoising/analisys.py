@@ -151,7 +151,8 @@ def make_plots(args):
     #smoothing the loss
     weight = 0.8
     #weight = 2/(len(loss_sum)+1)
-    loss_avg = moving_average(loss_sum, weight)
+    loss_avg = moving_average(loss_sum[0], weight)
+    perc_avg = moving_average(loss_sum[1], weight)
 
     fname = os.path.join(args.dir_metrics, 'test_epochs.npy')
     test_epochs = np.load(fname)
@@ -166,7 +167,9 @@ def make_plots(args):
     ax.set_xlabel('Epochs')
     ax.set_ylabel('Metrics')
     ax.plot(loss_avg, color='#ff7f0e', label='train loss')
-    ax.plot(loss_sum, color='#ff7f0e', alpha=0.2)
+    ax.plot(loss_sum[0], color='#ff7f0e', alpha=0.2)
+    ax.plot(perc_avg, color='r', label='perc loss')
+    ax.plot(loss_sum[1], color='r', alpha=0.2)
     ax.errorbar(test_epochs,test_metrics[2],
                 yerr=test_metrics[3], label='test loss')
     ax.set_yscale('log')

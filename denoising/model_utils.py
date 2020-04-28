@@ -20,7 +20,7 @@ class NonLocalAggregation(nn.Module):
         b, h, w, f = x.shape
         x = x.view(b, h*w, f)
         
-        closest_graph = get_closest_diff(x, self.k)
+        closest_graph = get_closest_diff(x, self.k) #this builds the graph
         agg_weights = self.diff_fc(closest_graph) # look closer
         agg_self = self.w_self(x)
                 
@@ -35,12 +35,20 @@ def pairwise_dist(arr, k):
     r_arr = torch.sum(arr * arr, dim=2, keepdim=True) # (B,N,1)
     mul = torch.matmul(arr, arr.permute(0,2,1))         # (B,N,N)
     dist = - (r_arr - 2 * mul + r_arr.permute(0,2,1))       # (B,N,N)
-    return dist.topk(k=k, dim=-1)[1]
+    #this is the euclidean distance wrt the feature vector of the current pixel
+    #then the matrix has to be of shape (B,N,N), where N=prod(crop_shape)
+    return dist.topk(k=k, dim=-1)[1] # (B,N,K)
 
 
 def batched_index_select(t, dim, inds):
-    dummy = inds.unsqueeze(2).expand(inds.size(0), inds.size(1), t.size(2))
-    out = t.gather(dim, dummy) # b x e x f
+    """
+    t: torch.Tensor with shape batch x h*w x f
+    dim: 1, dimension of the pixels
+    inds: torch.Tensor with shape batch x h*w*K
+    """
+    dummy = inds.unsqueeze(2).expand(inds.size(0), inds.size(1), t.size(2)) # b x h*w*K x f
+    out = t.gather(dim, dummy) # b x h*w*K x f
+    #this gathers only the k-closest neighbours for each pixel
     return out
 
 def get_closest_diff(arr, k):
@@ -50,7 +58,7 @@ def get_closest_diff(arr, k):
     b, hw, f = arr.shape
     dists = pairwise_dist(arr, k)
     selected = batched_index_select(arr, 1, dists.view(dists.shape[0], -1)).view(b, hw, k, f)
-    diff = arr.unsqueeze(2) - selected
+    diff = arr.unsqueeze(2) - selected # b x h*w x K x f
     return diff
 
 def calculate_pad(shape1, shape2):

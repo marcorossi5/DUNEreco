@@ -2,7 +2,7 @@ import os
 
 class Args:
     def __init__(self, dir_name, epochs, model, device):
-        self.crop_size = (16,16)
+        self.crop_size = (32,32)
         self.crop_p = 0.500000
         self.dev_ids = None
 
@@ -20,14 +20,14 @@ class Args:
         self.k = 1
         self.in_channels = 1
         self.hidden_channels = 32
-        self.lr = 1e-4
+        self.lr = 1e-2
         self.decay_lr = 0.9
         self.warmup_epoch = 0
 
         #logs
         self.epoch_log = 1
-        self.epoch_test_start = 1
-        self.epoch_test = 10
+        self.epoch_test_start = 0
+        self.epoch_test = 1
 
         self.load = False
         self.load_epoch = 25
