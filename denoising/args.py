@@ -3,7 +3,7 @@ import os
 class Args:
     def __init__(self, dir_name, epochs, model, device):
         self.crop_size = (32,32)
-        self.crop_p = 0.500000
+        self.crop_p = 0.900000
         self.dev_ids = None
 
         #argparser
@@ -20,7 +20,7 @@ class Args:
         self.k = 1
         self.in_channels = 1
         self.hidden_channels = 32
-        self.lr = 1e-2
+        self.lr = 5e-4
         self.decay_lr = 0.9
         self.warmup_epoch = 0
 
@@ -33,7 +33,7 @@ class Args:
         self.load_epoch = 25
 
         self.save = True
-        self.epoch_save = 25
+        self.epoch_save = 5
 
         #build directories
         self.dir_output = "./denoising/output"

@@ -31,7 +31,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, scheduler, mse_loss):
         optimizer.step()
     if epoch > args.warmup_epoch:
         scheduler.step()
-    return np.array([loss.mean().item()]),
+    return np.array([loss.mean().item()])
 
 
 def test_epoch(args, epoch, test_data, model, mse_loss):
@@ -90,7 +90,8 @@ def train(args, train_data, test_data, model):
         loss_sum = []
         test_metrics = []
         test_epochs = []
-
+    best_psnr = 0
+        
     # initialize optimizer
     optimizer=  optim.Adam(list(model.parameters()), lr=args.lr)
     scheduler = optim.lr_scheduler.LambdaLR(optimizer,
@@ -110,9 +111,8 @@ def train(args, train_data, test_data, model):
         time_end = tm.time()
         time_all[epoch - 1] = time_end - time_start
         if epoch % args.epoch_log == 0:
-            print("Epoch: %d, Loss: %.5f, Perc Loss: %.5f, time: %.5f"%(epoch,
-                                                      loss_sum[-1][0],
-                                                      loss_sum[-1][1],
+            print("Epoch: %d, Loss: %.5f, time: %.5f"%(epoch,
+                                                      loss_sum[-1][0]
                                                       time_all[epoch - 1]))
         # test
         if epoch % args.epoch_test == 0 and epoch>=args.epoch_test_start:
@@ -122,11 +122,10 @@ def train(args, train_data, test_data, model):
             test_metrics.append(test_epoch(args, epoch, test_data,
                                            model, mse_loss))
             
-            print('Test psnr: %.5f +- %.5f, mse: %.5f +- %.5f'%(test_metrics[-1][0],
+            print('Test psnr: %.5f +- %.5f, mse: %.f +- %.5f'%(test_metrics[-1][0],
                                                                 test_metrics[-1][1],
                                                                 test_metrics[-1][2],
                                                                 test_metrics[-1][3]))
-
             print('Test time: %.4f\n'%(tm.time()-start))
 
         # save model checkpoint
@@ -135,12 +134,14 @@ def train(args, train_data, test_data, model):
                 fname = os.path.join(args.dir_saved_models,
                         args.model + '_%d'%epoch + '.dat')
                 torch.save(model.state_dict(), fname)
-                bname = os.path.join(args.dir_final_test, 'best_model.txt')
-                with open(bname, 'w') as f:
-                    f.write(fname)
-                    f.close()
-                print('updated best model at: ',bname)
                 print('saved model at: %s'%fname)
+                if test_metrics[-1][0] > best_psnr:
+                    best_psnr = test_metrics[-1][0]
+                    bname = os.path.join(args.dir_final_test, 'best_model.txt')
+                    with open(bname, 'w') as f:
+                        f.write(fname)
+                        f.close()
+                    print('updated best model at: ',bname)
         epoch += 1
     
     #saving data
