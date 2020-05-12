@@ -152,7 +152,7 @@ def make_plots(args):
     weight = 0.8
     #weight = 2/(len(loss_sum)+1)
     loss_avg = moving_average(loss_sum[0], weight)
-    perc_avg = moving_average(loss_sum[1], weight)
+    #perc_avg = moving_average(loss_sum[1], weight)
 
     fname = os.path.join(args.dir_metrics, 'test_epochs.npy')
     test_epochs = np.load(fname)
@@ -168,8 +168,8 @@ def make_plots(args):
     ax.set_ylabel('Metrics')
     ax.plot(loss_avg, color='#ff7f0e', label='train loss')
     ax.plot(loss_sum[0], color='#ff7f0e', alpha=0.2)
-    ax.plot(perc_avg, color='r', label='perc loss')
-    ax.plot(loss_sum[1], color='r', alpha=0.2)
+    #ax.plot(perc_avg, color='r', label='perc loss')
+    #ax.plot(loss_sum[1], color='r', alpha=0.2)
     ax.errorbar(test_epochs,test_metrics[2],
                 yerr=test_metrics[3], label='test loss')
     ax.set_yscale('log')
@@ -205,13 +205,12 @@ def main(args):
     model.load_state_dict(torch.load(lname))
 
     start = tm.time()
+    make_plots(args)
     metrics = inference(args, model)
     print('Final test time: %.4f\n'%(tm.time()-start))
     print('Final test psnr: %.4f +/- %.4f'%(metrics[0], metrics[1]))
     print('Final test loss: %.4f +/- %.4f'%(metrics[2], metrics[3]))
     
-    make_plots(args)
-
 if __name__ == '__main__':
     args = vars(parser.parse_args())
     dev = 0

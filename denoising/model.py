@@ -96,15 +96,15 @@ def get_CNN(k, input_channels, hidden_channels,
         
         def forward(self, noised_image=None, clear_image=None):
             if self.training:
-                processed_image, residual_1,\
-                residual_2, answer = self.fit_image(clear_image)
+                #processed_image, residual_1,\
+                #residual_2, answer = self.fit_image(clear_image)
                 n_processed_image, n_residual_1,\
                 n_residual_2, n_answer = self.fit_image(noised_image)
-                perc_loss = loss_mse(processed_image, n_processed_image)\
-                            + loss_mse(residual_1, n_residual_1)\
-                            + loss_mse(residual_2, n_residual_2)
+                #perc_loss = loss_mse(processed_image, n_processed_image)\
+                #            + loss_mse(residual_1, n_residual_1)\
+                #            + loss_mse(residual_2, n_residual_2)
                 output = self.act(n_answer + noised_image)
-                loss = perc_loss + loss_mse(output, clear_image)
+                loss = loss_mse(output, clear_image)# + perc_loss
                 return output, loss
 
             _, _, _, answer = self.fit_image(noised_image)

@@ -22,7 +22,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, scheduler, mse_loss):
         #denoised_diff, perceptual_loss = model(clear, noised)
         #denoised_img = model.act(denoised_diff + noised)
         #loss = perceptual_loss + mse_loss(denoised_img, clear)
-        denoised_img, loss, perc = model(noised, clear)
+        denoised_img, loss = model(noised, clear)
         #c = model(clear)
         #n = model(noised)
         #loss = mse_loss(c[0], n[0]) + mse_loss(c[1], n[1])\
@@ -31,7 +31,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, scheduler, mse_loss):
         optimizer.step()
     if epoch > args.warmup_epoch:
         scheduler.step()
-    return np.array([loss.sum().item(),perc.sum().item()]),
+    return np.array([loss.mean().item()]),
 
 
 def test_epoch(args, epoch, test_data, model, mse_loss):
