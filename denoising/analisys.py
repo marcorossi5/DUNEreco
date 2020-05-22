@@ -33,7 +33,7 @@ parser.add_argument("--device", "-d", default="0", type=str,
 def inference(args, model):
     #load dataset
     test_data = [torch.utils.data.DataLoader(PlaneLoader(args.dataset_dir,
-                                                      'readout_test'
+                                                      'collection_test'
                                                       ),
                                         num_workers=args.num_workers),
                  torch.utils.data.DataLoader(PlaneLoader(args.dataset_dir,
@@ -110,17 +110,22 @@ def inference(args, model):
     fig = plt.figure(figsize=(20,25))
     plt.suptitle('Final denoising test')
 
-    ax = fig.add_subplot(311)
+    ax = fig.add_subplot(411)
     ax.title.set_text('Sample of Clear image')
     z = ax.imshow(labels[0][0])
     fig.colorbar(z, ax=ax)
 
-    ax = fig.add_subplot(312)
+    ax = fig.add_subplot(412)
+    ax.title.set_text('Sample of Denoised image')
+    z = ax.imshow(res[0][0])
+    fig.colorbar(z, ax=ax)
+
+    ax = fig.add_subplot(413)
     ax.title.set_text('Sample of |Denoised - Clear|')
     z = ax.imshow(diff[0][0])
     fig.colorbar(z, ax=ax)
 
-    ax = fig.add_subplot(325)
+    ax = fig.add_subplot(427)
     ax.hist([i[0].flatten() for i in diff], 100,
              stacked=True, label=legend,
              density=True, histtype='step')
@@ -128,7 +133,7 @@ def inference(args, model):
     ax.legend()
     ax.title.set_text('Sample of histogram of |Diff|')
 
-    ax = fig.add_subplot(326)
+    ax = fig.add_subplot(428)
     ax.hist([i.flatten() for i in diff], 100,
              stacked=True, label=legend,
              density=True, histtype='step')
@@ -149,7 +154,7 @@ def make_plots(args):
     loss_sum = np.load(fname)
 
     #smoothing the loss
-    weight = 0.8
+    weight = 0
     #weight = 2/(len(loss_sum)+1)
     loss_avg = moving_average(loss_sum[0], weight)
     #perc_avg = moving_average(loss_sum[1], weight)

@@ -2,7 +2,7 @@ import os
 
 class Args:
     def __init__(self, dir_name, epochs, model, device):
-        self.crop_size = (32,32)
+        self.crop_size = (64,64)
         self.crop_p = 0.900000
         self.dev_ids = None
 
@@ -12,8 +12,8 @@ class Args:
         self.model = model
         self.device = device
 
-        self.batch_size = 2048
-        self.test_batch_size = 2048
+        self.batch_size = 1024#2048
+        self.test_batch_size = 1024#2048
         self.num_workers = 8
 
         #model parameters

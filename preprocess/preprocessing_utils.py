@@ -27,7 +27,7 @@ def load_files(path_clear, path_noise):
 
     for f_clear, f_noise in zip(clear_files, noised_files):
         clear_data = np.load(f_clear)[:, 2:]
-        noised_data = np.load(f_noise)[:, 3:]
+        noised_data = np.load(f_noise)[:, 2:]
         yield clear_data, noised_data
 
 def plane_idx():

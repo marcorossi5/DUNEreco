@@ -27,7 +27,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, scheduler, mse_loss):
         #n = model(noised)
         #loss = mse_loss(c[0], n[0]) + mse_loss(c[1], n[1])\
         #       + mse_loss(c[2], n[2]) + mse_loss(clear, n[3])
-        loss.sum().backward()
+        loss.mean().backward()
         optimizer.step()
     if epoch > args.warmup_epoch:
         scheduler.step()
@@ -112,7 +112,7 @@ def train(args, train_data, test_data, model):
         time_all[epoch - 1] = time_end - time_start
         if epoch % args.epoch_log == 0:
             print("Epoch: %d, Loss: %.5f, time: %.5f"%(epoch,
-                                                      loss_sum[-1][0]
+                                                      loss_sum[-1][0],
                                                       time_all[epoch - 1]))
         # test
         if epoch % args.epoch_test == 0 and epoch>=args.epoch_test_start:
@@ -122,7 +122,7 @@ def train(args, train_data, test_data, model):
             test_metrics.append(test_epoch(args, epoch, test_data,
                                            model, mse_loss))
             
-            print('Test psnr: %.5f +- %.5f, mse: %.f +- %.5f'%(test_metrics[-1][0],
+            print('Test psnr: %.5f +- %.5f, mse: %.5e +- %.5e'%(test_metrics[-1][0],
                                                                 test_metrics[-1][1],
                                                                 test_metrics[-1][2],
                                                                 test_metrics[-1][3]))
