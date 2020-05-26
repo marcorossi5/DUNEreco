@@ -5,6 +5,7 @@ import torch.nn as nn
 from model_utils import NonLocalAggregation
 from model_utils import split_img
 from model_utils import recombine_img
+from model_utils import local_mask
 
 def get_CNN(k, input_channels, hidden_channels,
                     patch_size=(64, 64)):
@@ -147,6 +148,7 @@ def get_CNN(k, input_channels, hidden_channels,
 #Don't know if the wrapper is needed
 def get_GCNN(k, input_channels, hidden_channels,
                     patch_size=(64, 64)):
+	l_mask = local_mask(patch_size)
 
     class GraphConv(nn.Module):
         def __init__(self, k, input_channels, out_channels, search_area=None):
@@ -158,7 +160,7 @@ def get_GCNN(k, input_channels, hidden_channels,
         def forward(self, x):
             return torch.mean(torch.stack([self.conv1(x),
                                            self.conv2(x),
-                                           self.NLA(x)]), dim=0)
+                                           self.NLA(x, l_mask)]), dim=0)
                                            # here is conv instead of gc
 
     class PreProcessBlock(nn.Module):
@@ -267,7 +269,7 @@ def get_GCNN(k, input_channels, hidden_channels,
         '''
     gcnn = GCNN(k, input_channels, hidden_channels, patch_size)
 
-    return GCNN
+    return gcnn
 
 
 def get_GCNN_baseline():

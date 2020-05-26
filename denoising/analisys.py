@@ -51,7 +51,7 @@ def inference(args, model):
     res = [[],[]]
     labels = [[],[]]
     p_x, p_y = model.patch_size
-    split_size = 256
+    split_size = args.test_batch_size
     #print('Number of planes to be tested:', len(test_data))
     for i, data in enumerate(test_data):
         for (clear, noised) in data:

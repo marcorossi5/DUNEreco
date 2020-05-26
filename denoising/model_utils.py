@@ -4,15 +4,42 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+def local_mask(crop_size):
+
+    x, y = crop_size.shape
+    N = x*y
+
+    local_mask = torch.ones([N, N])
+    for ii in range(N):
+        if ii==0:
+            local_mask[ii, (ii+1,ii+y, ii+y+1)] = 0 # top-left
+        elif ii==N-1:
+            local_mask[ii, (ii-1, ii-y, ii-y-1)] = 0 # bottom-right
+        elif ii==x-1:
+            local_mask[ii, (ii-1, ii+y, ii+y-1)] = 0 # top-right
+        elif ii==N-x:
+            local_mask[ii, (ii+1, ii-y, ii-y+1)] = 0 # bottom-left
+        elif ii<x-1 and ii>0:
+            local_mask[ii, (ii+1, ii-1, ii+y-1, ii+y, ii+y+1)] = 0 # first row
+        elif ii<N-1 and ii>N-x:
+            local_mask[ii, (ii+1, ii-1, ii-y-1, ii-y, ii-y+1)] = 0 # last row
+        elif ii%y==0:
+            local_mask[ii, (ii+1, ii-y, ii+y, ii-y+1, ii+y+1)] = 0 # first col
+        elif ii%y==y-1:
+            local_mask[ii, (ii-1, ii-y, ii+y, ii-y-1, ii+y-1)] = 0 # last col
+        else:
+            local_mask[ii, (ii+1, ii-1, ii-y, ii-y+1, ii-y-1, ii+y, ii+y+1, ii+y-1)] = 0
+    return local_mask.unsqueeze(0)
+
 class NonLocalAggregation(nn.Module):
-    def __init__(self, k, input_channels, out_channels, search_area=None):
+    def __init__(self, k, input_channels, out_channels):
         super().__init__()
         self.k = k
         self.diff_fc = nn.Linear(input_channels, out_channels)
         self.w_self = nn.Linear(input_channels, out_channels)
         self.bias = nn.Parameter(torch.randn(out_channels), requires_grad=True)
         
-    def forward(self, x):
+    def forward(self, x, local_mask):
         """
         x: torch.Tensor with shape batch x features x h x w
         """
@@ -20,7 +47,7 @@ class NonLocalAggregation(nn.Module):
         b, h, w, f = x.shape
         x = x.view(b, h*w, f)
         
-        closest_graph = get_closest_diff(x, self.k) #this builds the graph
+        closest_graph = get_closest_diff(x, self.k, local_mask) #this builds the graph
         agg_weights = self.diff_fc(closest_graph) # look closer
         agg_self = self.w_self(x)
                 
@@ -28,13 +55,14 @@ class NonLocalAggregation(nn.Module):
 
         return x_new.view(b, h, w, x_new.shape[-1]).permute(0, 3, 1, 2)
 
-def pairwise_dist(arr, k):
+def pairwise_dist(arr, k, local_mask):
     """
     arr: torch.Tensor with shape batch x h*w x features
     """
     r_arr = torch.sum(arr * arr, dim=2, keepdim=True) # (B,N,1)
     mul = torch.matmul(arr, arr.permute(0,2,1))         # (B,N,N)
     dist = - (r_arr - 2 * mul + r_arr.permute(0,2,1))       # (B,N,N)
+    dist = D*local_mask - (1-local_mask)
     #this is the euclidean distance wrt the feature vector of the current pixel
     #then the matrix has to be of shape (B,N,N), where N=prod(crop_shape)
     return dist.topk(k=k, dim=-1)[1] # (B,N,K)
@@ -56,7 +84,7 @@ def get_closest_diff(arr, k):
     arr: torch.Tensor with shape batch x h * w x features
     """
     b, hw, f = arr.shape
-    dists = pairwise_dist(arr, k)
+    dists = pairwise_dist(arr.data, k, self.local_mask)
     selected = batched_index_select(arr, 1, dists.view(dists.shape[0], -1)).view(b, hw, k, f)
     diff = arr.unsqueeze(2) - selected # b x h*w x K x f
     return diff
