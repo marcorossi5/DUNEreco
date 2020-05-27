@@ -519,8 +519,7 @@ def get_CNNv2(k, input_channels, hidden_channels,
             y = self.LPF_3(y*(1-self.a2) + self.b2*y_hpf)
             y = self.LPF_4(y*(1-self.a3) + self.b3*y_hpf)
 
-            graph = get_graph(y*(1-self.a4) + self.b4*y_hpf, self.k, l_mask)
-            return self.act(self.GC(y, graph) + x)
+            return self.act(self.GC(y) + x)
 
         def forward(self, noised_image=None, clear_image=None):
             if self.training:
