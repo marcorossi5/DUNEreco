@@ -274,7 +274,7 @@ def get_GCNNv2(k, input_channels, hidden_channels,
             self.k = k
 
             self.conv = nn.Sequential(
-                GraphConv(k, input_channels, input_channels),
+                nn.Conv2d(input_channels, input_channels, 3, padding=1,
                 nn.BatchNorm2d(input_channels),
                 nn.LeakyReLU(0.05))
             
@@ -299,12 +299,12 @@ def get_GCNNv2(k, input_channels, hidden_channels,
             super().__init__()
             self.k = k
             self.conv = nn.Sequential(
-                GraphConv(input_channels, input_channels),
+                nn.Conv2d(input_channels, input_channels, kernel_size, padding=1),
                 nn.BatchNorm2d(input_channels),
                 nn.LeakyReLU(0.05))
             
             self.GC_1 = GraphConv(input_channels, input_channels)
-            self.bn_2 = nn.BatchNorm2d(input_channels)
+            self.bn_1 = nn.BatchNorm2d(input_channels)
             self.GC_2 = GraphConv(input_channels, out_channels)
             self.bn_2 = nn.BatchNorm2d(out_channels)
             self.GC_3 = GraphConv(out_channels, out_channels)
@@ -333,34 +333,34 @@ def get_GCNNv2(k, input_channels, hidden_channels,
                 PreProcessBlock(k, 5, input_channels, hidden_channels),
                 PreProcessBlock(k, 7, input_channels, hidden_channels),
             ])
-            self.LPF_1 = LPF(k, hidden_channels, hidden_channels)
-            self.LPF_2 = LPF(k, hidden_channels, hidden_channels)
-            self.LPF_3 = LPF(k, hidden_channels, hidden_channels)
-            self.LPF_4 = LPF(k, hidden_channels, hidden_channels)
+            self.LPF_1 = LPF(k, 3*hidden_channels, 3*hidden_channels)
+            self.LPF_2 = LPF(k, 3*hidden_channels, 3*hidden_channels)
+            self.LPF_3 = LPF(k, 3*hidden_channels, 3*hidden_channels)
+            self.LPF_4 = LPF(k, 3*hidden_channels, 3*hidden_channels)
 
-            self.HPF = HPF(k, hidden_channels, hidden_channels)
+            self.HPF = HPF(k, 3*hidden_channels, 3*hidden_channels)
 
-            self.GC = GraphConv(hidden_channels, input_channels)
+            self.GC = GraphConv(3*hidden_channels, input_channels)
             
             self.act = nn.Tanh()
 
-            self.a0 = nn.Parameter(torch.randn(), requires_grad=True)
-            self.a1 = nn.Parameter(torch.randn(), requires_grad=True)
-            self.a2 = nn.Parameter(torch.randn(), requires_grad=True)
-            self.a3 = nn.Parameter(torch.randn(), requires_grad=True)
-            self.a4 = nn.Parameter(torch.randn(), requires_grad=True)
-            self.b0 = nn.Parameter(torch.randn(), requires_grad=True)
-            self.b1 = nn.Parameter(torch.randn(), requires_grad=True)
-            self.b2 = nn.Parameter(torch.randn(), requires_grad=True)
-            self.b3 = nn.Parameter(torch.randn(), requires_grad=True)
-            self.b4 = nn.Parameter(torch.randn(), requires_grad=True)
+            self.a0 = nn.Parameter(torch.randn(1), requires_grad=True)
+            self.a1 = nn.Parameter(torch.randn(1), requires_grad=True)
+            self.a2 = nn.Parameter(torch.randn(1), requires_grad=True)
+            self.a3 = nn.Parameter(torch.randn(1), requires_grad=True)
+            self.a4 = nn.Parameter(torch.randn(1), requires_grad=True)
+            self.b0 = nn.Parameter(torch.randn(1), requires_grad=True)
+            self.b1 = nn.Parameter(torch.randn(1), requires_grad=True)
+            self.b2 = nn.Parameter(torch.randn(1), requires_grad=True)
+            self.b3 = nn.Parameter(torch.randn(1), requires_grad=True)
+            self.b4 = nn.Parameter(torch.randn(1), requires_grad=True)
 
         def fit_image(self, x):
             y = torch.cat([block(x) for block in
                                         self.preprocessing_blocks], dim=1)
-            y_hpf = self.HPF(y_prepr)
+            y_hpf = self.HPF(y)
 
-            y = self.LPF_1(y_prepr*(1-self.a0) + self.b0*y_hpf)
+            y = self.LPF_1(y*(1-self.a0) + self.b0*y_hpf)
             y = self.LPF_2(y*(1-self.a1) + self.b1*y_hpf)
             y = self.LPF_3(y*(1-self.a2) + self.b2*y_hpf)
             y = self.LPF_4(y*(1-self.a3) + self.b3*y_hpf)
@@ -370,24 +370,12 @@ def get_GCNNv2(k, input_channels, hidden_channels,
 
         def forward(self, noised_image=None, clear_image=None):
             if self.training:
-                n_answer = self.fit_image(noised_image)
-                loss = loss_mse(output, clear_image)
-                return output, loss
+                out = self.fit_image(noised_image)
+                loss = loss_mse(out, clear_image)
+                return out, loss
 
             return self.fit_image(noised_image)
 
     gcnn = GCNN(k, input_channels, hidden_channels, patch_size)
 
     return gcnn
-
-
-
-
-
-
-
-
-
-
-
-

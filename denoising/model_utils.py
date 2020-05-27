@@ -32,9 +32,8 @@ def local_mask(crop_size):
     return local_mask.unsqueeze(0)
 
 class NonLocalAggregation(nn.Module):
-    def __init__(self, k, input_channels, out_channels):
+    def __init__(self, input_channels, out_channels):
         super().__init__()
-        self.k = k
         self.diff_fc = nn.Linear(input_channels, out_channels)
         self.w_self = nn.Linear(input_channels, out_channels)
         self.bias = nn.Parameter(torch.randn(out_channels), requires_grad=True)
