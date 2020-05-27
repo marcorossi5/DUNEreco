@@ -16,10 +16,12 @@ ada_step = event_step // (2*readout_step + collection_step)
 def sample_binomial(num_trials, probs):
     return np.random.binomial(num_trials, probs)
 
-def normalize(img):
+def normalize(img, m=None):
     if img.max() == 0:
         return img
-    return (img-img.mean())/(img.max()-img.min())
+    if m is None:
+    	m = img.mean()
+    return (img-m)/(img.max()-img.min())
 
 def load_files(path_clear, path_noise):
     clear_files = glob.glob(path_clear)
@@ -62,7 +64,7 @@ def normalize_planes(clear_file, noised_file, r_idx, c_idx):
             print('skipped')
             continue
         r_n_clear.append(normalize(r_clear[i*readout_step:
-                                          (i+1)*readout_step]))
+                                          (i+1)*readout_step], 0))
         r_n_noised.append(normalize(r_noised[i*readout_step:
                                           (i+1)*readout_step]))
 
@@ -71,7 +73,7 @@ def normalize_planes(clear_file, noised_file, r_idx, c_idx):
             print('skipped')
             continue
         c_n_clear.append(normalize(c_clear[i*collection_step:
-                                          (i+1)*collection_step]))
+                                          (i+1)*collection_step], 0))
         c_n_noised.append(normalize(c_noised[i*collection_step:
                                             (i+1)*collection_step]))
 
@@ -92,8 +94,11 @@ def get_crop(clear_plane, n_crops=1000,
     c_x, c_y = crop_shape[0]//2, crop_shape[1]//2
 
     #does not work if clear_plane is a torch Tensor
-    clear_plane = np.array(clear_plane)
-    im = canny(clear_plane).astype(float)
+    im = torch.clone(clear_plane)
+    im[im!=0] = 1
+    #clear_plane = np.array(clear_plane)
+    #im = canny(clear_plane).astype(float)
+
     sgn = np.transpose(np.where(im==1))
     bkg = np.transpose(np.where(im==0))
 

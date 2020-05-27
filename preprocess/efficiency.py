@@ -3,7 +3,7 @@ import argparse
 from time import time as tm
 import numpy as np
 import torch
-#from skimage.feature import canny
+from skimage.feature import canny
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dir_name", "-p", default="../datasets",
@@ -15,20 +15,20 @@ def draw_results(a,b,c,d):
     print("------------------------------------------------")
     print("|{:>20}|{:>12}|{:>12}|".format("","Signal", "Background"))
     print("------------------------------------------------")
-    print("|{:>20}|{:>12.4f}|{:>12.4f}|".format("Predicted signal", a/tot,b/tot))
+    print("|{:>20}|{:>12.4e}|{:>12.4e}|".format("Predicted signal", a/tot,b/tot))
     print("------------------------------------------------")
-    print("|{:>20}|{:>12.4f}|{:>12.4f}|".format("Predicted background", c/tot,d/tot))
+    print("|{:>20}|{:>12.4e}|{:>12.4e}|".format("Predicted background", c/tot,d/tot))
     print("------------------------------------------------")
     print("{:>21}|{:>12}|{:>12}|".format("", "Sensitivity","Specificity"))
     print("                     ---------------------------")
-    print("{:>21}|{:>12.4f}|{:>12.4f}|".format("", a/(a+c), b/(b+d)))
+    print("{:>21}|{:>12.4e}|{:>12.4e}|".format("", a/(a+c), d/(b+d)))
     print("                     ---------------------------\n")
 
 def main(dir_name):
     
     for s in ['readout_', 'collection_']:
         for ss in ['train', 'val', 'test']:
-            clear = numpy.array(torch.load(os.path.join(dir_name,
+            clear = np.array(torch.load(os.path.join(dir_name,
                                                         'clear_planes',
                                                         "".join([s,ss]))))
 
@@ -37,6 +37,7 @@ def main(dir_name):
                 edges.append(canny(np.array(c)).astype(float))
 
             edges = np.stack(edges, 0)
+            clear[clear!=0] = 1
 
             d = clear*10-edges
 
