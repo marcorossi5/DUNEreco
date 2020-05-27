@@ -14,9 +14,10 @@ def get_CNN(k, input_channels, hidden_channels,
     class GraphConv(nn.Module):
         def __init__(self, k, input_channels, out_channels, search_area=None):
             super().__init__()
-            self.conv1 = nn.Conv2d(input_channels, out_channels, 1)
-            self.conv2 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
-            self.conv3 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
+            
+            self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
+            self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
+            self.conv3 = nn.Conv2d(input_channels, out_channels, 7, padding=3)
 
         def forward(self, x):
             return torch.mean(torch.stack([self.conv1(x),
@@ -124,8 +125,8 @@ def get_GCNN(k, input_channels, hidden_channels,
     class GraphConv(nn.Module):
         def __init__(self, k, input_channels, out_channels, search_area=None):
             super().__init__()
-            self.conv1 = nn.Conv2d(input_channels, out_channels, 1)
-            self.conv2 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
+            self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
+            self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
             self.NLA = NonLocalAggregation(input_channels, out_channels)
 
         def forward(self, x, graph):
@@ -231,8 +232,8 @@ def get_GCNNv2(k, input_channels, hidden_channels,
     class GraphConv(nn.Module):
         def __init__(self, input_channels, out_channels, search_area=None):
             super().__init__()
-            self.conv1 = nn.Conv2d(input_channels, out_channels, 1)
-            self.conv2 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
+            self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
+            self.conv2 = nn.Conv2d(input_channels, out_channels, 3, padding=2)
             self.NLA = NonLocalAggregation(input_channels, out_channels)
 
         def forward(self, x, graph):
@@ -389,9 +390,10 @@ def get_CNNv2(k, input_channels, hidden_channels,
     class GraphConv(nn.Module):
         def __init__(self, input_channels, out_channels, search_area=None):
             super().__init__()
-            self.conv1 = nn.Conv2d(input_channels, out_channels, 1)
-            self.conv2 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
-            self.conv3 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
+            
+            self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
+            self.conv1 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
+            self.conv3 = nn.Conv2d(input_channels, out_channels, 7, padding=3)
 
         def forward(self, x):
             return torch.mean(torch.stack([self.conv1(x),
