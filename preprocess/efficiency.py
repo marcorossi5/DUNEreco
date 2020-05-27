@@ -46,10 +46,8 @@ def main(dir_name):
             fn = (d[d==10].shape)[0]
             fp = (d[d==-1].shape)[0]
 
-        print(" ".join(["\n",s,ss]))
-        draw_results(tp,fp,fn,tn)    
-
-    draw_results(9,1,2,8)
+            print("".join(["\n",s,ss]))
+            draw_results(tp,fp,fn,tn)    
 
 if __name__ == '__main__':
     args = vars(parser.parse_args())

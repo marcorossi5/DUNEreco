@@ -39,7 +39,7 @@ class NonLocalAggregation(nn.Module):
         self.w_self = nn.Linear(input_channels, out_channels)
         self.bias = nn.Parameter(torch.randn(out_channels), requires_grad=True)
         
-    def forward(self, x, local_mask):
+    def forward(self, x, graph):
         """
         x: torch.Tensor with shape batch x features x h x w
         ------------------
@@ -49,8 +49,8 @@ class NonLocalAggregation(nn.Module):
         b, h, w, f = x.shape
         x = x.view(b, h*w, f)
         
-        closest_graph = get_closest_diff(x, self.k, local_mask) #this builds the graph
-        agg_weights = self.diff_fc(closest_graph) # look closer
+        #closest_graph = get_graph(x, self.k, local_mask) #this builds the graph
+        agg_weights = self.diff_fc(graph) # look closer
         agg_self = self.w_self(x)
                 
         x_new = torch.mean(agg_weights, dim=-2) + agg_self + self.bias
@@ -84,14 +84,19 @@ def batched_index_select(t, dim, inds):
     #this gathers only the k-closest neighbours for each pixel
     return out
 
-def get_closest_diff(arr, k, local_mask):
+def get_graph(arr, k, local_mask):
     """
     arr: torch.Tensor with shape batch x h * w x features
+    ------------------
+    Output: torch. Tensor with shape batch x h*w x K x f
     """
-    b, hw, f = arr.shape
+    arr = arr.permute(0, 2, 3, 1)
+    b, h, w, f = arr.shape
+    arr = arr.view(b, h*w, f)
+    hw = h*w
     dists = pairwise_dist(arr.data, k, local_mask)
     selected = batched_index_select(arr, 1, dists.view(dists.shape[0], -1)).view(b, hw, k, f)
-    diff = arr.unsqueeze(2) - selected # b x h*w x K x f
+    diff = arr.unsqueeze(2) - selected
     return diff
 
 def calculate_pad(shape1, shape2):
