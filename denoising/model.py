@@ -126,49 +126,53 @@ def get_GCNN(k, input_channels, hidden_channels,
             super().__init__()
             self.conv1 = nn.Conv2d(input_channels, out_channels, 1)
             self.conv2 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
-            self.NLA = NonLocalAggregation(k, input_channels, out_channels)
+            self.NLA = NonLocalAggregation(input_channels, out_channels)
 
-        def forward(self, x):
+        def forward(self, x, graph):
+            graph = get_graph(x,self.k,l_mask)
             return torch.mean(torch.stack([self.conv1(x),
                                            self.conv2(x),
-                                           self.NLA(x, l_mask)]), dim=0)
+                                           self.NLA(x, graph)]), dim=0)
 
     class PreProcessBlock(nn.Module):
         def __init__(self, k, kernel_size, input_channels, out_channels):
             super().__init__()
+            self.k = k
             self.conv = nn.Conv2d(input_channels, out_channels, kernel_size,
                                   padding=(kernel_size//2, kernel_size//2))
             self.activ = nn.LeakyReLU(0.05)
             self.bn = nn.BatchNorm2d(out_channels)
 
             # out_channels -> out_channels
-            self.GC = GraphConv(k, out_channels, out_channels)
+            self.GC = GraphConv(out_channels, out_channels)
 
         def forward(self, x):
             x = self.activ(self.conv(x))
-            x = self.GC(x)
+            graph = get_graph(x,self.k,l_mask)
+            x = self.GC(x,graph)
             x = self.activ(self.bn(x))
             return x
 
     class Residual(nn.Module):
         def __init__(self, k, input_channels, out_channels):
             super().__init__()
-            self.pipeline = nn.Sequential(
-                GraphConv(k, input_channels, input_channels),
-                nn.BatchNorm2d(input_channels),
-                nn.LeakyReLU(0.05),
+            self.k = k
+            self.act = nn.LeakyReLU(0.05)
+            self.GC_1 = GraphConv(input_channels, input_channels)
+            self.bn_1 = nn.BatchNorm2d(input_channels)
 
-                GraphConv(k, input_channels, out_channels),
-                nn.BatchNorm2d(out_channels),
-                nn.LeakyReLU(0.05),
+            self.GC_2 = GraphConv(input_channels, out_channels)
+            self.bn_2 = nn.BatchNorm2d(out_channels)
 
-                GraphConv(k, out_channels, out_channels),
-                nn.BatchNorm2d(out_channels),
-                nn.LeakyReLU(0.05),
-            )
+            self.GC_3 = GraphConv(out_channels, out_channels)
+            self.bn_3 = nn.BatchNorm2d(out_channels)
 
         def forward(self, x):
-            return self.pipeline(x)
+            graph = get_graph(x,self.k,l_mask)
+            y = self.activ(self.bn_1(self.GC_1(x, graph)))
+            y = self.activ(self.bn_2(self.GC_2(y, graph)))
+            return self.activ(self.bn_3(self.GC_3(y, graph))) + x
+
 
     loss_mse = nn.MSELoss()
 
@@ -185,7 +189,8 @@ def get_GCNN(k, input_channels, hidden_channels,
             self.residual_1 = Residual(k, hidden_channels*3, hidden_channels)
             self.residual_2 = Residual(k, hidden_channels, hidden_channels)
 
-            self.GC = GraphConv(k, hidden_channels, input_channels)
+            self.GC = GraphConv(hidden_channels, input_channels)
+            
             self.downsample = nn.Sequential(
                 nn.Conv2d(hidden_channels*3, hidden_channels, 1),
                 nn.BatchNorm2d(hidden_channels),
@@ -203,20 +208,18 @@ def get_GCNN(k, input_channels, hidden_channels,
             result_1 = residual_1 + self.downsample(processed_image)
             residual_2 = self.residual_2(result_1)
             result = residual_2 + result_1
-            return self.GC(result)
+            
+            graph = get_graph(result,self.k,l_mask)
+            return self.act(self.GC(result,graph)+image)
 
         def forward(self, noised_image=None, clear_image=None):
             if self.training:
-                answer = self.fit_image(clear_image)
-                n_answer = self.fit_image(noised_image)
-                output = self.act(n_answer + noised_image)
-                loss = loss_mse(output, clear_image)
-                return output, loss
+                out = self.fit_image(noised_image)
+                loss = loss_mse(out, clear_image)
+                return out, loss
 
-            answer = self.fit_image(noised_image)
+            return self.fit_image(noised_image)
             
-            return self.act(answer+noised_image)
-
     gcnn = GCNN(k, input_channels, hidden_channels, patch_size)
 
     return gcnn
@@ -274,7 +277,7 @@ def get_GCNNv2(k, input_channels, hidden_channels,
             self.k = k
 
             self.conv = nn.Sequential(
-                nn.Conv2d(input_channels, input_channels, 3, padding=1,
+                nn.Conv2d(input_channels, input_channels, 3, padding=1),
                 nn.BatchNorm2d(input_channels),
                 nn.LeakyReLU(0.05))
             
@@ -299,7 +302,7 @@ def get_GCNNv2(k, input_channels, hidden_channels,
             super().__init__()
             self.k = k
             self.conv = nn.Sequential(
-                nn.Conv2d(input_channels, input_channels, kernel_size, padding=1),
+                nn.Conv2d(input_channels, input_channels, 3, padding=1),
                 nn.BatchNorm2d(input_channels),
                 nn.LeakyReLU(0.05))
             
@@ -322,7 +325,7 @@ def get_GCNNv2(k, input_channels, hidden_channels,
 
     loss_mse = nn.MSELoss()
 
-    class GCNN(nn.Module):
+    class GCNNv2(nn.Module):
         def __init__(self, k, input_channels, hidden_channels,
                     patch_size=(64, 64)):
             super().__init__()
@@ -376,6 +379,6 @@ def get_GCNNv2(k, input_channels, hidden_channels,
 
             return self.fit_image(noised_image)
 
-    gcnn = GCNN(k, input_channels, hidden_channels, patch_size)
+    gcnnv2 = GCNNv2(k, input_channels, hidden_channels, patch_size)
 
-    return gcnn
+    return gcnnv2
