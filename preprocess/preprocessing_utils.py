@@ -19,7 +19,7 @@ def sample_binomial(num_trials, probs):
 def normalize(img):
     if img.max() == 0:
         return img
-    return (img-img.min())/(img.max()-img.min())
+    return (img-img.mean())/(img.max()-img.min())
 
 def load_files(path_clear, path_noise):
     clear_files = glob.glob(path_clear)

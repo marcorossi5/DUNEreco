@@ -161,7 +161,6 @@ def get_GCNN(k, input_channels, hidden_channels,
             return torch.mean(torch.stack([self.conv1(x),
                                            self.conv2(x),
                                            self.NLA(x, l_mask)]), dim=0)
-                                           # here is conv instead of gc
 
     class PreProcessBlock(nn.Module):
         def __init__(self, k, kernel_size, input_channels, out_channels):

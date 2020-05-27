@@ -23,11 +23,11 @@ class CropLoader(torch.utils.data.Dataset):
                                                                     p))
         collection_noise = torch.load(fname)
 
-        #self.clear_crops = torch.cat([collection_clear, readout_clear])
-        #self.noised_crops = torch.cat([collection_noise, readout_noise])
+        self.clear_crops = torch.cat([collection_clear, readout_clear])
+        self.noised_crops = torch.cat([collection_noise, readout_noise])
 
-        self.clear_crops = collection_clear
-        self.noised_crops = collection_noise
+        #self.clear_crops = collection_clear
+        #self.noised_crops = collection_noise
 
         #shape: (batch, #channel,width, height)
         #with #channel==1
@@ -61,11 +61,11 @@ class CropValLoader(torch.utils.data.Dataset):
                                                                     p))
         collection_noise = torch.load(fname)
 
-        #self.clear_crops = torch.cat([collection_clear, readout_clear])
-        #self.noised_crops = torch.cat([collection_noise, readout_noise])
+        self.clear_crops = torch.cat([collection_clear, readout_clear])
+        self.noised_crops = torch.cat([collection_noise, readout_noise])
 
-        self.clear_crops = collection_clear
-        self.noised_crops = collection_noise
+        #self.clear_crops = collection_clear
+        #self.noised_crops = collection_noise
 
         #shape: (batch, #channel,width, height)
         #with #channel==1

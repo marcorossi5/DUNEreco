@@ -6,7 +6,7 @@ import torch.nn.functional as F
 
 def local_mask(crop_size):
 
-    x, y = crop_size.shape
+    x, y = crop_size
     N = x*y
 
     local_mask = torch.ones([N, N])
@@ -42,6 +42,8 @@ class NonLocalAggregation(nn.Module):
     def forward(self, x, local_mask):
         """
         x: torch.Tensor with shape batch x features x h x w
+        ------------------
+        Output: torch. Tensor with shape batch x out_channels x h x w
         """
         x = x.permute(0, 2, 3, 1)
         b, h, w, f = x.shape
@@ -59,13 +61,16 @@ def pairwise_dist(arr, k, local_mask):
     """
     arr: torch.Tensor with shape batch x h*w x features
     """
+    dev = arr.get_device()
+    local_mask = local_mask.to(dev)
     r_arr = torch.sum(arr * arr, dim=2, keepdim=True) # (B,N,1)
     mul = torch.matmul(arr, arr.permute(0,2,1))         # (B,N,N)
-    dist = - (r_arr - 2 * mul + r_arr.permute(0,2,1))       # (B,N,N)
-    dist = D*local_mask - (1-local_mask)
+    D = - (r_arr - 2 * mul + r_arr.permute(0,2,1))       # (B,N,N)
+    D = D*local_mask - (1-local_mask)
+    del mul, r_arr
     #this is the euclidean distance wrt the feature vector of the current pixel
     #then the matrix has to be of shape (B,N,N), where N=prod(crop_shape)
-    return dist.topk(k=k, dim=-1)[1] # (B,N,K)
+    return D.topk(k=k, dim=-1)[1] # (B,N,K)
 
 
 def batched_index_select(t, dim, inds):
@@ -79,12 +84,12 @@ def batched_index_select(t, dim, inds):
     #this gathers only the k-closest neighbours for each pixel
     return out
 
-def get_closest_diff(arr, k):
+def get_closest_diff(arr, k, local_mask):
     """
     arr: torch.Tensor with shape batch x h * w x features
     """
     b, hw, f = arr.shape
-    dists = pairwise_dist(arr.data, k, self.local_mask)
+    dists = pairwise_dist(arr.data, k, local_mask)
     selected = batched_index_select(arr, 1, dists.view(dists.shape[0], -1)).view(b, hw, k, f)
     diff = arr.unsqueeze(2) - selected # b x h*w x K x f
     return diff
