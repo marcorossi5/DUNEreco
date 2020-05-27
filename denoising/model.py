@@ -12,7 +12,7 @@ def get_CNN(k, input_channels, hidden_channels,
                     patch_size=(64, 64)):
 
     class GraphConv(nn.Module):
-        def __init__(self, k, input_channels, out_channels, search_area=None):
+        def __init__(self, input_channels, out_channels, search_area=None):
             super().__init__()
             
             self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
@@ -26,7 +26,7 @@ def get_CNN(k, input_channels, hidden_channels,
                                            # here is conv instead of gc
 
     class PreProcessBlock(nn.Module):
-        def __init__(self, k, kernel_size, input_channels, out_channels):
+        def __init__(self, kernel_size, input_channels, out_channels):
             super().__init__()
             self.conv = nn.Conv2d(input_channels, out_channels, kernel_size,
                                  padding=(kernel_size//2, kernel_size//2))
@@ -34,7 +34,7 @@ def get_CNN(k, input_channels, hidden_channels,
             self.bn = nn.BatchNorm2d(out_channels)
 
             # out_channels -> out_channels
-            self.GC = GraphConv(k, out_channels, out_channels)
+            self.GC = GraphConv(out_channels, out_channels)
 
         def forward(self, x):
             x = self.activ(self.conv(x))
@@ -43,18 +43,18 @@ def get_CNN(k, input_channels, hidden_channels,
             return x
 
     class Residual(nn.Module):
-        def __init__(self, k, input_channels, out_channels):
+        def __init__(self, input_channels, out_channels):
             super().__init__()
             self.pipeline = nn.Sequential(
-                GraphConv(k, input_channels, input_channels),
+                GraphConv(input_channels, input_channels),
                 nn.BatchNorm2d(input_channels),
                 nn.LeakyReLU(0.05),
 
-                GraphConv(k, input_channels, out_channels),
+                GraphConv(input_channels, out_channels),
                 nn.BatchNorm2d(out_channels),
                 nn.LeakyReLU(0.05),
 
-                GraphConv(k, out_channels, out_channels),
+                GraphConv(out_channels, out_channels),
                 nn.BatchNorm2d(out_channels),
                 nn.LeakyReLU(0.05),
             )
@@ -65,19 +65,17 @@ def get_CNN(k, input_channels, hidden_channels,
     loss_mse = nn.MSELoss()
 
     class CNN(nn.Module):
-        def __init__(self, k, input_channels, hidden_channels,
-                    patch_size=(64, 64)):
+        def __init__(self, input_channels, hidden_channels):
             super().__init__()
-            self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
-                PreProcessBlock(k, 3, input_channels, hidden_channels),
-                PreProcessBlock(k, 5, input_channels, hidden_channels),
-                PreProcessBlock(k, 7, input_channels, hidden_channels),
+                PreProcessBlock(3, input_channels, hidden_channels),
+                PreProcessBlock(5, input_channels, hidden_channels),
+                PreProcessBlock(7, input_channels, hidden_channels),
                 ])
-            self.residual_1 = Residual(k, hidden_channels*3, hidden_channels)
-            self.residual_2 = Residual(k, hidden_channels, hidden_channels)
+            self.residual_1 = Residual(hidden_channels*3, hidden_channels)
+            self.residual_2 = Residual(hidden_channels, hidden_channels)
 
-            self.GC = GraphConv(k, hidden_channels, input_channels)
+            self.GC = GraphConv(hidden_channels, input_channels)
             self.downsample = nn.Sequential(
                 nn.Conv2d(hidden_channels*3, hidden_channels, 1),
                 nn.BatchNorm2d(hidden_channels),
@@ -114,7 +112,7 @@ def get_CNN(k, input_channels, hidden_channels,
             
             return self.act(answer+noised_image)
 
-    cnn = CNN(k, input_channels, hidden_channels, patch_size)
+    cnn = CNN(input_channels, hidden_channels)
         
     return cnn
 
@@ -123,7 +121,7 @@ def get_GCNN(k, input_channels, hidden_channels,
     l_mask = local_mask(patch_size)
 
     class GraphConv(nn.Module):
-        def __init__(self, k, input_channels, out_channels, search_area=None):
+        def __init__(self, input_channels, out_channels):
             super().__init__()
             self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
             self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
@@ -178,10 +176,8 @@ def get_GCNN(k, input_channels, hidden_channels,
     loss_mse = nn.MSELoss()
 
     class GCNN(nn.Module):
-        def __init__(self, k, input_channels, hidden_channels,
-                    patch_size=(64, 64)):
+        def __init__(self, k, input_channels, hidden_channels):
             super().__init__()
-            self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
                 PreProcessBlock(k, 3, input_channels, hidden_channels),
                 PreProcessBlock(k, 5, input_channels, hidden_channels),
@@ -221,12 +217,12 @@ def get_GCNN(k, input_channels, hidden_channels,
 
             return self.fit_image(noised_image)
             
-    gcnn = GCNN(k, input_channels, hidden_channels, patch_size)
+    gcnn = GCNN(input_channels, hidden_channels)
 
     return gcnn
 
 def get_GCNNv2(k, input_channels, hidden_channels,
-                    patch_size=(64, 64)):
+               patch_size=(64,64)):
     l_mask = local_mask(patch_size)
 
     class GraphConv(nn.Module):
@@ -327,11 +323,9 @@ def get_GCNNv2(k, input_channels, hidden_channels,
     loss_mse = nn.MSELoss()
 
     class GCNNv2(nn.Module):
-        def __init__(self, k, input_channels, hidden_channels,
-                    patch_size=(64, 64)):
+        def __init__(self, k, input_channels, hidden_channels):
             super().__init__()
             self.k = k
-            self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
                 PreProcessBlock(k, 3, input_channels, hidden_channels),
                 PreProcessBlock(k, 5, input_channels, hidden_channels),
@@ -380,7 +374,7 @@ def get_GCNNv2(k, input_channels, hidden_channels,
 
             return self.fit_image(noised_image)
 
-    gcnnv2 = GCNNv2(k, input_channels, hidden_channels, patch_size)
+    gcnnv2 = GCNNv2(k, input_channels, hidden_channels)
 
     return gcnnv2
 
@@ -388,11 +382,11 @@ def get_CNNv2(k, input_channels, hidden_channels,
                     patch_size=(64, 64)):
 
     class GraphConv(nn.Module):
-        def __init__(self, input_channels, out_channels, search_area=None):
+        def __init__(self, input_channels, out_channels):
             super().__init__()
             
             self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
-            self.conv1 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
+            self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
             self.conv3 = nn.Conv2d(input_channels, out_channels, 7, padding=3)
 
         def forward(self, x):
@@ -480,10 +474,8 @@ def get_CNNv2(k, input_channels, hidden_channels,
     loss_mse = nn.MSELoss()
 
     class CNNv2(nn.Module):
-        def __init__(self, input_channels, hidden_channels,
-                    patch_size=(64, 64)):
+        def __init__(self, input_channels, hidden_channels):
             super().__init__()
-            self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
                 PreProcessBlock(3, input_channels, hidden_channels),
                 PreProcessBlock(5, input_channels, hidden_channels),
@@ -531,6 +523,6 @@ def get_CNNv2(k, input_channels, hidden_channels,
 
             return self.fit_image(noised_image)
 
-    cnnv2 = CNNv2(k, input_channels, hidden_channels, patch_size)
+    cnnv2 = CNNv2(input_channels, hidden_channels)
 
     return cnnv2
