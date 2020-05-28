@@ -128,7 +128,6 @@ def get_GCNN(k, input_channels, hidden_channels,
             self.NLA = NonLocalAggregation(input_channels, out_channels)
 
         def forward(self, x, graph):
-            graph = get_graph(x,self.k,l_mask)
             return torch.mean(torch.stack([self.conv1(x),
                                            self.conv2(x),
                                            self.NLA(x, graph)]), dim=0)
@@ -139,17 +138,17 @@ def get_GCNN(k, input_channels, hidden_channels,
             self.k = k
             self.conv = nn.Conv2d(input_channels, out_channels, kernel_size,
                                   padding=(kernel_size//2, kernel_size//2))
-            self.activ = nn.LeakyReLU(0.05)
+            self.act = nn.LeakyReLU(0.05)
             self.bn = nn.BatchNorm2d(out_channels)
 
             # out_channels -> out_channels
             self.GC = GraphConv(out_channels, out_channels)
 
         def forward(self, x):
-            x = self.activ(self.conv(x))
+            x = self.act(self.conv(x))
             graph = get_graph(x,self.k,l_mask)
             x = self.GC(x,graph)
-            x = self.activ(self.bn(x))
+            x = self.act(self.bn(x))
             return x
 
     class Residual(nn.Module):
@@ -168,9 +167,9 @@ def get_GCNN(k, input_channels, hidden_channels,
 
         def forward(self, x):
             graph = get_graph(x,self.k,l_mask)
-            y = self.activ(self.bn_1(self.GC_1(x, graph)))
-            y = self.activ(self.bn_2(self.GC_2(y, graph)))
-            return self.activ(self.bn_3(self.GC_3(y, graph))) + x
+            y = self.act(self.bn_1(self.GC_1(x, graph)))
+            y = self.act(self.bn_2(self.GC_2(y, graph)))
+            return self.act(self.bn_3(self.GC_3(y, graph))) + x
 
 
     loss_mse = nn.MSELoss()
