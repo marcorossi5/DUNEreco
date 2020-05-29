@@ -147,6 +147,44 @@ def inference(args, model):
     plt.savefig(fname)
     plt.close()
 
+    sample = torch.randint(0, len(labels[0]),(25,))
+    wire = torch.randint(0, labels[0][0].shape[0],(25))
+
+    plot_wires(args.dir_final_test,
+               labels[0],
+               "collection_label",
+               sample,
+               wire)
+    plot_wires(args.dir_final_test,
+               res[0],
+               "collection_DN",
+               sample,
+               wire)
+    plot_wires(args.dir_final_test,
+               noisy[0],
+               "collection_noisy",
+               sample,
+               wire)
+
+    sample = torch.randint(0, len(labels[1]),(25,))
+    wire = torch.randint(0, labels[1][0].shape[0],(25))
+
+    plot_wires(args.dir_final_test,
+               labels[1],
+               "readout_label",
+               sample,
+               wire)
+    plot_wires(args.dir_final_test,
+               res[1],
+               "readout_DN",
+               sample,
+               wire)
+    plot_wires(args.dir_final_test,
+               noisy[1],
+               "readout_noisy",
+               sample,
+               wire)
+    '''
     fname = os.path.join(args.dir_final_test, 'wire.png')
     fig = plt.figure(figsize=(20,25))
     ax = fig.add_subplot(231)
@@ -175,6 +213,7 @@ def inference(args, model):
 
     plt.savefig(fname)
     plt.close()
+    '''
 
     return np.array([np.mean(psnr),
                     np.std(psnr)/np.sqrt(len(psnr)),
