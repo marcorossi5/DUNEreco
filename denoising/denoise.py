@@ -16,6 +16,7 @@ from args import Args
 
 from model_utils import MyDataParallel
 from model_utils import print_summary_file
+from model_utils import plot_data
 
 import train
 
@@ -38,18 +39,22 @@ def main(args):
     torch.cuda.set_enabled_lms(True)
     print_summary_file(args)
     #load datasets
-    train_data = torch.utils.data.DataLoader(CropLoader(args.dataset_dir,
-                                                        args.crop_size[0],
-                                                        args.crop_p),
+    train_data = CropLoader(args.dataset_dir, args.crop_size[0], args.crop_p)
+    plot_data(arg, train_data, "train_dataset")
+
+    test_data = CropValLoader(args.dataset_dir, args.crop_size[0], args.crop_p)
+    plot_data(args, test_data, "test_dataset")
+    
+    train_data = torch.utils.data.DataLoader(train_data,
                                             shuffle=True,
                                             batch_size=args.batch_size,
                                             num_workers=args.num_workers)
-    test_data = torch.utils.data.DataLoader(CropValLoader(args.dataset_dir,
-                                                          args.crop_size[0],
-                                                          args.crop_p),
+    test_data = torch.utils.data.DataLoader(test_data,
                                             shuffle=True,
                                             batch_size=args.batch_size,
                                             num_workers=args.num_workers)
+
+
     
     #build model
     model = eval('get_' + args.model)(args.k,

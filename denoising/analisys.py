@@ -49,6 +49,7 @@ def inference(args, model):
     psnr = []
     mse = []
     res = [[],[]]
+    noisy = [[],[]]
     labels = [[],[]]
     p_x, p_y = model.patch_size
     split_size = args.test_batch_size
@@ -56,6 +57,7 @@ def inference(args, model):
     for i, data in enumerate(test_data):
         for (clear, noised) in data:
             labels[i] += [clear]
+            noisy[i] += [noised]
             
             crops, crops_shape, pad = split_img(noised, (p_x,p_y))
             loader = torch.split(crops, split_size)
@@ -76,6 +78,7 @@ def inference(args, model):
             psnr.append(compute_psnr(clear, res[i][-1]))
             mse.append(mse_loss(clear, res[i][-1]).item())
         labels[i] = np.concatenate(labels[i])[:,0]
+        noisy[i] = np.concatenate(noisy[i])[:,0] 
         res[i] = np.concatenate(res[i])
     #res[i] is a np array with shape [batch,row,col]
     #the same for labels[i]
@@ -140,6 +143,35 @@ def inference(args, model):
     ax.set_yscale('log')
     ax.legend()
     ax.title.set_text('Histogram of all |Diff|')
+
+    plt.savefig(fname)
+    plt.close()
+
+    fname = os.path.join(args.dir_final_test, 'wire.png')
+    fig = plt.figure(figsize=(20,25))
+    ax = fig.add_subplot(231)
+    ax.title.set_text('Collection Wire %d DN'%800)
+    ax.plot(res[0][0][800], linewidth=0.3)
+
+    ax = fig.add_subplot(232)
+    ax.title.set_text('Collection Wire %d noisy'%800)
+    ax.plot(noisy[0][0][800], linewidth=0.3)
+
+    ax = fig.add_subplot(233)
+    ax.title.set_text('Collection Wire %d labels'%800)
+    ax.plot(labels[0][0][800], linewidth=0.3)
+
+    ax = fig.add_subplot(234)
+    ax.title.set_text('Readout Wire %d DN'%700)
+    ax.plot(res[1][0][700], linewidth=0.3)
+
+    ax = fig.add_subplot(235)
+    ax.title.set_text('Readout Wire %d noisy'%700)
+    ax.plot(noisy[1][0][700], linewidth=0.3)
+
+    ax = fig.add_subplot(236)
+    ax.title.set_text('Readout Wire %d labels'%700)
+    ax.plot(labels[1][0][700], linewidth=0.3)
 
     plt.savefig(fname)
     plt.close()

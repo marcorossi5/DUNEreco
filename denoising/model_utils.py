@@ -3,6 +3,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import matplotlib.pyplot as plt
 
 def local_mask(crop_size):
 
@@ -165,4 +166,18 @@ def print_summary_file(args):
         for k in d.keys():
             f.writelines('\n%s     %s'%(str(k), str(d[k])))
         f.close()
-        
+
+def plot_data(args, imgs, name):
+    p_x, p_y = args.crop_size
+    l = len(imgs)
+    sample = torch.randint(0,l,(25,))
+    crops = imgs[sample]
+    
+    fname = os.path.join(args.dir_testing, "_".join([name,"crops.png"]))
+    fig = plt.figure(figsize=(25,25))
+    for i in range(5):
+        for j in range(5):
+            ax = fig.add_subplot(5,5,i*5+j+1)
+            ax.imshow(crops[i*5+j])
+    plt.savefig(fname)
+    plt.close()

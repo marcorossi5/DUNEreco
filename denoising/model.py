@@ -65,8 +65,9 @@ def get_CNN(k, input_channels, hidden_channels,
     loss_mse = nn.MSELoss()
 
     class CNN(nn.Module):
-        def __init__(self, input_channels, hidden_channels):
+        def __init__(self, input_channels, hidden_channels, patch_size):
             super().__init__()
+            self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
                 PreProcessBlock(3, input_channels, hidden_channels),
                 PreProcessBlock(5, input_channels, hidden_channels),
@@ -84,7 +85,7 @@ def get_CNN(k, input_channels, hidden_channels,
                 nn.BatchNorm2d(hidden_channels),
                 nn.LeakyReLU(0.05),
             )
-            self.act = nn.Tanh()
+            self.act = nn.Sigmoid()
 
         def fit_image(self, image):
             processed_image = torch.cat([block(image) for block in
@@ -112,7 +113,7 @@ def get_CNN(k, input_channels, hidden_channels,
             
             return self.act(answer+noised_image)
 
-    cnn = CNN(input_channels, hidden_channels)
+    cnn = CNN(input_channels, hidden_channels, patch_size)
         
     return cnn
 
@@ -169,20 +170,22 @@ def get_GCNN(k, input_channels, hidden_channels,
             graph = get_graph(x,self.k,l_mask)
             y = self.act(self.bn_1(self.GC_1(x, graph)))
             y = self.act(self.bn_2(self.GC_2(y, graph)))
-            return self.act(self.bn_3(self.GC_3(y, graph))) + x
+            return self.act(self.bn_3(self.GC_3(y, graph)))
 
 
     loss_mse = nn.MSELoss()
 
     class GCNN(nn.Module):
-        def __init__(self, k, input_channels, hidden_channels):
+        def __init__(self, k, input_channels, hidden_channels, patch_size):
             super().__init__()
+            self.patch_size = patch_size
+            self.k = k
             self.preprocessing_blocks = nn.ModuleList([
                 PreProcessBlock(k, 3, input_channels, hidden_channels),
                 PreProcessBlock(k, 5, input_channels, hidden_channels),
                 PreProcessBlock(k, 7, input_channels, hidden_channels),
             ])
-            self.residual_1 = Residual(k, hidden_channels*3, hidden_channels)
+            self.residual_1 = Residual(k, hidden_channels, hidden_channels)
             self.residual_2 = Residual(k, hidden_channels, hidden_channels)
 
             self.GC = GraphConv(hidden_channels, input_channels)
@@ -195,7 +198,7 @@ def get_GCNN(k, input_channels, hidden_channels,
                 nn.BatchNorm2d(hidden_channels),
                 nn.LeakyReLU(0.05),
             )
-            self.act = nn.Tanh()
+            self.act = nn.Sigmoid()
 
         def fit_image(self, image):
             processed_image = torch.cat([block(image) for block in
@@ -216,7 +219,7 @@ def get_GCNN(k, input_channels, hidden_channels,
 
             return self.fit_image(noised_image)
             
-    gcnn = GCNN(input_channels, hidden_channels)
+    gcnn = GCNN(k, input_channels, hidden_channels, patch_size)
 
     return gcnn
 
@@ -228,7 +231,7 @@ def get_GCNNv2(k, input_channels, hidden_channels,
         def __init__(self, input_channels, out_channels, search_area=None):
             super().__init__()
             self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
-            self.conv2 = nn.Conv2d(input_channels, out_channels, 3, padding=2)
+            self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
             self.NLA = NonLocalAggregation(input_channels, out_channels)
 
         def forward(self, x, graph):
@@ -322,8 +325,9 @@ def get_GCNNv2(k, input_channels, hidden_channels,
     loss_mse = nn.MSELoss()
 
     class GCNNv2(nn.Module):
-        def __init__(self, k, input_channels, hidden_channels):
+        def __init__(self, k, input_channels, hidden_channels, patch_size):
             super().__init__()
+            self.patch_size = patch_size
             self.k = k
             self.preprocessing_blocks = nn.ModuleList([
                 PreProcessBlock(k, 3, input_channels, hidden_channels),
@@ -339,7 +343,7 @@ def get_GCNNv2(k, input_channels, hidden_channels,
 
             self.GC = GraphConv(3*hidden_channels, input_channels)
             
-            self.act = nn.Tanh()
+            self.act = nn.Sigmoid()
 
             self.a0 = nn.Parameter(torch.randn(1), requires_grad=True)
             self.a1 = nn.Parameter(torch.randn(1), requires_grad=True)
@@ -373,7 +377,7 @@ def get_GCNNv2(k, input_channels, hidden_channels,
 
             return self.fit_image(noised_image)
 
-    gcnnv2 = GCNNv2(k, input_channels, hidden_channels)
+    gcnnv2 = GCNNv2(k, input_channels, hidden_channels, patch_size)
 
     return gcnnv2
 
@@ -473,8 +477,9 @@ def get_CNNv2(k, input_channels, hidden_channels,
     loss_mse = nn.MSELoss()
 
     class CNNv2(nn.Module):
-        def __init__(self, input_channels, hidden_channels):
+        def __init__(self, input_channels, hidden_channels, patch_size):
             super().__init__()
+            self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
                 PreProcessBlock(3, input_channels, hidden_channels),
                 PreProcessBlock(5, input_channels, hidden_channels),
@@ -489,7 +494,7 @@ def get_CNNv2(k, input_channels, hidden_channels,
 
             self.GC = GraphConv(3*hidden_channels, input_channels)
             
-            self.act = nn.Tanh()
+            self.act = nn.Sigmoid()
 
             self.a0 = nn.Parameter(torch.randn(1), requires_grad=True)
             self.a1 = nn.Parameter(torch.randn(1), requires_grad=True)
@@ -522,6 +527,6 @@ def get_CNNv2(k, input_channels, hidden_channels,
 
             return self.fit_image(noised_image)
 
-    cnnv2 = CNNv2(input_channels, hidden_channels)
+    cnnv2 = CNNv2(input_channels, hidden_channels, patch_size)
 
     return cnnv2
