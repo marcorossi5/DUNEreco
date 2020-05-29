@@ -168,10 +168,10 @@ def print_summary_file(args):
             f.writelines('\n%s     %s'%(str(k), str(d[k])))
         f.close()
 
-def plot_crops(args, imgs, name):
+def plot_crops(args, imgs, name, sample):
     p_x, p_y = args.crop_size
     l = len(imgs)
-    sample = torch.randint(0,l,(25,))
+    #sample = torch.randint(0,l,(25,))
     samples = imgs[sample]
     
     fname = os.path.join(args.dir_testing, "_".join([name,"crops.png"]))
@@ -184,11 +184,11 @@ def plot_crops(args, imgs, name):
     plt.close()
     print("\nSaved image at %s"%fname)
     
-def plot_wires(args, imgs, name):
+def plot_wires(args, imgs, name, sample, wire):
     p_x, p_y = args.crop_size
     l = len(imgs)
-    sample = torch.randint(0,l,(25,))
-    wire = torch.randint(0,p_x, (25,))
+    #sample = torch.randint(0,l,(25,))
+    #wire = torch.randint(0,p_x, (25,))
     samples = imgs[sample]
     
     fname = os.path.join(args.dir_testing, "_".join([name,"wires.png"]))

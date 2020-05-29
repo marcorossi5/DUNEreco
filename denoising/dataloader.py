@@ -37,8 +37,18 @@ class CropLoader(torch.utils.data.Dataset):
                                                                 patch_size,
                                                                 p))
         readout_clear = minmax_norm(torch.load(fname))
-        plot_crops(args, readout_clear, "_".join(["readout_clear",name]))
-        plot_wires(args, readout_clear, "_".join(["readout_clear",name]))
+        sample = torch.randint(0,readout_clear.shape[0],(25,))
+        wire = torch.randint(0,patch_size, (25,))
+        plot_crops(args, readout_clear, "_".join(["readout_clear",name]),sample)
+        plot_wires(args, readout_clear, "_".join(["readout_clear",name]),sample,wire)
+
+        fname = os.path.join(data_dir,
+                             'noised_crops/readout_%s_%d_%f'%(name,
+                                                                patch_size,
+                                                                p))
+        readout_noise = minmax_norm(torch.load(fname))
+        plot_crops(args, readout_noise, "_".join(["readout_noisy",name]),sample)
+        plot_wires(args, readout_noise, "_".join(["readout_noisy",name]),sample,wire)
         
 
         fname = os.path.join(data_dir,
@@ -46,24 +56,20 @@ class CropLoader(torch.utils.data.Dataset):
                                                                 patch_size,
                                                                 p))
         collection_clear = minmax_norm(torch.load(fname))
-        plot_crops(args, collection_clear, "_".join(["collection_clear",name]))
-        plot_wires(args, collection_clear, "_".join(["collection_clear",name]))
+        sample = torch.randint(0,collection_clear.shape[0],(25,))
+        wire = torch.randint(0,patch_size, (25,))
+        plot_crops(args, collection_clear, "_".join(["collection_clear",name]),sample)
+        plot_wires(args, collection_clear, "_".join(["collection_clear",name]),sample, wire)
 
-        fname = os.path.join(data_dir,
-                             'noised_crops/readout_%s_%d_%f'%(name,
-                                                                patch_size,
-                                                                p))
-        readout_noise = minmax_norm(torch.load(fname))
-        plot_crops(args, readout_noise, "_".join(["readout_noisy",name]))
-        plot_wires(args, readout_noise, "_".join(["readout_noisy",name]))
+        
 
         fname = os.path.join(data_dir,
                              'noised_crops/collection_%s_%d_%f'%(name,
                                                                 patch_size,
                                                                 p))
         collection_noise = minmax_norm(torch.load(fname))
-        plot_crops(args, collection_noise, "_".join(["collection_noisy",name]))
-        plot_wires(args, collection_noise, "_".join(["collection_noisy",name]))
+        plot_crops(args, collection_noise, "_".join(["collection_noisy",name]),sample)
+        plot_wires(args, collection_noise, "_".join(["collection_noisy",name]),sample,wire)
 
         self.clear_crops = torch.cat([collection_clear, readout_clear])
         self.noised_crops = torch.cat([collection_noise, readout_noise])
@@ -83,15 +89,19 @@ class CropLoader(torch.utils.data.Dataset):
 
 class PlaneLoader(torch.utils.data.Dataset):
     def __init__(self, args, file):
-        data_dir = args.data_dir
+        data_dir = args.dataset_dir
 
         fname = os.path.join(data_dir, 'clear_planes/%s'%file)
         self.clear_planes = minmax_norm(torch.load(fname)).unsqueeze(1)
-        plot_wires(args, self.clear_planes[:,0], "_".join([file, "clear"]))
+
+        sample = torch.randint(0,self.clear_planes.shape[0],(25,))
+        wire = torch.randint(0,self.clear_planes.shape[2], (25,))
+
+        plot_wires(args, self.clear_planes[:,0], "_".join([file, "clear"]),sample,wires)
 
         fname = os.path.join(data_dir, 'noised_planes/%s'%file)
         self.noised_planes = minmax_norm(torch.load(fname)).unsqueeze(1)
-        plot_wires(args, self.noised_planes[:,0], "_".join([file, "noisy"]))
+        plot_wires(args, self.noised_planes[:,0], "_".join([file, "noisy"]),sample,wires)
      
     def __len__(self):
         return len(self.noised_planes)
