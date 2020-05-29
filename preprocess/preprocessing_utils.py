@@ -11,17 +11,8 @@ collection_step = 960
 readout_step = 800
 time_len = 6000
 ada_step = event_step // (2*readout_step + collection_step)
-
-
-def sample_binomial(num_trials, probs):
-    return np.random.binomial(num_trials, probs)
-
-def normalize(img, m=None):
-    if img.max() == 0:
-        return img
-    if m is None:
-    	m = img.mean()
-    return (img-m)/(img.max()-img.min())
+c_pedestal = 500
+r_pedestal = 1800
 
 def load_files(path_clear, path_noise):
     clear_files = glob.glob(path_clear)
@@ -63,19 +54,19 @@ def normalize_planes(clear_file, noised_file, r_idx, c_idx):
         if r_clear[i*readout_step:(i+1)*readout_step].max() == 0:
             print('skipped')
             continue
-        r_n_clear.append(normalize(r_clear[i*readout_step:
-                                          (i+1)*readout_step], 0))
-        r_n_noised.append(normalize(r_noised[i*readout_step:
-                                          (i+1)*readout_step]))
+        r_n_clear.append(r_clear[i*readout_step:
+                                          (i+1)*readout_step]-r_pedestal)
+        r_n_noised.append(r_noised[i*readout_step:
+                                          (i+1)*readout_step])
 
     for i in range(int(c_clear.shape[0]/collection_step)):
         if c_clear[i*collection_step:(i+1)*collection_step].max() == 0:
             print('skipped')
             continue
-        c_n_clear.append(normalize(c_clear[i*collection_step:
-                                          (i+1)*collection_step], 0))
-        c_n_noised.append(normalize(c_noised[i*collection_step:
-                                            (i+1)*collection_step]))
+        c_n_clear.append(c_clear[i*collection_step:
+                                          (i+1)*collection_step]-c_pedestal)
+        c_n_noised.append(c_noised[i*collection_step:
+                                            (i+1)*collection_step])
 
     return np.stack(r_n_clear), np.stack(r_n_noised),\
            np.stack(c_n_clear), np.stack(c_n_noised)
