@@ -1,6 +1,8 @@
 import os
 import torch
 
+from model_utils import plot_crops
+
 def minmax_norm(img):
     """
     MinMax normalization to be done on APAs or crops
@@ -24,64 +26,43 @@ def minmax_norm(img):
     return img
 
 class CropLoader(torch.utils.data.Dataset):
-    def __init__(self, data_dir, patch_size, p):
+    def __init__(self, args, name):
+        data_dir = args.dataset_dir
+        patch_size = args.crop_size[0]
+        p = args.crop_p
+
         fname = os.path.join(data_dir,
-                             'clear_crops/readout_train_%d_%f'%(patch_size,
+                             'clear_crops/readout_train_%d_%f'%(name
+                                                                patch_size,
                                                                 p))
         readout_clear = minmax_norm(torch.load(fname))
+        plot_crops(args, readout_clear, "_".join(["readout_clear",name]))
+        plot_wires(args, readout_clear, "_".join(["readout_clear",name]))
+        
 
         fname = os.path.join(data_dir,
-                             'clear_crops/collection_train_%d_%f'%(patch_size,
-                                                                   p))
-        collection_clear = minmax_norm(torch.load(fname))
-
-        fname = os.path.join(data_dir,
-                             'noised_crops/readout_train_%d_%f'%(patch_size,
-                                                                 p))
-        readout_noise = minmax_norm(torch.load(fname))
-
-        fname = os.path.join(data_dir,
-                             'noised_crops/collection_train_%d_%f'%(patch_size,
-                                                                    p))
-        collection_noise = minmax_norm(torch.load(fname))
-
-        self.clear_crops = torch.cat([collection_clear, readout_clear])
-        self.noised_crops = torch.cat([collection_noise, readout_noise])
-
-        #self.clear_crops = collection_clear
-        #self.noised_crops = collection_noise
-
-        #shape: (batch, #channel,width, height)
-        #with #channel==1
-        self.clear_crops = self.clear_crops.unsqueeze(1)
-        self.noised_crops = self.noised_crops.unsqueeze(1)
-     
-    def __len__(self):
-        return len(self.noised_crops)
-    def __getitem__(self, index):
-        return self.clear_crops[index], self.noised_crops[index]
-
-class CropValLoader(torch.utils.data.Dataset):
-    def __init__(self, data_dir, patch_size, p):
-        fname = os.path.join(data_dir,
-                             'clear_crops/readout_val_%d_%f'%(patch_size,
+                             'clear_crops/collection_train_%d_%f'%(name
+                                                                patch_size,
                                                                 p))
-        readout_clear = minmax_norm(torch.load(fname))
-
-        fname = os.path.join(data_dir,
-                             'clear_crops/collection_val_%d_%f'%(patch_size,
-                                                                   p))
         collection_clear = minmax_norm(torch.load(fname))
+        plot_crops(args, collection_clear, "_".join(["collection_clear",name]))
+        plot_wires(args, collection_clear, "_".join(["collection_clear",name]))
 
         fname = os.path.join(data_dir,
-                             'noised_crops/readout_val_%d_%f'%(patch_size,
-                                                                 p))
+                             'noised_crops/readout_train_%d_%f'%(name
+                                                                patch_size,
+                                                                p))
         readout_noise = minmax_norm(torch.load(fname))
+        plot_crops(args, readout_noise, "_".join(["readout_noisy",name]))
+        plot_wires(args, readout_noise, "_".join(["readout_noisy",name]))
 
         fname = os.path.join(data_dir,
-                             'noised_crops/collection_val_%d_%f'%(patch_size,
-                                                                    p))
+                             'noised_crops/collection_train_%d_%f'%(name
+                                                                patch_size,
+                                                                p))
         collection_noise = minmax_norm(torch.load(fname))
+        plot_crops(args, collection_noise, "_".join(["collection_noisy",name]))
+        plot_wires(args, collection_noise, "_".join(["collection_noisy",name]))
 
         self.clear_crops = torch.cat([collection_clear, readout_clear])
         self.noised_crops = torch.cat([collection_noise, readout_noise])
@@ -100,13 +81,16 @@ class CropValLoader(torch.utils.data.Dataset):
         return self.clear_crops[index], self.noised_crops[index]
 
 class PlaneLoader(torch.utils.data.Dataset):
-    def __init__(self, data_dir, file):
+    def __init__(self, args, file):
+        data_dir = args.data_dir
 
         fname = os.path.join(data_dir, 'clear_planes/%s'%file)
         self.clear_planes = minmax_norm(torch.load(fname)).unsqueeze(1)
+        plot_wires(args, self.clear_planes, "_".join([file, "clear"]))
 
         fname = os.path.join(data_dir, 'noised_planes/%s'%file)
         self.noised_planes = minmax_norm(torch.load(fname)).unsqueeze(1)
+        plot_wires(args, self.noised_planes, "_".join([file, "noisy"]))
      
     def __len__(self):
         return len(self.noised_planes)

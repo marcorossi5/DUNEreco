@@ -32,11 +32,11 @@ parser.add_argument("--device", "-d", default="0", type=str,
 
 def inference(args, model):
     #load dataset
-    test_data = [torch.utils.data.DataLoader(PlaneLoader(args.dataset_dir,
+    test_data = [torch.utils.data.DataLoader(PlaneLoader(args,
                                                       'collection_test'
                                                       ),
                                         num_workers=args.num_workers),
-                 torch.utils.data.DataLoader(PlaneLoader(args.dataset_dir,
+                 torch.utils.data.DataLoader(PlaneLoader(args,
                                                       'readout_test'
                                                       ),
                                         num_workers=args.num_workers)]

@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 
+
 def local_mask(crop_size):
 
     x, y = crop_size
@@ -167,17 +168,35 @@ def print_summary_file(args):
             f.writelines('\n%s     %s'%(str(k), str(d[k])))
         f.close()
 
-def plot_data(args, imgs, name):
+def plot_crops(args, imgs, name):
     p_x, p_y = args.crop_size
     l = len(imgs)
     sample = torch.randint(0,l,(25,))
-    crops = imgs[sample]
+    samples = imgs[sample]
     
     fname = os.path.join(args.dir_testing, "_".join([name,"crops.png"]))
     fig = plt.figure(figsize=(25,25))
     for i in range(5):
         for j in range(5):
             ax = fig.add_subplot(5,5,i*5+j+1)
-            ax.imshow(crops[i*5+j])
+            ax.imshow(samples[i*5+j,0])
     plt.savefig(fname)
     plt.close()
+    print("\nSaved image at %s"%fname)
+    
+def plot_wires(args, imgs, name):
+    p_x, p_y = args.crop_size
+    l = len(imgs)
+    sample = torch.randint(0,l,(25,))
+    wire = torch.randint(0,p_x, (25,))
+    samples = imgs[sample]
+    
+    fname = os.path.join(args.dir_testing, "_".join([name,"wires.png"]))
+    fig = plt.figure(figsize=(25,25))
+    for i in range(5):
+        for j in range(5):
+            ax = fig.add_subplot(5,5,i*5+j+1)
+            ax.plot(samples[i*5+j,0,wire[i*5+j]], linewidth=0.3)
+    plt.savefig(fname)
+    plt.close()
+    print("\nSaved image at %s"%fname)
