@@ -179,7 +179,7 @@ def plot_crops(args, imgs, name):
     for i in range(5):
         for j in range(5):
             ax = fig.add_subplot(5,5,i*5+j+1)
-            ax.imshow(samples[i*5+j,0])
+            ax.imshow(samples[i*5+j])
     plt.savefig(fname)
     plt.close()
     print("\nSaved image at %s"%fname)
@@ -196,7 +196,7 @@ def plot_wires(args, imgs, name):
     for i in range(5):
         for j in range(5):
             ax = fig.add_subplot(5,5,i*5+j+1)
-            ax.plot(samples[i*5+j,0,wire[i*5+j]], linewidth=0.3)
+            ax.plot(samples[i*5+j,wire[i*5+j]], linewidth=0.3)
     plt.savefig(fname)
     plt.close()
     print("\nSaved image at %s"%fname)

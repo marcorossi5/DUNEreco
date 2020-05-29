@@ -8,7 +8,6 @@ import time as tm
 import torch
 
 from dataloader import CropLoader
-from dataloader import CropValLoader
 from dataloader import PlaneLoader
 #from dataloader import load_planes
 from model import  *

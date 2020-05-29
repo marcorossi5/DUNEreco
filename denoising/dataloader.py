@@ -2,6 +2,7 @@ import os
 import torch
 
 from model_utils import plot_crops
+from model_utils import plot_wires
 
 def minmax_norm(img):
     """
@@ -32,7 +33,7 @@ class CropLoader(torch.utils.data.Dataset):
         p = args.crop_p
 
         fname = os.path.join(data_dir,
-                             'clear_crops/readout_train_%d_%f'%(name
+                             'clear_crops/readout_%s_%d_%f'%(name,
                                                                 patch_size,
                                                                 p))
         readout_clear = minmax_norm(torch.load(fname))
@@ -41,7 +42,7 @@ class CropLoader(torch.utils.data.Dataset):
         
 
         fname = os.path.join(data_dir,
-                             'clear_crops/collection_train_%d_%f'%(name
+                             'clear_crops/collection_%s_%d_%f'%(name,
                                                                 patch_size,
                                                                 p))
         collection_clear = minmax_norm(torch.load(fname))
@@ -49,7 +50,7 @@ class CropLoader(torch.utils.data.Dataset):
         plot_wires(args, collection_clear, "_".join(["collection_clear",name]))
 
         fname = os.path.join(data_dir,
-                             'noised_crops/readout_train_%d_%f'%(name
+                             'noised_crops/readout_%s_%d_%f'%(name,
                                                                 patch_size,
                                                                 p))
         readout_noise = minmax_norm(torch.load(fname))
@@ -57,7 +58,7 @@ class CropLoader(torch.utils.data.Dataset):
         plot_wires(args, readout_noise, "_".join(["readout_noisy",name]))
 
         fname = os.path.join(data_dir,
-                             'noised_crops/collection_train_%d_%f'%(name
+                             'noised_crops/collection_%s_%d_%f'%(name,
                                                                 patch_size,
                                                                 p))
         collection_noise = minmax_norm(torch.load(fname))
@@ -86,11 +87,11 @@ class PlaneLoader(torch.utils.data.Dataset):
 
         fname = os.path.join(data_dir, 'clear_planes/%s'%file)
         self.clear_planes = minmax_norm(torch.load(fname)).unsqueeze(1)
-        plot_wires(args, self.clear_planes, "_".join([file, "clear"]))
+        plot_wires(args, self.clear_planes[:,0], "_".join([file, "clear"]))
 
         fname = os.path.join(data_dir, 'noised_planes/%s'%file)
         self.noised_planes = minmax_norm(torch.load(fname)).unsqueeze(1)
-        plot_wires(args, self.noised_planes, "_".join([file, "noisy"]))
+        plot_wires(args, self.noised_planes[:,0], "_".join([file, "noisy"]))
      
     def __len__(self):
         return len(self.noised_planes)
