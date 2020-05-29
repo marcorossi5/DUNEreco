@@ -13,6 +13,8 @@ from model import  *
 from model_utils import MyDataParallel
 from model_utils import split_img
 from model_utils import recombine_img
+from model_utils import plot_wires
+
 
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -148,7 +150,7 @@ def inference(args, model):
     plt.close()
 
     sample = torch.randint(0, len(labels[0]),(25,))
-    wire = torch.randint(0, labels[0][0].shape[0],(25))
+    wire = torch.randint(0, labels[0][0].shape[0],(25,))
 
     plot_wires(args.dir_final_test,
                labels[0],
@@ -167,7 +169,7 @@ def inference(args, model):
                wire)
 
     sample = torch.randint(0, len(labels[1]),(25,))
-    wire = torch.randint(0, labels[1][0].shape[0],(25))
+    wire = torch.randint(0, labels[1][0].shape[0],(25,))
 
     plot_wires(args.dir_final_test,
                labels[1],

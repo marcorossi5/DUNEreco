@@ -73,45 +73,34 @@ def get_CNN(k, input_channels, hidden_channels,
                 PreProcessBlock(5, input_channels, hidden_channels),
                 PreProcessBlock(7, input_channels, hidden_channels),
                 ])
-            self.residual_1 = Residual(hidden_channels*3, hidden_channels)
-            self.residual_2 = Residual(hidden_channels, hidden_channels)
+            self.residual_1 = Residual(hidden_channels*3, hidden_channels*3)
+            self.residual_2 = Residual(hidden_channels*3, hidden_channels*3)
 
-            self.GC = GraphConv(hidden_channels, input_channels)
             self.downsample = nn.Sequential(
-                nn.Conv2d(hidden_channels*3, hidden_channels, 1),
+                GraphConv(hidden_channels*3, hidden_channels*2),
+                nn.BatchNorm2d(hidden_channels*2),
+                nn.LeakyReLU(0.05),
+                GraphConv(hidden_channels*2, hidden_channels),
                 nn.BatchNorm2d(hidden_channels),
                 nn.LeakyReLU(0.05),
-                nn.Conv2d(hidden_channels, hidden_channels, 1),
-                nn.BatchNorm2d(hidden_channels),
-                nn.LeakyReLU(0.05),
+                GraphConv(hidden_channels, input_channels)
             )
             self.act = nn.Sigmoid()
 
         def fit_image(self, image):
             processed_image = torch.cat([block(image) for block in
                                         self.preprocessing_blocks], dim=1)
-            residual_1 = self.residual_1(processed_image)
-            result_1 = residual_1 + self.downsample(processed_image)
-            residual_2 = self.residual_2(result_1)
-            result = residual_2 + result_1
-            return [processed_image, residual_1, result, self.GC(result)]
+            residual_1 = self.residual_1(processed_image) + processed_image
+            residual_2 = self.residual_2(residual_1) + residual_1
+            return self.act(self.downsample(residual_2)+image)
         
         def forward(self, noised_image=None, clear_image=None):
             if self.training:
-                #processed_image, residual_1,\
-                #residual_2, answer = self.fit_image(clear_image)
-                n_processed_image, n_residual_1,\
-                n_residual_2, n_answer = self.fit_image(noised_image)
-                #perc_loss = loss_mse(processed_image, n_processed_image)\
-                #            + loss_mse(residual_1, n_residual_1)\
-                #            + loss_mse(residual_2, n_residual_2)
-                output = self.act(n_answer + noised_image)
-                loss = loss_mse(output, clear_image)# + perc_loss
+                output = self.fit_image(noised_image)
+                loss = loss_mse(output, clear_image)
                 return output, loss
 
-            _, _, _, answer = self.fit_image(noised_image)
-            
-            return self.act(answer+noised_image)
+            return self.fit_image(noised_image)
 
     cnn = CNN(input_channels, hidden_channels, patch_size)
         
@@ -185,31 +174,36 @@ def get_GCNN(k, input_channels, hidden_channels,
                 PreProcessBlock(k, 5, input_channels, hidden_channels),
                 PreProcessBlock(k, 7, input_channels, hidden_channels),
             ])
-            self.residual_1 = Residual(k, hidden_channels, hidden_channels)
-            self.residual_2 = Residual(k, hidden_channels, hidden_channels)
+            self.residual_1 = Residual(k, hidden_channels*3, hidden_channels*3)
+            self.residual_2 = Residual(k, hidden_channels*3, hidden_channels*3)
 
-            self.GC = GraphConv(hidden_channels, input_channels)
+            self.GC_1 = GraphConv(hidden_channels*3, hidden_channels*2)
+            self.bn_1 = nn.BatchNorm2d(hidden_channels*2)
+            self.GC_2 = GraphConv(hidden_channels*2, hidden_channels)
+            self.bn_2 = nn.BatchNorm2d(hidden_channels*2)
+            self.GC_3 = GraphConv(hidden_channels, input_channels)
+
+            self.relu = nn.LeakyReLU(0.05)
             
-            self.downsample = nn.Sequential(
-                nn.Conv2d(hidden_channels*3, hidden_channels, 1),
-                nn.BatchNorm2d(hidden_channels),
-                nn.LeakyReLU(0.05),
-                nn.Conv2d(hidden_channels, hidden_channels, 1),
-                nn.BatchNorm2d(hidden_channels),
-                nn.LeakyReLU(0.05),
-            )
             self.act = nn.Sigmoid()
 
         def fit_image(self, image):
             processed_image = torch.cat([block(image) for block in
                                         self.preprocessing_blocks], dim=1)
-            residual_1 = self.residual_1(processed_image)
-            result_1 = residual_1 + self.downsample(processed_image)
-            residual_2 = self.residual_2(result_1)
-            result = residual_2 + result_1
+            residual_1 = self.residual_1(processed_image) + processed_image
+            residual_2 = self.residual_2(residual_1) + residual_1
+            
+            graph = get_graph(residual_2,self.k,l_mask)
+            result = self.bn_1(self.GC_1(residual_2,graph))
+            result = self.relu(result)
+
+            graph = get_graph(result,self.k,l_mask)
+            result = self.bn_2(self.GC_2(result,graph))
+            result = self.relu(result)
             
             graph = get_graph(result,self.k,l_mask)
-            return self.act(self.GC(result,graph)+image)
+            return self.act(self.GC_3(result,graph) + image)
+
 
         def forward(self, noised_image=None, clear_image=None):
             if self.training:
@@ -334,15 +328,20 @@ def get_GCNNv2(k, input_channels, hidden_channels,
                 PreProcessBlock(k, 5, input_channels, hidden_channels),
                 PreProcessBlock(k, 7, input_channels, hidden_channels),
             ])
-            self.LPF_1 = LPF(k, 3*hidden_channels, 3*hidden_channels)
-            self.LPF_2 = LPF(k, 3*hidden_channels, 3*hidden_channels)
-            self.LPF_3 = LPF(k, 3*hidden_channels, 3*hidden_channels)
-            self.LPF_4 = LPF(k, 3*hidden_channels, 3*hidden_channels)
+            self.LPF_1 = LPF(k, hidden_channels*3, hidden_channels*3)
+            self.LPF_2 = LPF(k, hidden_channels*3, hidden_channels*3)
+            self.LPF_3 = LPF(k, hidden_channels*3, hidden_channels*3)
+            self.LPF_4 = LPF(k, hidden_channels*3, hidden_channels*3)
 
-            self.HPF = HPF(k, 3*hidden_channels, 3*hidden_channels)
+            self.HPF = HPF(k, hidden_channels*3, hidden_channels*3)
 
-            self.GC = GraphConv(3*hidden_channels, input_channels)
-            
+            self.GC_1 = GraphConv(hidden_channels*3, hidden_channels*2)
+            self.bn_1 = nn.BatchNorm2d(hidden_channels*2)
+            self.GC_2 = GraphConv(hidden_channels*2, hidden_channels)
+            self.bn_1 = nn.BatchNorm2d(hidden_channels)
+            self.GC_3 = GraphConv(hidden_channels, input_channels)
+
+            self.relu = nn.LeakyReLU(0.05)
             self.act = nn.Sigmoid()
 
             self.a0 = nn.Parameter(torch.randn(1), requires_grad=True)
@@ -366,8 +365,16 @@ def get_GCNNv2(k, input_channels, hidden_channels,
             y = self.LPF_3(y*(1-self.a2) + self.b2*y_hpf)
             y = self.LPF_4(y*(1-self.a3) + self.b3*y_hpf)
 
-            graph = get_graph(y*(1-self.a4) + self.b4*y_hpf, self.k, l_mask)
-            return self.act(self.GC(y, graph) + x)
+            y = y*(1-self.a4) + self.b4*y_hpf
+
+            graph = get_graph(y, self.k, l_mask)
+            y = self.relu(self.bn_1(self.GC_1(y, graph)))
+
+            graph = get_graph(y, self.k, l_mask)
+            y = self.relu(self.bn_2(self.GC_2(y, graph)))
+
+            graph = get_graph(y, self.k, l_mask)
+            return self.act(self.GC_3(y, graph) + x)
 
         def forward(self, noised_image=None, clear_image=None):
             if self.training:
@@ -485,15 +492,20 @@ def get_CNNv2(k, input_channels, hidden_channels,
                 PreProcessBlock(5, input_channels, hidden_channels),
                 PreProcessBlock(7, input_channels, hidden_channels),
             ])
-            self.LPF_1 = LPF(3*hidden_channels, 3*hidden_channels)
-            self.LPF_2 = LPF(3*hidden_channels, 3*hidden_channels)
-            self.LPF_3 = LPF(3*hidden_channels, 3*hidden_channels)
-            self.LPF_4 = LPF(3*hidden_channels, 3*hidden_channels)
+            self.LPF_1 = LPF(hidden_channels*3, hidden_channels*3)
+            self.LPF_2 = LPF(hidden_channels*3, hidden_channels*3)
+            self.LPF_3 = LPF(hidden_channels*3, hidden_channels*3)
+            self.LPF_4 = LPF(hidden_channels*3, hidden_channels*3)
 
-            self.HPF = HPF(3*hidden_channels, 3*hidden_channels)
+            self.HPF = HPF(hidden_channels*3, hidden_channels*3)
 
-            self.GC = GraphConv(3*hidden_channels, input_channels)
-            
+            self.GC_1 = GraphConv(hidden_channels*3, hidden_channels*2)
+            self.bn_1 = nn.BatchNorm2d(hidden_channels*2)
+            self.GC_2 = GraphConv(hidden_channels*2, hidden_channels)
+            self.bn_1 = nn.BatchNorm2d(hidden_channels)
+            self.GC_3 = GraphConv(hidden_channels, input_channels)
+
+            self.relu = nn.LeakyReLU(0.05)            
             self.act = nn.Sigmoid()
 
             self.a0 = nn.Parameter(torch.randn(1), requires_grad=True)
@@ -517,7 +529,9 @@ def get_CNNv2(k, input_channels, hidden_channels,
             y = self.LPF_3(y*(1-self.a2) + self.b2*y_hpf)
             y = self.LPF_4(y*(1-self.a3) + self.b3*y_hpf)
 
-            return self.act(self.GC(y) + x)
+            y = self.relu(self.bn_1(self.GC_1(y)))
+            y = self.relu(self.bn_2(self.GC_2(y)))
+            return self.act(self.GC_3(y) + x)
 
         def forward(self, noised_image=None, clear_image=None):
             if self.training:
