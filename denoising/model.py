@@ -180,7 +180,7 @@ def get_GCNN(k, input_channels, hidden_channels,
             self.GC_1 = GraphConv(hidden_channels*3, hidden_channels*2)
             self.bn_1 = nn.BatchNorm2d(hidden_channels*2)
             self.GC_2 = GraphConv(hidden_channels*2, hidden_channels)
-            self.bn_2 = nn.BatchNorm2d(hidden_channels*2)
+            self.bn_2 = nn.BatchNorm2d(hidden_channels)
             self.GC_3 = GraphConv(hidden_channels, input_channels)
 
             self.relu = nn.LeakyReLU(0.05)

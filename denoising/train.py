@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 from model_utils import split_img
 from model_utils import recombine_img
+from model_utils import plot_crops
 
 import time as tm
 
@@ -46,6 +47,9 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
         noised = noised.to(args.device)
 
         denoised_img = model(noised)
+        sample = torch.randint(0,denoised_img.shape[0],(25,))
+        plot_crops(args.dir_testing, denoised_img, "act_epoch%d_DN"%epoch, sample)
+        plot_crops(args.dir_testing, clear, "act_epoch%d_DN"%epoch, sample)
 
         loss = mse_loss(denoised_img, clear).mean(-1).mean(-1)[:,0]
 
@@ -142,6 +146,7 @@ def train(args, train_data, test_data, model):
                         f.write(fname)
                         f.close()
                     print('updated best model at: ',bname)
+
         epoch += 1
     
     #saving data

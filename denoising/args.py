@@ -2,7 +2,7 @@ import os
 
 class Args:
     def __init__(self, dir_name, epochs, model, device):
-        self.crop_size = (16,16)
+        self.crop_size = (32,32)
         self.crop_p = 0.900000
         self.dev_ids = None
 
