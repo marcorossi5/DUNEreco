@@ -188,7 +188,7 @@ def plot_crops(out_dir, imgs, name, sample):
             ax.imshow(samples[i*5+j])
     plt.savefig(fname)
     plt.close()
-    print("\nSaved image at %s"%fname)
+    print("Saved image at %s"%fname)
     
 def plot_wires(out_dir, imgs, name, sample, wire):
     """
@@ -210,4 +210,4 @@ def plot_wires(out_dir, imgs, name, sample, wire):
             ax.plot(samples[i*5+j,wire[i*5+j]], linewidth=0.3)
     plt.savefig(fname)
     plt.close()
-    print("\nSaved image at %s"%fname)
+    print("Saved image at %s"%fname)

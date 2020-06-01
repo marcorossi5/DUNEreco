@@ -47,10 +47,7 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
         noised = noised.to(args.device)
 
         denoised_img = model(noised)
-        sample = torch.randint(0,denoised_img.shape[0],(25,))
-        plot_crops(args.dir_testing, denoised_img, "act_epoch%d_DN"%epoch, sample)
-        plot_crops(args.dir_testing, clear, "act_epoch%d_DN"%epoch, sample)
-
+        
         loss = mse_loss(denoised_img, clear).mean(-1).mean(-1)[:,0]
 
         mse.append(loss.mean().cpu().item())
@@ -58,6 +55,18 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
 
         res = (m/loss).mean().cpu().detach().numpy()
         psnr.append(10*np.log10(res))
+
+    sample = torch.randint(0,
+                           denoised_img.shape[0],
+                           (25,)).cpu().detach().numpy()
+    plot_crops(args.dir_testing,
+               denoised_img.cpu().detach().numpy()[:,0],
+               "act_epoch%d_DN"%epoch,
+               sample)
+    plot_crops(args.dir_testing,
+               clear.cpu().detach().numpy()[:,0],
+               "act_epoch%d_label"%epoch,
+               sample)
 
 
     return np.array([np.mean(psnr), np.std(psnr)/np.sqrt(i+1),
@@ -115,7 +124,7 @@ def train(args, train_data, test_data, model):
         time_end = tm.time()
         time_all[epoch - 1] = time_end - time_start
         if epoch % args.epoch_log == 0:
-            print("Epoch: %d, Loss: %.5f, time: %.5f"%(epoch,
+            print("\nEpoch: %d, Loss: %.5f, time: %.5f"%(epoch,
                                                       loss_sum[-1][0],
                                                       time_all[epoch - 1]))
         # test

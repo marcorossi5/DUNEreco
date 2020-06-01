@@ -7,6 +7,7 @@ from model_utils import get_graph
 from model_utils import split_img
 from model_utils import recombine_img
 from model_utils import local_mask
+import ssim
 
 def get_CNN(k, input_channels, hidden_channels,
                     patch_size=(64, 64)):
@@ -97,7 +98,8 @@ def get_CNN(k, input_channels, hidden_channels,
         def forward(self, noised_image=None, clear_image=None):
             if self.training:
                 output = self.fit_image(noised_image)
-                loss = loss_mse(output, clear_image)
+                #loss = loss_mse(output, clear_image)
+                loss = ssim.ssim(output, clear_image, data_range=1.)
                 return output, loss
 
             return self.fit_image(noised_image)
