@@ -96,16 +96,15 @@ def get_CNN(k, input_channels, hidden_channels,
             return self.act(self.downsample(residual_2)+image)
         
         def forward(self, noised_image=None, clear_image=None):
+            out = self.fit_image(noised_image)
             if self.training:
-                output = self.fit_image(noised_image)
-                #loss = loss_mse(output, clear_image)
-                loss = 1 - ssim.ssim(output,
-                                     clear_image,
-                                     data_range=1.,
-                                     size_average=True)
-                return output, loss
-
-            return self.fit_image(noised_image)
+                #loss = loss_mse(out, clear_image)
+                loss = 1 - ssim.ssim(out,
+                                 clear_image,
+                                 data_range=1.,
+                                 size_average=True)
+                return out, loss
+            return out
 
     cnn = CNN(input_channels, hidden_channels, patch_size)
         
@@ -212,14 +211,15 @@ def get_GCNN(k, input_channels, hidden_channels,
 
         def forward(self, noised_image=None, clear_image=None):
             out = self.fit_image(noised_image)
-            #loss = loss_mse(out, clear_image)
-            loss = 1 - ssim.ssim(output,
+            if self.training:
+                #loss = loss_mse(out, clear_image)
+                loss = 1 - ssim.ssim(out,
                                  clear_image,
                                  data_range=1.,
                                  size_average=True)
-                
-            return out, loss
-            
+                return out, loss
+            return out
+                        
     gcnn = GCNN(k, input_channels, hidden_channels, patch_size)
 
     return gcnn
@@ -385,13 +385,14 @@ def get_GCNNv2(k, input_channels, hidden_channels,
 
         def forward(self, noised_image=None, clear_image=None):
             out = self.fit_image(noised_image)
-            #loss = loss_mse(out, clear_image)
-            loss = 1 - ssim.ssim(output,
+            if self.training:
+                #loss = loss_mse(out, clear_image)
+                loss = 1 - ssim.ssim(out,
                                  clear_image,
                                  data_range=1.,
                                  size_average=True)
-                
-            return out, loss
+                return out, loss
+            return out
 
     gcnnv2 = GCNNv2(k, input_channels, hidden_channels, patch_size)
 
@@ -544,13 +545,14 @@ def get_CNNv2(k, input_channels, hidden_channels,
 
         def forward(self, noised_image=None, clear_image=None):
             out = self.fit_image(noised_image)
-            #loss = loss_mse(out, clear_image)
-            loss = 1 - ssim.ssim(output,
+            if self.training:
+                #loss = loss_mse(out, clear_image)
+                loss = 1 - ssim.ssim(out,
                                  clear_image,
                                  data_range=1.,
                                  size_average=True)
-                
-            return out, loss
+                return out, loss
+            return out
 
     cnnv2 = CNNv2(input_channels, hidden_channels, patch_size)
 

@@ -67,7 +67,7 @@ def inference(args, model):
             loader = torch.split(crops, split_size)
             dn = []
             for chunk in loader:
-                answer, loss = model(chunk.to(args.device)).cpu().data
+                answer = model(chunk.to(args.device)).cpu().data
                 dn.append(answer)
 
             dn = torch.cat(dn)

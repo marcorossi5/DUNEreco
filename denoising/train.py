@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from model_utils import split_img
 from model_utils import recombine_img
 from model_utils import plot_crops
+import ssim
 
 import time as tm
 
@@ -40,9 +41,12 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
         clear = clear.to(args.device)
         noised = noised.to(args.device)
 
-        denoised_img, loss = model(noised)
+        denoised_img = model(noised)
 
-        ssim.append(loss.mean().cpu().item())
+        ssim.append((1 - ssim.ssim(denoised_img,
+                                   clear,
+                                   data_range=1.,
+                                   size_average=True)).cpu().item())
         
         mse_ = mse_loss(denoised_img, clear).mean([-1,-2])[:,0]
 
