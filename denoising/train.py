@@ -69,7 +69,8 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
                sample)
 
 
-    return np.array([np.array(ssim_loss), np.mean(psnr), np.std(psnr)/np.sqrt(i+1),
+    return np.array([np.mean(ssim_loss), np.std(ssim_loss)/np.sqrt(i+1),
+                np.mean(psnr), np.std(psnr)/np.sqrt(i+1),
                 np.mean(mse), np.std(mse)/np.sqrt(i+1)])
 
 ########### main train function
@@ -135,13 +136,14 @@ def train(args, train_data, test_data, model):
             test_metrics.append(test_epoch(args, epoch, test_data,
                                            model, mse_loss))
             
-            print('Test ssim: %.5f,\
+            print('Test ssim: %.5f +- %.5f,\
                    psnr: %.5f +- %.5f,\
                    mse: %.5e +- %.5e'%(test_metrics[-1][0],
                                        test_metrics[-1][1],
                                        test_metrics[-1][2],
                                        test_metrics[-1][3],
-                                       test_metrics[-1][4]))
+                                       test_metrics[-1][4],
+                                       test_metrics[-1][5]))
             print('Test time: %.4f\n'%(tm.time()-start))
 
         # save model checkpoint

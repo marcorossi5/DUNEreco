@@ -256,9 +256,10 @@ def make_plots(args):
     ax.plot(loss_sum[0], color='#ff7f0e', alpha=0.2)
     #ax.plot(perc_avg, color='r', label='perc loss')
     #ax.plot(loss_sum[1], color='r', alpha=0.2)
-    ax.plot(test_epochs, test_metrics[0], label='test ssim')
-    ax.errorbar(test_epochs,test_metrics[3],
-                yerr=test_metrics[4], label='test mse')
+    ax.errorbar(test_epochs,test_metrics[0],
+                yerr=test_metrics[1], label='test mse')
+    ax.errorbar(test_epochs,test_metrics[4],
+                yerr=test_metrics[5], label='test mse')
     ax.set_yscale('log')
     ax.legend()
 
@@ -266,8 +267,8 @@ def make_plots(args):
     ax.title.set_text('pSNR (over validation set)')
     ax.set_xlabel('Epochs')
     ax.set_ylabel('pSNR [dB]')
-    ax.errorbar(test_epochs,test_metrics[1],
-                yerr=test_metrics[2])
+    ax.errorbar(test_epochs,test_metrics[2],
+                yerr=test_metrics[3])
     plt.savefig(fname)
     plt.close()
     print('saved image at: %s'%fname)
