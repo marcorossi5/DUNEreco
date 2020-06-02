@@ -20,14 +20,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, scheduler, mse_loss):
         clear = clear.to(args.device)
         noised = noised.to(args.device)
         optimizer.zero_grad()
-        #denoised_diff, perceptual_loss = model(clear, noised)
-        #denoised_img = model.act(denoised_diff + noised)
-        #loss = perceptual_loss + mse_loss(denoised_img, clear)
         denoised_img, loss = model(noised, clear)
-        #c = model(clear)
-        #n = model(noised)
-        #loss = mse_loss(c[0], n[0]) + mse_loss(c[1], n[1])\
-        #       + mse_loss(c[2], n[2]) + mse_loss(clear, n[3])
         loss.mean().backward()
         optimizer.step()
     if epoch > args.warmup_epoch:
@@ -39,6 +32,7 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
     model.eval()
     mse = []
     psnr = []
+    ssim = []
 
     mse_loss = torch.nn.MSELoss(reduction='none')
 
@@ -46,11 +40,13 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
         clear = clear.to(args.device)
         noised = noised.to(args.device)
 
-        denoised_img = model(noised)
-        
-        loss = mse_loss(denoised_img, clear).mean(-1).mean(-1)[:,0]
+        denoised_img, loss = model(noised)
 
-        mse.append(loss.mean().cpu().item())
+        ssim.append(loss.mean().cpu().item())
+        
+        mse_ = mse_loss(denoised_img, clear).mean([-1,-2])[:,0]
+
+        mse.append(mse_.mean().cpu().item())
         m = clear.max(-1).values.max(-1).values
 
         res = (m/loss).mean().cpu().detach().numpy()
@@ -69,7 +65,7 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
                sample)
 
 
-    return np.array([np.mean(psnr), np.std(psnr)/np.sqrt(i+1),
+    return np.array([np.array(ssim), np.mean(psnr), np.std(psnr)/np.sqrt(i+1),
                 np.mean(mse), np.std(mse)/np.sqrt(i+1)])
 
 ########### main train function
@@ -103,7 +99,7 @@ def train(args, train_data, test_data, model):
         loss_sum = []
         test_metrics = []
         test_epochs = []
-    best_psnr = 0
+    best_ssim = 1
         
     # initialize optimizer
     optimizer=  optim.Adam(list(model.parameters()), lr=args.lr)
@@ -135,10 +131,13 @@ def train(args, train_data, test_data, model):
             test_metrics.append(test_epoch(args, epoch, test_data,
                                            model, mse_loss))
             
-            print('Test psnr: %.5f +- %.5f, mse: %.5e +- %.5e'%(test_metrics[-1][0],
-                                                                test_metrics[-1][1],
-                                                                test_metrics[-1][2],
-                                                                test_metrics[-1][3]))
+            print('Test ssim: %.5f,\
+                   psnr: %.5f +- %.5f,\
+                   mse: %.5e +- %.5e'%(test_metrics[-1][0],
+                                       test_metrics[-1][1],
+                                       test_metrics[-1][2],
+                                       test_metrics[-1][3],
+                                       test_metrics[-1][4]))
             print('Test time: %.4f\n'%(tm.time()-start))
 
         # save model checkpoint
@@ -148,8 +147,8 @@ def train(args, train_data, test_data, model):
                         args.model + '_%d'%epoch + '.dat')
                 torch.save(model.state_dict(), fname)
                 print('saved model at: %s'%fname)
-                if test_metrics[-1][0] > best_psnr:
-                    best_psnr = test_metrics[-1][0]
+                if test_metrics[-1][0] < best_ssim:
+                    best_ssim = test_metrics[-1][0]
                     bname = os.path.join(args.dir_final_test, 'best_model.txt')
                     with open(bname, 'w') as f:
                         f.write(fname)

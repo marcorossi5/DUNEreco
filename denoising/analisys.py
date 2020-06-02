@@ -14,6 +14,7 @@ from model_utils import MyDataParallel
 from model_utils import split_img
 from model_utils import recombine_img
 from model_utils import plot_wires
+import ssim
 
 
 
@@ -48,6 +49,7 @@ def inference(args, model):
     legend = ['collection', 'readout']
 
     mse_loss = torch.nn.MSELoss()
+    ssim = []
     psnr = []
     mse = []
     res = [[],[]]
@@ -65,7 +67,7 @@ def inference(args, model):
             loader = torch.split(crops, split_size)
             dn = []
             for chunk in loader:
-                answer = model(chunk.to(args.device)).cpu().data
+                answer, loss = model(chunk.to(args.device)).cpu().data
                 dn.append(answer)
 
             dn = torch.cat(dn)
@@ -79,6 +81,10 @@ def inference(args, model):
             #                               args.test_batch_size)]
             psnr.append(compute_psnr(clear, res[i][-1]))
             mse.append(mse_loss(clear, res[i][-1]).item())
+            ssim.append((1 - ssim.ssim(res[i][-1],
+                                       clear,
+                                       data_range=1.,
+                                       size_average=True).cpu().item()))
         labels[i] = np.concatenate(labels[i])[:,0]
         noisy[i] = np.concatenate(noisy[i])[:,0] 
         res[i] = np.concatenate(res[i])
@@ -217,10 +223,12 @@ def inference(args, model):
     plt.close()
     '''
 
-    return np.array([np.mean(psnr),
-                    np.std(psnr)/np.sqrt(len(psnr)),
-                    np.mean(mse),
-                    np.std(mse)/np.sqrt(len(psnr))])
+    return np.array([np.mean(ssim),
+                     np.std(ssim)/np.sqrt(len(ssim)),
+                     np.mean(psnr),
+                     np.std(psnr)/np.sqrt(len(psnr)),
+                     np.mean(mse),
+                     np.std(mse)/np.sqrt(len(psnr))])
 
 def make_plots(args):
     fname = os.path.join(args.dir_metrics, 'loss_sum.npy')
@@ -244,12 +252,13 @@ def make_plots(args):
     ax.title.set_text('Metrics')
     ax.set_xlabel('Epochs')
     ax.set_ylabel('Metrics')
-    ax.plot(loss_avg, color='#ff7f0e', label='train loss')
+    ax.plot(loss_avg, color='#ff7f0e', label='train ssim')
     ax.plot(loss_sum[0], color='#ff7f0e', alpha=0.2)
     #ax.plot(perc_avg, color='r', label='perc loss')
     #ax.plot(loss_sum[1], color='r', alpha=0.2)
-    ax.errorbar(test_epochs,test_metrics[2],
-                yerr=test_metrics[3], label='test loss')
+    ax.plot(test_epochs, test_metrics[0], label='test ssim')
+    ax.errorbar(test_epochs,test_metrics[3],
+                yerr=test_metrics[4], label='test mse')
     ax.set_yscale('log')
     ax.legend()
 
@@ -257,8 +266,8 @@ def make_plots(args):
     ax.title.set_text('pSNR (over validation set)')
     ax.set_xlabel('Epochs')
     ax.set_ylabel('pSNR [dB]')
-    ax.errorbar(test_epochs,test_metrics[0],
-                yerr=test_metrics[1])
+    ax.errorbar(test_epochs,test_metrics[1],
+                yerr=test_metrics[2])
     plt.savefig(fname)
     plt.close()
     print('saved image at: %s'%fname)
@@ -286,8 +295,9 @@ def main(args):
     make_plots(args)
     metrics = inference(args, model)
     print('Final test time: %.4f\n'%(tm.time()-start))
-    print('Final test psnr: %.4f +/- %.4f'%(metrics[0], metrics[1]))
-    print('Final test loss: %.4f +/- %.4f'%(metrics[2], metrics[3]))
+    print('Final test ssim: %.4f +/- %.4f'%(metrics[0], metrics[1]))
+    print('Final test psnr: %.4f +/- %.4f'%(metrics[2], metrics[3]))
+    print('Final test mse: %.4f +/- %.4f'%(metrics[4], metrics[5]))
     
 if __name__ == '__main__':
     args = vars(parser.parse_args())
