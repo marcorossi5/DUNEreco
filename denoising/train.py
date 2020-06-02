@@ -53,7 +53,7 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
         mse.append(mse_.mean().cpu().item())
         m = clear.max(-1).values.max(-1).values
 
-        res = (m/loss).mean().cpu().detach().numpy()
+        res = (m/mse_).mean().cpu().detach().numpy()
         psnr.append(10*np.log10(res))
 
     sample = torch.randint(0,
