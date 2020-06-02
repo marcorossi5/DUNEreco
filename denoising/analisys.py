@@ -49,7 +49,7 @@ def inference(args, model):
     legend = ['collection', 'readout']
 
     mse_loss = torch.nn.MSELoss()
-    ssim = []
+    ssim_loss = []
     psnr = []
     mse = []
     res = [[],[]]
@@ -81,7 +81,7 @@ def inference(args, model):
             #                               args.test_batch_size)]
             psnr.append(compute_psnr(clear, res[i][-1]))
             mse.append(mse_loss(clear, res[i][-1]).item())
-            ssim.append((1 - ssim.ssim(res[i][-1],
+            ssim_loss.append((1 - ssim.ssim(res[i][-1],
                                        clear,
                                        data_range=1.,
                                        size_average=True).cpu().item()))
@@ -223,8 +223,8 @@ def inference(args, model):
     plt.close()
     '''
 
-    return np.array([np.mean(ssim),
-                     np.std(ssim)/np.sqrt(len(ssim)),
+    return np.array([np.mean(ssim_loss),
+                     np.std(ssim_loss)/np.sqrt(len(ssim_loss)),
                      np.mean(psnr),
                      np.std(psnr)/np.sqrt(len(psnr)),
                      np.mean(mse),

@@ -33,7 +33,7 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
     model.eval()
     mse = []
     psnr = []
-    ssim = []
+    ssim_loss = []
 
     mse_loss = torch.nn.MSELoss(reduction='none')
 
@@ -43,7 +43,7 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
 
         denoised_img = model(noised)
 
-        ssim.append((1 - ssim.ssim(denoised_img,
+        ssim_loss.append((1 - ssim.ssim(denoised_img,
                                    clear,
                                    data_range=1.,
                                    size_average=True)).cpu().item())
@@ -69,7 +69,7 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
                sample)
 
 
-    return np.array([np.array(ssim), np.mean(psnr), np.std(psnr)/np.sqrt(i+1),
+    return np.array([np.array(ssim_loss), np.mean(psnr), np.std(psnr)/np.sqrt(i+1),
                 np.mean(mse), np.std(mse)/np.sqrt(i+1)])
 
 ########### main train function
