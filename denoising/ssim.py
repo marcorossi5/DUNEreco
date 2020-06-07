@@ -20,7 +20,7 @@ def _fspecial_gauss_1d(size, sigma):
 
 
 def gaussian_filter(input, win):
-    r""" Blur input with 1-D kernel
+    r""" Blur input with 1-D kernel (valid padding)
     Args:
         input (torch.Tensor): a batch of tensors to be blured
         window (torch.Tensor): 1-D gauss kernel
@@ -28,8 +28,22 @@ def gaussian_filter(input, win):
         torch.Tensor: blured tensors
     """
     N, C, H, W = input.shape
-    out = F.conv2d(input, win, groups=C)
-    out = F.conv2d(out, win.transpose(2, 3), groups=C)
+    out = F.conv2d(input, win padding=0, groups=C)
+    out = F.conv2d(out, win.transpose(2, 3) padding=0, groups=C)
+    return out
+
+def stat_gaussian_filter(input, win):
+    r""" Blur input with 1-D kernel (same padding)
+    Args:
+        input (torch.Tensor): a batch of tensors to be blured
+        window (torch.Tensor): 1-D gauss kernel
+    Returns:
+        torch.Tensor: blured tensors
+    """
+    N, C, H, W = input.shape
+    k = win.shape[-1]
+    out = F.conv2d(input, win padding=k//2, groups=C)
+    out = F.conv2d(out, win.transpose(2, 3) padding=k//2, groups=C)
     return out
 
 
@@ -101,8 +115,8 @@ def _stat_ssim(X, Y,
 
     win = win.to(X.device, dtype=X.dtype)
 
-    mu1 = gaussian_filter(X, win)
-    mu2 = gaussian_filter(Y, win)
+    mu1 = stat_gaussian_filter(X, win)
+    mu2 = stat_gaussian_filter(Y, win)
 
     mu1_sq = mu1.pow(2)
     mu2_sq = mu2.pow(2)
@@ -111,9 +125,9 @@ def _stat_ssim(X, Y,
     X -= mu1
     Y -= mu2
 
-    sigma1_sq = compensation * ( gaussian_filter(X * X, win) - mu1_sq )
-    sigma2_sq = compensation * ( gaussian_filter(Y * Y, win) - mu2_sq )
-    sigma12   = compensation * ( gaussian_filter(X * Y, win) - mu1_mu2 )
+    sigma1_sq = compensation * (stat_gaussian_filter(X * X, win))
+    sigma2_sq = compensation * (stat_gaussian_filter(Y * Y, win))
+    sigma12   = compensation * (stat_gaussian_filter(X * Y, win))
 
     cs_map = (2 * sigma12 + C2) / (sigma1_sq + sigma2_sq + C2) # set alpha=beta=gamma=1
     ssim_map = ((2 * mu1_mu2 + C1) / (mu1_sq + mu2_sq + C1)) * cs_map
