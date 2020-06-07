@@ -82,11 +82,12 @@ def inference(args, model):
             #                               args.test_batch_size)]
             psnr.append(compute_psnr(clear, res[i][-1]).unsqueeze(1))
             mse.append(mse_loss(clear, res[i][-1]).item())
-            l = (1 - ssim.ssim(res[i][-1],
+            l = (1 - ssim.ssim(res[i][-1].unsqueeze(1),
                                clear,
                                data_range=1.,
                                size_average=True)
-            ssim_loss.append((a*l+(1-a)*(res[i][-1].clear).abs().mean()).cpu().item()))
+            ssim_loss.append((a*l+(1-a)*(res[i][-1].unsqueeze(1)\
+            							 -clear).abs().mean()).cpu().item()))
         labels[i] = np.concatenate(labels[i])[:,0]
         noisy[i] = np.concatenate(noisy[i])[:,0] 
         res[i] = np.concatenate(res[i])
@@ -254,8 +255,8 @@ def make_plots(args):
     ax.title.set_text('Metrics')
     ax.set_xlabel('Epochs')
     ax.set_ylabel('Metrics')
-    ax.plot(loss_avg, color='#ff7f0e', label='train ssim')
-    ax.plot(loss_sum[0], color='#ff7f0e', alpha=0.2)
+    ax.plot(loss_avg, color='g', label='train ssim')
+    ax.plot(loss_sum[0], color='g', alpha=0.2)
     #ax.plot(perc_avg, color='r', label='perc loss')
     #ax.plot(loss_sum[1], color='r', alpha=0.2)
     ax.errorbar(test_epochs,test_metrics[0],
