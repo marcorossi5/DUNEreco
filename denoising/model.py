@@ -63,11 +63,10 @@ def get_CNN(k, input_channels, hidden_channels,
         def forward(self, x):
             return self.pipeline(x)
 
-    loss_mse = nn.MSELoss()
-
     class CNN(nn.Module):
         def __init__(self, input_channels, hidden_channels, patch_size):
             super().__init__()
+            self.a = 0.84
             self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
                 PreProcessBlock(3, input_channels, hidden_channels),
@@ -99,10 +98,12 @@ def get_CNN(k, input_channels, hidden_channels,
             out = self.fit_image(noised_image)
             if self.training:
                 #loss = loss_mse(out, clear_image)
-                loss = 1 - ssim.ssim(out,
+                loss = 1 - ssim.stat_ssim(out,
                                  clear_image,
                                  data_range=1.,
                                  size_average=True)
+                loss *= self.a
+                loss += (1-self.a)*(out-clear_image).abs().mean()
                 return out, loss
             return out
 
@@ -165,12 +166,10 @@ def get_GCNN(k, input_channels, hidden_channels,
             y = self.act(self.bn_2(self.GC_2(y, graph)))
             return self.act(self.bn_3(self.GC_3(y, graph)))
 
-
-    loss_mse = nn.MSELoss()
-
     class GCNN(nn.Module):
         def __init__(self, k, input_channels, hidden_channels, patch_size):
             super().__init__()
+            self.a = 0.84
             self.patch_size = patch_size
             self.k = k
             self.preprocessing_blocks = nn.ModuleList([
@@ -213,10 +212,12 @@ def get_GCNN(k, input_channels, hidden_channels,
             out = self.fit_image(noised_image)
             if self.training:
                 #loss = loss_mse(out, clear_image)
-                loss = 1 - ssim.ssim(out,
+                loss = 1 - ssim.stat_ssim(out,
                                  clear_image,
                                  data_range=1.,
                                  size_average=True)
+                loss *= self.a
+                loss += (1-self.a)*(out-clear_image).abs().mean()
                 return out, loss
             return out
                         
@@ -323,11 +324,10 @@ def get_GCNNv2(k, input_channels, hidden_channels,
             y = self.act(self.bn_2(self.GC_2(y, graph)))
             return x + self.act(self.bn_3(self.GC_3(y, graph)))
 
-    loss_mse = nn.MSELoss()
-
     class GCNNv2(nn.Module):
         def __init__(self, k, input_channels, hidden_channels, patch_size):
             super().__init__()
+            self.a = 0.84
             self.patch_size = patch_size
             self.k = k
             self.preprocessing_blocks = nn.ModuleList([
@@ -387,10 +387,12 @@ def get_GCNNv2(k, input_channels, hidden_channels,
             out = self.fit_image(noised_image)
             if self.training:
                 #loss = loss_mse(out, clear_image)
-                loss = 1 - ssim.ssim(out,
+                loss = 1 - ssim.stat_ssim(out,
                                  clear_image,
                                  data_range=1.,
                                  size_average=True)
+                loss *= self.a
+                loss += (1-self.a)*(out-clear_image).abs().mean()
                 return out, loss
             return out
 
@@ -491,11 +493,10 @@ def get_CNNv2(k, input_channels, hidden_channels,
             y = self.act(self.bn_2(self.GC_2(y)))
             return x + self.act(self.bn_3(self.GC_3(y)))
 
-    loss_mse = nn.MSELoss()
-
     class CNNv2(nn.Module):
         def __init__(self, input_channels, hidden_channels, patch_size):
             super().__init__()
+            self.a = 0.84
             self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
                 PreProcessBlock(3, input_channels, hidden_channels),
@@ -547,10 +548,12 @@ def get_CNNv2(k, input_channels, hidden_channels,
             out = self.fit_image(noised_image)
             if self.training:
                 #loss = loss_mse(out, clear_image)
-                loss = 1 - ssim.ssim(out,
+                loss = 1 - ssim.stat_ssim(out,
                                  clear_image,
                                  data_range=1.,
                                  size_average=True)
+                loss *= self.a
+                loss += (1-self.a)*(out-clear_image).abs().mean()
                 return out, loss
             return out
 

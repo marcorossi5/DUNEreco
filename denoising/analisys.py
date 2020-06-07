@@ -57,6 +57,7 @@ def inference(args, model):
     labels = [[],[]]
     p_x, p_y = model.patch_size
     split_size = args.test_batch_size
+    a = model.a
     #print('Number of planes to be tested:', len(test_data))
     for i, data in enumerate(test_data):
         for (clear, noised) in data:
@@ -79,12 +80,13 @@ def inference(args, model):
             #res[i] += [model.forward_image(noised,
             #                               args.device,
             #                               args.test_batch_size)]
-            psnr.append(compute_psnr(clear, res[i][-1]))
+            psnr.append(compute_psnr(clear, res[i][-1]).unsqueeze(1))
             mse.append(mse_loss(clear, res[i][-1]).item())
-            ssim_loss.append((1 - ssim.ssim(res[i][-1],
-                                       clear,
-                                       data_range=1.,
-                                       size_average=True).cpu().item()))
+            l = (1 - ssim.ssim(res[i][-1],
+                               clear,
+                               data_range=1.,
+                               size_average=True)
+            ssim_loss.append((a*l+(1-a)*(res[i][-1].clear).abs().mean()).cpu().item()))
         labels[i] = np.concatenate(labels[i])[:,0]
         noisy[i] = np.concatenate(noisy[i])[:,0] 
         res[i] = np.concatenate(res[i])
@@ -257,7 +259,7 @@ def make_plots(args):
     #ax.plot(perc_avg, color='r', label='perc loss')
     #ax.plot(loss_sum[1], color='r', alpha=0.2)
     ax.errorbar(test_epochs,test_metrics[0],
-                yerr=test_metrics[1], label='test mse')
+                yerr=test_metrics[1], label='test ssim')
     ax.errorbar(test_epochs,test_metrics[4],
                 yerr=test_metrics[5], label='test mse')
     ax.set_yscale('log')
