@@ -28,8 +28,8 @@ def gaussian_filter(input, win):
         torch.Tensor: blured tensors
     """
     N, C, H, W = input.shape
-    out = F.conv2d(input, win padding=0, groups=C)
-    out = F.conv2d(out, win.transpose(2, 3) padding=0, groups=C)
+    out = F.conv2d(input, win, groups=C)
+    out = F.conv2d(out, win.transpose(2, 3), groups=C)
     return out
 
 def stat_gaussian_filter(input, win):
@@ -42,8 +42,10 @@ def stat_gaussian_filter(input, win):
     """
     N, C, H, W = input.shape
     k = win.shape[-1]
-    out = F.conv2d(input, win padding=k//2, groups=C)
-    out = F.conv2d(out, win.transpose(2, 3) padding=k//2, groups=C)
+    input = F.pad(input, (k//2,k//2))
+    out = F.conv2d(input, win, groups=C)
+    out = F.pad(out, (0,0,k//2, k//2))
+    out = F.conv2d(out, win.transpose(2, 3), groups=C)
     return out
 
 
@@ -122,12 +124,12 @@ def _stat_ssim(X, Y,
     mu2_sq = mu2.pow(2)
     mu1_mu2 = mu1 * mu2
 
-    X -= mu1
-    Y -= mu2
+    X_ = X - mu1
+    Y_ = Y - mu2
 
-    sigma1_sq = compensation * (stat_gaussian_filter(X * X, win))
-    sigma2_sq = compensation * (stat_gaussian_filter(Y * Y, win))
-    sigma12   = compensation * (stat_gaussian_filter(X * Y, win))
+    sigma1_sq = compensation * (stat_gaussian_filter(X_ * X_, win))
+    sigma2_sq = compensation * (stat_gaussian_filter(Y_ * Y_, win))
+    sigma12   = compensation * (stat_gaussian_filter(X_ * Y_, win))
 
     cs_map = (2 * sigma12 + C2) / (sigma1_sq + sigma2_sq + C2) # set alpha=beta=gamma=1
     ssim_map = ((2 * mu1_mu2 + C1) / (mu1_sq + mu2_sq + C1)) * cs_map
@@ -142,7 +144,7 @@ def ssim(X, Y,
          data_range=255, 
          size_average=True, 
          win_size=11, 
-         win_sigma=1.5, 
+         win_sigma=3, 
          win=None, 
          K=(0.01, 0.03), 
          nonnegative_ssim=False):
@@ -198,7 +200,7 @@ def ms_ssim(X, Y,
             data_range=255, 
             size_average=True, 
             win_size=11, 
-            win_sigma=1.5, 
+            win_sigma=3, 
             win=None, 
             weights=None, 
             K=(0.01, 0.03)):
@@ -272,7 +274,7 @@ def stat_ssim(X, Y,
          data_range=255, 
          size_average=True, 
          win_size=11, 
-         win_sigma=1.5, 
+         win_sigma=3, 
          win=None, 
          K=(0.01, 0.03), 
          nonnegative_ssim=False):
