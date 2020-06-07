@@ -25,6 +25,8 @@ class Args:
         self.warmup_epoch = 0
 
         #logs
+        self.plot_dataset = False
+
         self.epoch_log = 1
         self.epoch_test_start = 0
         self.epoch_test = 1

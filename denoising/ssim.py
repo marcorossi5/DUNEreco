@@ -28,8 +28,8 @@ def gaussian_filter(input, win):
         torch.Tensor: blured tensors
     """
     N, C, H, W = input.shape
-    out = F.conv2d(input, win, stride=1, padding=0, groups=C)
-    out = F.conv2d(out, win.transpose(2, 3), stride=1, padding=0, groups=C)
+    out = F.conv2d(input, win, groups=C)
+    out = F.conv2d(out, win.transpose(2, 3), groups=C)
     return out
 
 
