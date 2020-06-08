@@ -14,6 +14,11 @@ ada_step = event_step // (2*readout_step + collection_step)
 c_pedestal = 500
 r_pedestal = 1800
 
+def normalize(img):
+    if img.max()==0:
+        return img
+    return (img-img.min())/(img.max()-img.min())
+
 def load_files(path_clear, path_noise):
     clear_files = glob.glob(path_clear)
     noised_files = glob.glob(path_noise)
@@ -54,19 +59,19 @@ def normalize_planes(clear_file, noised_file, r_idx, c_idx):
         if r_clear[i*readout_step:(i+1)*readout_step].max() == 0:
             print('skipped')
             continue
-        r_n_clear.append(r_clear[i*readout_step:
-                                          (i+1)*readout_step]-r_pedestal)
-        r_n_noised.append(r_noised[i*readout_step:
-                                          (i+1)*readout_step])
+        r_n_clear.append(normalize(r_clear[i*readout_step:
+                                                  (i+1)*readout_step]-r_pedestal))
+        r_n_noised.append(normalize(r_noised[i*readout_step:
+                                                  (i+1)*readout_step]))
 
     for i in range(int(c_clear.shape[0]/collection_step)):
         if c_clear[i*collection_step:(i+1)*collection_step].max() == 0:
             print('skipped')
             continue
-        c_n_clear.append(c_clear[i*collection_step:
-                                          (i+1)*collection_step]-c_pedestal)
-        c_n_noised.append(c_noised[i*collection_step:
-                                            (i+1)*collection_step])
+        c_n_clear.append(normalize(c_clear[i*collection_step:
+                                                  (i+1)*collection_step]-c_pedestal))
+        c_n_noised.append(normalize(c_noised[i*collection_step:
+                                                    (i+1)*collection_step]))
 
     return np.stack(r_n_clear), np.stack(r_n_noised),\
            np.stack(c_n_clear), np.stack(c_n_noised)
@@ -85,10 +90,10 @@ def get_crop(clear_plane, n_crops=1000,
     c_x, c_y = crop_shape[0]//2, crop_shape[1]//2
 
     #does not work if clear_plane is a torch Tensor
-    im = torch.clone(clear_plane)
-    im[im!=0] = 1
-    #clear_plane = np.array(clear_plane)
-    #im = canny(clear_plane).astype(float)
+    #im = torch.clone(clear_plane)
+    #im[im!=0] = 1
+    clear_plane = np.array(clear_plane)
+    im = canny(clear_plane).astype(float)
 
     sgn = np.transpose(np.where(im==1))
     bkg = np.transpose(np.where(im==0))
