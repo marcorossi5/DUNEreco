@@ -80,14 +80,14 @@ def inference(args, model):
             #res[i] += [model.forward_image(noised,
             #                               args.device,
             #                               args.test_batch_size)]
-            psnr.append(compute_psnr(clear, res[i][-1]).unsqueeze(1))
+            psnr.append(compute_psnr(clear, res[i][-1]))
             mse.append(mse_loss(clear, res[i][-1]).item())
-            l = (1 - ssim.ssim(res[i][-1].unsqueeze(1),
+            l = 1 - ssim.ssim(res[i][-1].unsqueeze(1),
                                clear,
                                data_range=1.,
                                size_average=True)
             ssim_loss.append((a*l+(1-a)*(res[i][-1].unsqueeze(1)\
-            							 -clear).abs().mean()).cpu().item()))
+            							 -clear).abs().mean()).cpu().item())
         labels[i] = np.concatenate(labels[i])[:,0]
         noisy[i] = np.concatenate(noisy[i])[:,0] 
         res[i] = np.concatenate(res[i])

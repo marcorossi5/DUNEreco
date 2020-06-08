@@ -12,6 +12,7 @@ def minmax_norm(img):
     Output:
     torch.Tensor of shape (batch, w, h)
     """
+    return img
     m = img.min(-1)[0]
     m = m.min(-1)[0]
 
