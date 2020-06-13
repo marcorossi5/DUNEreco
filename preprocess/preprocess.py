@@ -1,5 +1,5 @@
 import numpy as np
-import torch
+import np
 import os
 import sys
 import argparse
@@ -10,8 +10,6 @@ parser.add_argument("--source", "-s", default="*",
                     type=str, help='Source .npy file name')
 parser.add_argument("--dir_name", "-p", default="../datasets",
                     type=str, help='Directory path to datasets')
-parser.add_argument("--device", "-d", default="-2", type=str,
-                    help="-1 (automatic)/ -2 (cpu) / gpu number")
 parser.add_argument("--n_crops", "-n", default=500, type=int,
                     help="number of crops for each plane")
 parser.add_argument("--crop_edge", "-c", default=32, type=int,
@@ -52,19 +50,19 @@ def get_planes_and_dump(source, dir_name):
     c_r = clear_readout_planes[p]
     n_r = noised_readout_planes[p]
 
-    torch.save(torch.Tensor(c_r[:int(s*0.6)]),
-               os.path.join(dir_name,"clear_planes", 'readout_train'))
-    torch.save(torch.Tensor(c_r[int(s*0.6):int(s*0.8)]),
-               os.path.join(dir_name,"clear_planes", 'readout_val'))
-    torch.save(torch.Tensor(c_r[int(s*0.8):]),
-               os.path.join(dir_name,"clear_planes", 'readout_test'))
+    np.save(os.path.join(dir_name,"clear_planes", 'readout_train'),
+            c_r[:int(s*0.6)])
+    np.save(os.path.join(dir_name,"clear_planes", 'readout_val'),
+            c_r[int(s*0.6):int(s*0.8)])
+    np.save(os.path.join(dir_name,"clear_planes", 'readout_test'),
+            c_r[int(s*0.8):])
 
-    torch.save(torch.Tensor(n_r[:int(s*0.6)]),
-               os.path.join(dir_name,"noised_planes", 'readout_train'))
-    torch.save(torch.Tensor(n_r[int(s*0.6):int(s*0.8)]),
-               os.path.join(dir_name,"noised_planes", 'readout_val'))
-    torch.save(torch.Tensor(n_r[int(s*0.8):]),
-               os.path.join(dir_name,"noised_planes", 'readout_test'))
+    np.save(os.path.join(dir_name,"noised_planes", 'readout_train'),
+            n_r[:int(s*0.6)])
+    np.save(os.path.join(dir_name,"noised_planes", 'readout_val'),
+            n_r[int(s*0.6):int(s*0.8)])
+    np.save(os.path.join(dir_name,"noised_planes", 'readout_test'),
+            n_r[int(s*0.8):])
 
 
     s = len(clear_collection_planes)
@@ -72,29 +70,35 @@ def get_planes_and_dump(source, dir_name):
     c_c = clear_collection_planes[p]
     n_c = noised_collection_planes[p]
 
-    torch.save(torch.Tensor(c_c[:int(s*0.6)]),
-               os.path.join(dir_name,"clear_planes", 'collection_train'))
-    torch.save(torch.Tensor(c_c[int(s*0.6):int(s*0.8)]),
-               os.path.join(dir_name,"clear_planes", 'collection_val'))
-    torch.save(torch.Tensor(c_c[int(s*0.8):]),
-               os.path.join(dir_name,"clear_planes", 'collection_test'))
+    np.save(os.path.join(dir_name,"clear_planes", 'collection_train'),
+            c_c[:int(s*0.6)])
+    np.save(os.path.join(dir_name,"clear_planes", 'collection_val'),
+            c_c[int(s*0.6):int(s*0.8)])
+    np.save(os.path.join(dir_name,"clear_planes", 'collection_test'),
+            c_c[int(s*0.8):])
 
-    torch.save(torch.Tensor(n_c[:int(s*0.6)]),
-               os.path.join(dir_name,"noised_planes", 'collection_train'))
-    torch.save(torch.Tensor(n_c[int(s*0.6):int(s*0.8)]),
-               os.path.join(dir_name,"noised_planes", 'collection_val'))
-    torch.save(torch.Tensor(n_c[int(s*0.8):]),
-               os.path.join(dir_name,"noised_planes", 'collection_test'))
+    np.save(os.path.join(dir_name,"noised_planes", 'collection_train'),
+            n_c[:int(s*0.6)])
+    np.save(os.path.join(dir_name,"noised_planes", 'collection_val'),
+            n_c[int(s*0.6):int(s*0.8)])
+    np.save(os.path.join(dir_name,"noised_planes", 'collection_test'),
+            n_c[int(s*0.8):])
 
-def crop_planes_and_dump(dir_name, n_crops, device, crop_shape, p):
+def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
     for s in ['readout_', 'collection_']:
         for ss in ['train', 'val', 'test']:
-            clear_planes = torch.load(os.path.join(dir_name,
-                                                   "clear_planes",
-                                                   s+ss))
-            noised_planes = torch.load(os.path.join(dir_name,
-                                                    "noised_planes",
-                                                    s+ss))
+            clear_planes = np.load(os.path.join(dir_name,
+                                                 "clear_planes",
+                                                 s+ss))
+            noised_planes = np.load(os.path.join(dir_name,
+                                                 "noised_planes",
+                                                 s+ss))
+            clear_planes, clear_min,\
+            clear_max = putils.normalize(clear_planes)
+            
+            noised_planes, noised_min,\
+            noised_max = putils.normalize(noised_planes)
+            
             clear_crops = []
             noised_crops = []
             for clear_plane, noised_plane in zip(clear_planes,noised_planes):
@@ -102,27 +106,38 @@ def crop_planes_and_dump(dir_name, n_crops, device, crop_shape, p):
                 idx = putils.get_crop(clear_plane,
                                       n_crops = n_crops,
                                       crop_shape = crop_shape,
-                                      device = device,
                                       p = p)
 
                 clear_crops.append(clear_plane[idx])
                 noised_crops.append(noised_plane[idx])
 
-            clear_crops = torch.cat(clear_crops, 0)
-            noised_crops = torch.cat(noised_crops, 0)
+            clear_crops = np.cat(clear_crops, 0)
+            noised_crops = np.cat(noised_crops, 0)
                 
-            torch.save(clear_crops,
-                       os.path.join(dir_name,
-                       				"clear_crops",
-                       				"%s%s_%d_%f"%(s, ss, crop_shape[0], p)))
+            np.save(os.path.join(dir_name,
+                                 "clear_crops",
+                                 "%s%s_%d_%f"%(s, ss, crop_shape[0], p)),
+                    clear_crops)
 
             
-            torch.save(noised_crops,
-                       os.path.join(dir_name,
-                       				"noised_crops",
-                       				"%s%s_%d_%f"%(s, ss, crop_shape[0], p)))
+            np.save(os.path.join(dir_name,
+                                "noised_crops",
+                                "%s%s_%d_%f"%(s, ss, crop_shape[0], p)),
+                    noised_crops)
+
+            np.save(os.path.join(dir_name,
+                                "clear_crops",
+                                "postprocess_%s%s_%d_%f"%(s, ss, crop_shape[0], p)),
+                    np.array([clear_min, clear_max])
+                    )
+
+            np.save(os.path.join(dir_name,
+                                "noised_crops",
+                                "postprocess_%s%s_%d_%f"%(s, ss, crop_shape[0], p)),
+                    np.array([noised_min, noised_max])
+                    )
             
-def main(source, dir_name, device, n_crops, crop_edge, percentage):
+def main(source, dir_name, n_crops, crop_edge, percentage):
     crop_shape = (crop_edge, crop_edge)
     for i in ['clear_planes', 'clear_crops', 'noised_planes', 'noised_crops']:
         if not os.path.isdir(os.path.join(dir_name,i)):
@@ -132,44 +147,31 @@ def main(source, dir_name, device, n_crops, crop_edge, percentage):
     for s in ['readout_', 'collection_']:
         for ss in ['train', 'val', 'test']:
             print(s+ss + ' clear planes',
-                  torch.load(os.path.join(dir_name,
-                                          'clear_planes', s+ss)).shape)
+                  np.load(os.path.join(dir_name,
+                                       'clear_planes', s+ss)).shape)
             print(s+ss + ' noised planes',
-                  torch.load(os.path.join(dir_name,
-                                          'noised_planes', s+ss)).shape)
+                  np.load(os.path.join(dir_name,
+                                       'noised_planes', s+ss)).shape)
     
-    crop_planes_and_dump(dir_name, n_crops, device, crop_shape, percentage)
+    crop_planes_and_dump(dir_name, n_crops, crop_shape, percentage)
     for s in ['readout_', 'collection_']:
         for ss in ['train', 'val', 'test']:
             print(s+ss + ' clear crops',
-                  torch.load(os.path.join(dir_name,
-                                          'clear_crops',
-                                          "%s%s_%d_%f"%(s, ss,
-                                                        crop_shape[0],
-                                                        percentage))).shape)
+                  np.load(os.path.join(dir_name,
+                                       'clear_crops',
+                                       "%s%s_%d_%f"%(s, ss,
+                                                     crop_shape[0],
+                                                     percentage))).shape)
             print(s+ss + ' noised crops',
-                  torch.load(os.path.join(dir_name,
-                                          'noised_crops',
-                                          "%s%s_%d_%f"%(s, ss,
-                                                        crop_shape[0],
-                                                        percentage))).shape)
+                  np.load(os.path.join(dir_name,
+                                       'noised_crops',
+                                       "%s%s_%d_%f"%(s, ss,
+                                                     crop_shape[0],
+                                                     percentage))).shape)
 
 if __name__ == '__main__':
     args = vars(parser.parse_args())
-    dev = 0
 
-    if torch.cuda.is_available():
-        if int(args['device']) == -1:
-            gpu_num = get_freer_gpu()
-            dev = torch.device('cuda:{}'.format(gpu_num))
-        elif  int(args['device']) > -1:
-            dev = torch.device('cuda:{}'.format(args['device']))
-        else:
-            dev = torch.device('cpu')
-    else:
-        dev = torch.device('cpu')
-    args['device'] = dev
-    print('Working on device: {}\n'.format(args['device']))
     start = time.time()
     main(**args)
     print('Program done in %f'%(time.time()-start))

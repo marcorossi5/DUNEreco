@@ -1,31 +1,10 @@
 import os
 import torch
+import numpy as np
 
 from model_utils import plot_crops
 from model_utils import plot_wires
 
-def minmax_norm(img):
-    """
-    MinMax normalization to be done on APAs or crops
-    Parameters:
-        img: torch.Tensor of shape (batch, w, h)
-    Output:
-    torch.Tensor of shape (batch, w, h)
-    """
-    return img
-    m = img.min(-1)[0]
-    m = m.min(-1)[0]
-
-    M = img.max(-1)[0]
-    M = M.max(-1)[0]
-
-    mask = M!=m
-
-    m = m.view(-1,1,1)
-    M = M.view(-1,1,1)
-
-    img[mask] = (img[mask]-m[mask])/(M[mask]-m[mask])
-    return img
 
 class CropLoader(torch.utils.data.Dataset):
     def __init__(self, args, name):
@@ -37,7 +16,7 @@ class CropLoader(torch.utils.data.Dataset):
                              'clear_crops/readout_%s_%d_%f'%(name,
                                                                 patch_size,
                                                                 p))
-        readout_clear = minmax_norm(torch.load(fname))
+        readout_clear = torch.Tensor(np.load(fname))
         if args.plot_dataset:
             sample = torch.randint(0,readout_clear.shape[0],(25,))
             wire = torch.randint(0,patch_size, (25,))
@@ -52,7 +31,7 @@ class CropLoader(torch.utils.data.Dataset):
                              'noised_crops/readout_%s_%d_%f'%(name,
                                                                 patch_size,
                                                                 p))
-        readout_noise = minmax_norm(torch.load(fname))
+        readout_noise = torch.Tensor(np.load(fname))
         if args.plot_dataset:
             plot_crops(args.dir_testing,
                        readout_noise,
@@ -66,7 +45,7 @@ class CropLoader(torch.utils.data.Dataset):
                              'clear_crops/collection_%s_%d_%f'%(name,
                                                                 patch_size,
                                                                 p))
-        collection_clear = minmax_norm(torch.load(fname))
+        collection_clear = torch.Tensor(np.load(fname))
         if args.plot_dataset:
             sample = torch.randint(0,collection_clear.shape[0],(25,))
             wire = torch.randint(0,patch_size, (25,))
@@ -83,7 +62,7 @@ class CropLoader(torch.utils.data.Dataset):
                              'noised_crops/collection_%s_%d_%f'%(name,
                                                                 patch_size,
                                                                 p))
-        collection_noise = minmax_norm(torch.load(fname))
+        collection_noise = torch.Tensor(np.load(fname))
         if args.plot_dataset:
             plot_crops(args.dir_testing,
                        collection_noise,
@@ -111,7 +90,7 @@ class PlaneLoader(torch.utils.data.Dataset):
         data_dir = args.dataset_dir
 
         fname = os.path.join(data_dir, 'clear_planes/%s'%file)
-        self.clear_planes = minmax_norm(torch.load(fname)).unsqueeze(1)
+        self.clear_planes = torch.Tensor(np.load(fname)).unsqueeze(1)
 
         if args.plot_dataset:
             sample = torch.randint(0,self.clear_planes.shape[0],(25,))
@@ -122,7 +101,7 @@ class PlaneLoader(torch.utils.data.Dataset):
                        "_".join([file, "clear"]),sample,wire)
 
         fname = os.path.join(data_dir, 'noised_planes/%s'%file)
-        self.noised_planes = minmax_norm(torch.load(fname)).unsqueeze(1)
+        self.noised_planes = torch.Tensor(np.load(fname)).unsqueeze(1)
         if args.plot_dataset:
             plot_wires(args.dir_testing,
                        self.noised_planes[:,0],
