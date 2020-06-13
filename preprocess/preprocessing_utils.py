@@ -13,12 +13,17 @@ ada_step = event_step // (2*readout_step + collection_step)
 #c_pedestal = 500
 #r_pedestal = 1800
 
-def normalize(planes):
-    M = planes.max()
+def normalize(planes, m=None, M=None):
+    if M == None:
+        M = planes.max()
     if M==0:
         return planes, 0, M
-    m = planes.min()
+    if m == None:
+        m = planes.min()
     return (planes - m)/(M-m), m, M
+
+def get_normalization(planes):
+    return planes.min(), planes.max()
 
 def load_files(path_clear, path_noise):
     clear_files = glob.glob(path_clear)
@@ -90,10 +95,10 @@ def get_crop(clear_plane, n_crops=1000,
     x, y = clear_plane.shape
     c_x, c_y = crop_shape[0]//2, crop_shape[1]//2
 
-    #im = np.copy(clear_plane)
-    #im[im!=0] = 1
-    clear_plane = np.copy(clear_plane)
-    im = canny(clear_plane).astype(float)
+    im = np.copy(clear_plane)
+    im[im!=0] = 1
+    #clear_plane = np.copy(clear_plane)
+    #im = canny(clear_plane).astype(float)
 
     sgn = np.transpose(np.where(im==1))
     bkg = np.transpose(np.where(im==0))
@@ -111,4 +116,4 @@ def get_crop(clear_plane, n_crops=1000,
         np.minimum(np.maximum(samples[:,1], c_y), y-c_y)) #crops centers
 
     return((w[0][:,None]+np.arange(-c_x,c_x)[None])[:,:,None],
-           (w[1][:,None]+np.arange(-c_y,c_y)[None])[:,None,:])    
+           (w[1][:,None]+np.arange(-c_y,c_y)[None])[:,None,:])

@@ -92,11 +92,11 @@ def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
             noised_planes = np.load(os.path.join(dir_name,
                                                  "noised_planes",
                                                  s+ss+".npy"))
-            clear_planes, clear_min,\
-            clear_max = putils.normalize(clear_planes)
+            clear_min,\
+            clear_max = putils.get_normalization(clear_planes)
             
-            noised_planes, noised_min,\
-            noised_max = putils.normalize(noised_planes)
+            noised_min,\
+            noised_max = putils.get_normalization(noised_planes)
             
             clear_crops = []
             noised_crops = []
@@ -116,13 +116,13 @@ def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
             np.save(os.path.join(dir_name,
                                  "clear_crops",
                                  "%s%s_%d_%f"%(s, ss, crop_shape[0], p)),
-                    clear_crops)
+                    (clear_crops-clear_min)/(clear_max-clear_min))
 
             
             np.save(os.path.join(dir_name,
                                 "noised_crops",
                                 "%s%s_%d_%f"%(s, ss, crop_shape[0], p)),
-                    noised_crops)
+                    (noised_crops-noised_min)/(noised_max-noised_min))
 
             np.save(os.path.join(dir_name,
                                 "clear_crops",
@@ -170,6 +170,11 @@ def main(source, dir_name, n_crops, crop_edge, percentage):
 
 if __name__ == '__main__':
     args = vars(parser.parse_args())
+
+    print("Args:")
+    for k  in args.keys():
+      print(k, args[k])
+
 
     start = time.time()
     main(**args)

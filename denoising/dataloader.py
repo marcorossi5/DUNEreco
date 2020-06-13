@@ -92,6 +92,13 @@ class PlaneLoader(torch.utils.data.Dataset):
         fname = os.path.join(data_dir, 'clear_planes/%s.npy'%file)
         self.clear_planes = torch.Tensor(np.load(fname)).unsqueeze(1)
 
+        fname = os.path.join(data_dir,
+                             'clear_crops/postprocess_collection_%s_%d_%f.npy'%(name,
+                                                                patch_size,
+                                                                p))
+        clear_norm = np.load(fname)
+        self.clear_planes = (self.clear_planes/clear_norm[0])/(clear_norm[1]-clear_norm[0])
+
         if args.plot_dataset:
             sample = torch.randint(0,self.clear_planes.shape[0],(25,))
             wire = torch.randint(0,self.clear_planes.shape[2], (25,))
@@ -102,6 +109,15 @@ class PlaneLoader(torch.utils.data.Dataset):
 
         fname = os.path.join(data_dir, 'noised_planes/%s.npy'%file)
         self.noised_planes = torch.Tensor(np.load(fname)).unsqueeze(1)
+
+        fname = os.path.join(data_dir,
+                             'noised_crops/postprocess_collection_%s_%d_%f.npy'%(name,
+                                                                patch_size,
+                                                                p))
+        noisy_norm = np.load(fname)
+
+        self.noised_planes = (self.noised_planes/noisy_norm[0])/(noisy_norm[1]-noisy_norm[0])
+
         if args.plot_dataset:
             plot_wires(args.dir_testing,
                        self.noised_planes[:,0],
