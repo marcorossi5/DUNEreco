@@ -110,8 +110,8 @@ def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
                 clear_crops.append(clear_plane[idx])
                 noised_crops.append(noised_plane[idx])
 
-            clear_crops = np.cat(clear_crops, 0)
-            noised_crops = np.cat(noised_crops, 0)
+            clear_crops = np.concatenate(clear_crops, 0)
+            noised_crops = np.concatenate(noised_crops, 0)
                 
             np.save(os.path.join(dir_name,
                                  "clear_crops",
