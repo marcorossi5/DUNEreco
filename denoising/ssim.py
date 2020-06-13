@@ -146,7 +146,7 @@ def ssim(X, Y,
          win_size=11, 
          win_sigma=3, 
          win=None, 
-         K=(0.01, 0.03), 
+         K=(1e-10, 1e-10), 
          nonnegative_ssim=False):
     r""" interface of ssim
     Args:
@@ -203,7 +203,7 @@ def ms_ssim(X, Y,
             win_sigma=3, 
             win=None, 
             weights=None, 
-            K=(0.01, 0.03)):
+            K=(1e-10, 1e-10)):
 
     r""" interface of ms-ssim
     Args:
@@ -276,7 +276,7 @@ def stat_ssim(X, Y,
          win_size=11, 
          win_sigma=3, 
          win=None, 
-         K=(0.01, 0.03), 
+         K=(1e-10, 1e-10), 
          nonnegative_ssim=False):
     r""" interface of stat_ssim
     Args:

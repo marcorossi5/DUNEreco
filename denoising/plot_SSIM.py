@@ -1,4 +1,6 @@
 import os
+import argparse
+import time as tm
 import ssim
 import numpy as np
 import torch
@@ -16,26 +18,29 @@ PARSER.add_argument("--device", "-d", default="0", type=str,
 
 def main(args):
     """Main function: plots SSIM of a batch of crops to select k1, k2 parameters"""
-    fname = os.path.join(data_dir,
+    fname = os.path.join(args.dataset_dir,
                              'clear_crops/collection_val_32_0.500000.npy')
-    clear = torch.Tensor(np.load(fname)[:2048]).unsqueeze(1)
+    clear = torch.Tensor(np.load(fname)[:2048]).unsqueeze(1).to(args.device)
 
 
-    fname = os.path.join(data_dir,
+    fname = os.path.join(args.dataset_dir,
                              'noised_crops/collection_val_32_0.500000.npy')
-    noisy = torch.Tensor(np.load(fname)[:2048]).unsqueeze(1)
+    noisy = torch.Tensor(np.load(fname)[:2048]).unsqueeze(1).to(args.device)
 
     print("Number of crops: ", len(clear))
+    print("MSE: ", torch.nn.MSELoss()(noisy, clear))
 
     y = []
-    x = np.logspace(-5,-1,10)
+    x = np.logspace(-15,-1,10000)
 
     for i in x:
         y.append(stat_ssim(noisy, clear,
-                           data_range=1., size_average=True),
-                           k=(i,i))
+                           data_range=1., size_average=True,
+                           K=(i,i)).cpu().item())
 
+    plt.figure(figsize=(15,15))
     plt.plot(x,y)
+    plt.xscale("log")
     plt.savefig("../collection_t.png")
 
 if __name__ == '__main__':
@@ -54,7 +59,7 @@ if __name__ == '__main__':
         DEV = torch.device('cpu')
     ARGS['device'] = DEV
     print('Working on device: {}\n'.format(ARGS['device']))
-    ARGS['epoch'] = None
+    ARGS['epochs'] = None
     ARGS['model'] = None
     ARGS = Args(**ARGS)
     START = tm.time()
