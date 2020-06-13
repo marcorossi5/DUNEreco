@@ -13,7 +13,7 @@ class CropLoader(torch.utils.data.Dataset):
         p = args.crop_p
 
         fname = os.path.join(data_dir,
-                             'clear_crops/readout_%s_%d_%f'%(name,
+                             'clear_crops/readout_%s_%d_%f.npy'%(name,
                                                                 patch_size,
                                                                 p))
         readout_clear = torch.Tensor(np.load(fname))
@@ -28,7 +28,7 @@ class CropLoader(torch.utils.data.Dataset):
                        "_".join(["readout_clear",name]),sample,wire)
 
         fname = os.path.join(data_dir,
-                             'noised_crops/readout_%s_%d_%f'%(name,
+                             'noised_crops/readout_%s_%d_%f.npy'%(name,
                                                                 patch_size,
                                                                 p))
         readout_noise = torch.Tensor(np.load(fname))
@@ -42,7 +42,7 @@ class CropLoader(torch.utils.data.Dataset):
         
 
         fname = os.path.join(data_dir,
-                             'clear_crops/collection_%s_%d_%f'%(name,
+                             'clear_crops/collection_%s_%d_%f.npy'%(name,
                                                                 patch_size,
                                                                 p))
         collection_clear = torch.Tensor(np.load(fname))
@@ -59,7 +59,7 @@ class CropLoader(torch.utils.data.Dataset):
         
 
         fname = os.path.join(data_dir,
-                             'noised_crops/collection_%s_%d_%f'%(name,
+                             'noised_crops/collection_%s_%d_%f.npy'%(name,
                                                                 patch_size,
                                                                 p))
         collection_noise = torch.Tensor(np.load(fname))
@@ -89,7 +89,7 @@ class PlaneLoader(torch.utils.data.Dataset):
     def __init__(self, args, file):
         data_dir = args.dataset_dir
 
-        fname = os.path.join(data_dir, 'clear_planes/%s'%file)
+        fname = os.path.join(data_dir, 'clear_planes/%s.npy'%file)
         self.clear_planes = torch.Tensor(np.load(fname)).unsqueeze(1)
 
         if args.plot_dataset:
@@ -100,7 +100,7 @@ class PlaneLoader(torch.utils.data.Dataset):
                        self.clear_planes[:,0],
                        "_".join([file, "clear"]),sample,wire)
 
-        fname = os.path.join(data_dir, 'noised_planes/%s'%file)
+        fname = os.path.join(data_dir, 'noised_planes/%s.npy'%file)
         self.noised_planes = torch.Tensor(np.load(fname)).unsqueeze(1)
         if args.plot_dataset:
             plot_wires(args.dir_testing,

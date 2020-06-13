@@ -1,5 +1,4 @@
 import numpy as np
-import np
 import os
 import sys
 import argparse
@@ -89,10 +88,10 @@ def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
         for ss in ['train', 'val', 'test']:
             clear_planes = np.load(os.path.join(dir_name,
                                                  "clear_planes",
-                                                 s+ss))
+                                                 s+ss+".npy"))
             noised_planes = np.load(os.path.join(dir_name,
                                                  "noised_planes",
-                                                 s+ss))
+                                                 s+ss+".npy"))
             clear_planes, clear_min,\
             clear_max = putils.normalize(clear_planes)
             
@@ -148,10 +147,10 @@ def main(source, dir_name, n_crops, crop_edge, percentage):
         for ss in ['train', 'val', 'test']:
             print(s+ss + ' clear planes',
                   np.load(os.path.join(dir_name,
-                                       'clear_planes', s+ss)).shape)
+                                       'clear_planes', s+ss+".npy")).shape)
             print(s+ss + ' noised planes',
                   np.load(os.path.join(dir_name,
-                                       'noised_planes', s+ss)).shape)
+                                       'noised_planes', s+ss+".npy")).shape)
     
     crop_planes_and_dump(dir_name, n_crops, crop_shape, percentage)
     for s in ['readout_', 'collection_']:
@@ -159,13 +158,13 @@ def main(source, dir_name, n_crops, crop_edge, percentage):
             print(s+ss + ' clear crops',
                   np.load(os.path.join(dir_name,
                                        'clear_crops',
-                                       "%s%s_%d_%f"%(s, ss,
+                                       "%s%s_%d_%f.npy"%(s, ss,
                                                      crop_shape[0],
                                                      percentage))).shape)
             print(s+ss + ' noised crops',
                   np.load(os.path.join(dir_name,
                                        'noised_crops',
-                                       "%s%s_%d_%f"%(s, ss,
+                                       "%s%s_%d_%f.npy"%(s, ss,
                                                      crop_shape[0],
                                                      percentage))).shape)
 

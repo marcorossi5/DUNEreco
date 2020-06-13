@@ -12,8 +12,8 @@ class Args:
         self.model = model
         self.device = device
 
-        self.batch_size = 512
-        self.test_batch_size = 512
+        self.batch_size = 64#512
+        self.test_batch_size = 64#512
         self.num_workers = 8
 
         #model parameters
@@ -25,7 +25,7 @@ class Args:
         self.warmup_epoch = 0
 
         #logs
-        self.plot_dataset = False
+        self.plot_dataset = True#False
 
         self.epoch_log = 1
         self.epoch_test_start = 0
