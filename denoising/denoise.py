@@ -50,7 +50,8 @@ def main(args):
     model = eval('get_' + args.model)(args.k,
                                       args.in_channels,
                                       args.hidden_channels,
-                                      args.crop_size)
+                                      args.crop_size,
+                                      args.a)
     model = MyDataParallel(model, device_ids=args.dev_ids)
     model = model.to(args.device)
 

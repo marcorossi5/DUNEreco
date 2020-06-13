@@ -10,7 +10,7 @@ from model_utils import local_mask
 import ssim
 
 def get_CNN(k, input_channels, hidden_channels,
-                    patch_size=(64, 64)):
+                    patch_size=(64, 64), a):
 
     class GraphConv(nn.Module):
         def __init__(self, input_channels, out_channels, search_area=None):
@@ -64,9 +64,9 @@ def get_CNN(k, input_channels, hidden_channels,
             return self.pipeline(x)
 
     class CNN(nn.Module):
-        def __init__(self, input_channels, hidden_channels, patch_size):
+        def __init__(self, input_channels, hidden_channels, patch_size, a):
             super().__init__()
-            self.a = 0.84
+            self.a = a
             self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
                 PreProcessBlock(3, input_channels, hidden_channels),
@@ -107,12 +107,12 @@ def get_CNN(k, input_channels, hidden_channels,
                 return out, loss
             return out
 
-    cnn = CNN(input_channels, hidden_channels, patch_size)
+    cnn = CNN(input_channels, hidden_channels, patch_size, a)
         
     return cnn
 
 def get_GCNN(k, input_channels, hidden_channels,
-                    patch_size=(64, 64)):
+                    patch_size=(64, 64), a):
     l_mask = local_mask(patch_size)
 
     class GraphConv(nn.Module):
@@ -167,9 +167,9 @@ def get_GCNN(k, input_channels, hidden_channels,
             return self.act(self.bn_3(self.GC_3(y, graph)))
 
     class GCNN(nn.Module):
-        def __init__(self, k, input_channels, hidden_channels, patch_size):
+        def __init__(self, k, input_channels, hidden_channels, patch_size, a):
             super().__init__()
-            self.a = 0.84
+            self.a = a
             self.patch_size = patch_size
             self.k = k
             self.preprocessing_blocks = nn.ModuleList([
@@ -221,12 +221,12 @@ def get_GCNN(k, input_channels, hidden_channels,
                 return out, loss
             return out
                         
-    gcnn = GCNN(k, input_channels, hidden_channels, patch_size)
+    gcnn = GCNN(k, input_channels, hidden_channels, patch_size, a)
 
     return gcnn
 
 def get_GCNNv2(k, input_channels, hidden_channels,
-               patch_size=(64,64)):
+               patch_size=(64,64), a):
     l_mask = local_mask(patch_size)
 
     class GraphConv(nn.Module):
@@ -325,9 +325,9 @@ def get_GCNNv2(k, input_channels, hidden_channels,
             return x + self.act(self.bn_3(self.GC_3(y, graph)))
 
     class GCNNv2(nn.Module):
-        def __init__(self, k, input_channels, hidden_channels, patch_size):
+        def __init__(self, k, input_channels, hidden_channels, patch_size, a):
             super().__init__()
-            self.a = 0.84
+            self.a = a
             self.patch_size = patch_size
             self.k = k
             self.preprocessing_blocks = nn.ModuleList([
@@ -396,12 +396,12 @@ def get_GCNNv2(k, input_channels, hidden_channels,
                 return out, loss
             return out
 
-    gcnnv2 = GCNNv2(k, input_channels, hidden_channels, patch_size)
+    gcnnv2 = GCNNv2(k, input_channels, hidden_channels, patch_size, a)
 
     return gcnnv2
 
 def get_CNNv2(k, input_channels, hidden_channels,
-                    patch_size=(64, 64)):
+                    patch_size=(64, 64), a):
 
     class GraphConv(nn.Module):
         def __init__(self, input_channels, out_channels):
@@ -494,9 +494,9 @@ def get_CNNv2(k, input_channels, hidden_channels,
             return x + self.act(self.bn_3(self.GC_3(y)))
 
     class CNNv2(nn.Module):
-        def __init__(self, input_channels, hidden_channels, patch_size):
+        def __init__(self, input_channels, hidden_channels, patch_size, a):
             super().__init__()
-            self.a = 0.84
+            self.a = a
             self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
                 PreProcessBlock(3, input_channels, hidden_channels),
@@ -557,6 +557,6 @@ def get_CNNv2(k, input_channels, hidden_channels,
                 return out, loss
             return out
 
-    cnnv2 = CNNv2(input_channels, hidden_channels, patch_size)
+    cnnv2 = CNNv2(input_channels, hidden_channels, patch_size, a)
 
     return cnnv2
