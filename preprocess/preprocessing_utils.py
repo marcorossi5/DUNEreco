@@ -92,6 +92,14 @@ def get_planes(clear_file, noised_file):
 
 def get_crop(clear_plane, n_crops=1000,
             crop_shape=(32,32), p=0.5):
+    """
+    This functions finds crops centers indeces
+    Input:
+        clear_plane: array of shape (N,H,W)
+
+    Returns:
+        numpy array of shape (N,C,H,W)
+    """
     x, y = clear_plane.shape
     c_x, c_y = crop_shape[0]//2, crop_shape[1]//2
 
@@ -115,5 +123,5 @@ def get_crop(clear_plane, n_crops=1000,
     w = (np.minimum(np.maximum(samples[:,0], c_x), x-c_x),
         np.minimum(np.maximum(samples[:,1], c_y), y-c_y)) #crops centers
 
-    return((w[0][:,None]+np.arange(-c_x,c_x)[None])[:,:,None],
-           (w[1][:,None]+np.arange(-c_y,c_y)[None])[:,None,:])
+    return((w[0][:,None,None]+np.arange(-c_x,c_x)[None,None])[:,:,:,None],
+           (w[1][:,None,None]+np.arange(-c_y,c_y)[None,None])[:,:,None,:])

@@ -9,8 +9,15 @@ from model_utils import recombine_img
 from model_utils import local_mask
 import ssim
 
-def get_CNN(k, input_channels, hidden_channels,
-                    patch_size=(64, 64), a):
+from losses import *
+
+def get_CNN(args):
+    k = args.k
+    input_channels = args.in_channels
+    hidden_channels = args.hidden_channels
+    patch_size = args.crop_size
+    loss_fn = args.loss_fn
+    #a
 
     class GraphConv(nn.Module):
         def __init__(self, input_channels, out_channels, search_area=None):
@@ -64,9 +71,9 @@ def get_CNN(k, input_channels, hidden_channels,
             return self.pipeline(x)
 
     class CNN(nn.Module):
-        def __init__(self, input_channels, hidden_channels, patch_size, a):
+        def __init__(self, input_channels, hidden_channels, patch_size, loss_fn):
             super().__init__()
-            self.a = a
+            self.loss_fn = loss_fn
             self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
                 PreProcessBlock(3, input_channels, hidden_channels),
@@ -97,22 +104,21 @@ def get_CNN(k, input_channels, hidden_channels,
         def forward(self, noised_image=None, clear_image=None):
             out = self.fit_image(noised_image)
             if self.training:
-                #loss = loss_mse(out, clear_image)
-                loss = 1 - ssim.stat_ssim(out,
-                                 clear_image,
-                                 data_range=1.,
-                                 size_average=True)
-                loss *= self.a
-                loss += (1-self.a)*(out-clear_image).abs().mean()
-                return out, loss
+                return out, loss(out, clear_image)
             return out
 
-    cnn = CNN(input_channels, hidden_channels, patch_size, a)
+    cnn = CNN(input_channels, hidden_channels, patch_size, eval(loss_fn))
         
     return cnn
 
-def get_GCNN(k, input_channels, hidden_channels,
-                    patch_size=(64, 64), a):
+def get_GCNN(args):
+    k = args.k
+    input_channels = args.in_channels
+    hidden_channels = args.hidden_channels
+    patch_size = args.crop_size
+    loss_fn = args.loss_fn
+    #a
+
     l_mask = local_mask(patch_size)
 
     class GraphConv(nn.Module):
@@ -167,9 +173,9 @@ def get_GCNN(k, input_channels, hidden_channels,
             return self.act(self.bn_3(self.GC_3(y, graph)))
 
     class GCNN(nn.Module):
-        def __init__(self, k, input_channels, hidden_channels, patch_size, a):
+        def __init__(self, k, input_channels, hidden_channels, patch_size, loss_fn):
             super().__init__()
-            self.a = a
+            self.loss_fn = loss_fn
             self.patch_size = patch_size
             self.k = k
             self.preprocessing_blocks = nn.ModuleList([
@@ -211,34 +217,32 @@ def get_GCNN(k, input_channels, hidden_channels,
         def forward(self, noised_image=None, clear_image=None):
             out = self.fit_image(noised_image)
             if self.training:
-                #loss = loss_mse(out, clear_image)
-                loss = 1 - ssim.stat_ssim(out,
-                                 clear_image,
-                                 data_range=1.,
-                                 size_average=True)
-                loss *= self.a
-                loss += (1-self.a)*(out-clear_image).abs().mean()
-                return out, loss
+                return out, loss_fn(out, clear_image)
             return out
                         
-    gcnn = GCNN(k, input_channels, hidden_channels, patch_size, a)
+    gcnn = GCNN(k, input_channels, hidden_channels, patch_size, eval(loss_fn))
 
     return gcnn
 
-def get_GCNNv2(k, input_channels, hidden_channels,
-               patch_size=(64,64), a):
+def get_GCNNv2(args):
+    k = args.k
+    input_channels = args.in_channels
+    hidden_channels = args.hidden_channels
+    patch_size = args.crop_size
+    loss_fn = args.loss_fn
+    #a
     l_mask = local_mask(patch_size)
 
     class GraphConv(nn.Module):
         def __init__(self, input_channels, out_channels, search_area=None):
             super().__init__()
             self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
-            self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
+            #self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
             self.NLA = NonLocalAggregation(input_channels, out_channels)
 
         def forward(self, x, graph):
             return torch.mean(torch.stack([self.conv1(x),
-                                           self.conv2(x),
+                                           #self.conv2(x),
                                            self.NLA(x, graph)]), dim=0)
 
     class PreProcessBlock(nn.Module):
@@ -325,9 +329,9 @@ def get_GCNNv2(k, input_channels, hidden_channels,
             return x + self.act(self.bn_3(self.GC_3(y, graph)))
 
     class GCNNv2(nn.Module):
-        def __init__(self, k, input_channels, hidden_channels, patch_size, a):
+        def __init__(self, k, input_channels, hidden_channels, patch_size, loss_fn):
             super().__init__()
-            self.a = a
+            self.loss_fn = loss_fn
             self.patch_size = patch_size
             self.k = k
             self.preprocessing_blocks = nn.ModuleList([
@@ -386,34 +390,33 @@ def get_GCNNv2(k, input_channels, hidden_channels,
         def forward(self, noised_image=None, clear_image=None):
             out = self.fit_image(noised_image)
             if self.training:
-                #loss = loss_mse(out, clear_image)
-                loss = 1 - ssim.stat_ssim(out,
-                                 clear_image,
-                                 data_range=1.,
-                                 size_average=True)
-                loss *= self.a
-                loss += (1-self.a)*(out-clear_image).abs().mean()
-                return out, loss
+                return out, loss_fn(clear_image, out)
             return out
 
-    gcnnv2 = GCNNv2(k, input_channels, hidden_channels, patch_size, a)
+    gcnnv2 = GCNNv2(k, input_channels, hidden_channels, patch_size, eval(loss_fn))
 
     return gcnnv2
 
-def get_CNNv2(k, input_channels, hidden_channels,
-                    patch_size=(64, 64), a):
+def get_CNNv2(args):
+    k = args.k
+    input_channels = args.in_channels
+    hidden_channels = args.hidden_channels
+    patch_size = args.crop_size
+    loss_fn = args.loss_fn
+    #a
+
 
     class GraphConv(nn.Module):
         def __init__(self, input_channels, out_channels):
             super().__init__()
             
             self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
-            self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
+            #self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
             self.conv3 = nn.Conv2d(input_channels, out_channels, 7, padding=3)
 
         def forward(self, x):
             return torch.mean(torch.stack([self.conv1(x),
-                                           self.conv2(x),
+                                           #self.conv2(x),
                                            self.conv3(x)]), dim=0)
 
     class PreProcessBlock(nn.Module):
@@ -494,9 +497,9 @@ def get_CNNv2(k, input_channels, hidden_channels,
             return x + self.act(self.bn_3(self.GC_3(y)))
 
     class CNNv2(nn.Module):
-        def __init__(self, input_channels, hidden_channels, patch_size, a):
+        def __init__(self, input_channels, hidden_channels, patch_size, loss_fn):
             super().__init__()
-            self.a = a
+            self.loss_fn = loss_fn
             self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
                 PreProcessBlock(3, input_channels, hidden_channels),
@@ -547,16 +550,9 @@ def get_CNNv2(k, input_channels, hidden_channels,
         def forward(self, noised_image=None, clear_image=None):
             out = self.fit_image(noised_image)
             if self.training:
-                #loss = loss_mse(out, clear_image)
-                loss = 1 - ssim.stat_ssim(out,
-                                 clear_image,
-                                 data_range=1.,
-                                 size_average=True)
-                loss *= self.a
-                loss += (1-self.a)*(out-clear_image).abs().mean()
-                return out, loss
+                return out, self.loss_fn(clear_image, out)
             return out
 
-    cnnv2 = CNNv2(input_channels, hidden_channels, patch_size, a)
+    cnnv2 = CNNv2(input_channels, hidden_channels, patch_size, eval(loss_fn))
 
     return cnnv2

@@ -5,6 +5,8 @@ import numpy as np
 from model_utils import plot_crops
 from model_utils import plot_wires
 
+from denoising.ssim import _fspecial_gauss_1d, stat_gaussian_filter
+
 
 class CropLoader(torch.utils.data.Dataset):
     def __init__(self, args, name):
@@ -77,8 +79,8 @@ class CropLoader(torch.utils.data.Dataset):
         #self.clear_crops = collection_clear
         #self.noised_crops = collection_noise
 
-        self.clear_crops = self.clear_crops.unsqueeze(1)
-        self.noised_crops = self.noised_crops.unsqueeze(1)
+        self.clear_crops = self.clear_crops
+        self.noised_crops = self.noised_crops
      
     def __len__(self):
         return len(self.noised_crops)
@@ -122,7 +124,18 @@ class PlaneLoader(torch.utils.data.Dataset):
             plot_wires(args.dir_testing,
                        self.noised_planes[:,0],
                        "_".join([file, "noisy"]),sample,wire)
-     
+
+        win = _fspecial_gauss_1d(17,4).unsqueeze(1)
+        filt_1 = stat_gaussian_filter(noised_planes.to(0),
+                                      win.to(0)).cpu()
+
+        win = _fspecial_gauss_1d(101,32).unsqueeze(1)
+        filt_2 = stat_gaussian_filter(noised_planes.to(0),
+                                      win.to(0)).cpu()
+
+        noised_planes = torch.cat([noised_planes,
+                                   filt_1,
+                                   filt_2,],1)
     def __len__(self):
         return len(self.noised_planes)
     def __getitem__(self, index):

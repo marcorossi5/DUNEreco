@@ -27,9 +27,11 @@ PARSER.add_argument("--dir_name", "-p", default="../datasets",
 PARSER.add_argument("--epochs", "-n", default=50, type=int,
                     help="training epochs")
 PARSER.add_argument("--model", "-m", default="CNN", type=str,
-                    help="either CNN or GCNN")
+                    help="CNN, GCNN, CNNv2, GCNNv2")
 PARSER.add_argument("--device", "-d", default="0", type=str,
                     help="-1 (automatic)/ -2 (cpu) / gpu number")
+PARSER.add_argument("--loss_fn", "-l", default="ssim", type=str,
+                    help="mse, ssim, ssim_l1, ssim_l2")
 
 
 def main(args):
@@ -47,11 +49,7 @@ def main(args):
                                             num_workers=args.num_workers)
     
     #build model
-    model = eval('get_' + args.model)(args.k,
-                                      args.in_channels,
-                                      args.hidden_channels,
-                                      args.crop_size,
-                                      args.a)
+    model = eval('get_' + args.model)(args)
     model = MyDataParallel(model, device_ids=args.dev_ids)
     model = model.to(args.device)
 
@@ -73,6 +71,7 @@ if __name__ == '__main__':
     else:
         DEV = torch.device('cpu')
     ARGS['device'] = DEV
+    ARGS['loss_fn'] = "_".join(["loss", ARGS['loss_fn']])
     print('Working on device: {}\n'.format(ARGS['device']))
     ARGS = Args(**ARGS)
     START = tm.time()

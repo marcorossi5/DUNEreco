@@ -42,9 +42,9 @@ def stat_gaussian_filter(input, win):
     """
     N, C, H, W = input.shape
     k = win.shape[-1]
-    input = F.pad(input, (k//2,k//2))
+    input = F.pad(input, (k//2,k//2), value=input.mean())
     out = F.conv2d(input, win, groups=C)
-    out = F.pad(out, (0,0,k//2, k//2))
+    out = F.pad(out, (0,0,k//2, k//2), value=input.mean())
     out = F.conv2d(out, win.transpose(2, 3), groups=C)
     return out
 
@@ -146,7 +146,7 @@ def ssim(X, Y,
          win_size=11, 
          win_sigma=3, 
          win=None, 
-         K=(1e-10, 1e-10), 
+         K=(1e-13, 1e-13), 
          nonnegative_ssim=False):
     r""" interface of ssim
     Args:
@@ -203,7 +203,7 @@ def ms_ssim(X, Y,
             win_sigma=3, 
             win=None, 
             weights=None, 
-            K=(1e-10, 1e-10)):
+            K=(1e-13, 1e-13)):
 
     r""" interface of ms-ssim
     Args:
@@ -276,7 +276,7 @@ def stat_ssim(X, Y,
          win_size=11, 
          win_sigma=3, 
          win=None, 
-         K=(1e-10, 1e-10), 
+         K=(1e-13, 1e-13), 
          nonnegative_ssim=False):
     r""" interface of stat_ssim
     Args:

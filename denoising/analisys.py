@@ -32,6 +32,8 @@ parser.add_argument("--model", "-m", default="CNN", type=str,
                     help="either CNN or GCNN")
 parser.add_argument("--device", "-d", default="0", type=str,
                     help="-1 (automatic)/ -2 (cpu) / gpu number")
+PARSER.add_argument("--loss_fn", "-l", default="ssim", type=str,
+                    help="mse, ssim, ssim_l1, ssim_l2")
 
 def inference(args, model):
     #load dataset
@@ -318,6 +320,7 @@ if __name__ == '__main__':
     else:
         dev = torch.device('cpu')
     args['device'] = dev
+    args['loss_fn'] = "_".join(["loss", args['loss_fn']])
     print('Working on device: {}\n'.format(args['device']))
     args = Args(**args)
     start = tm.time()

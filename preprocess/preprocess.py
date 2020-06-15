@@ -1,8 +1,9 @@
-import numpy as np
 import os
 import sys
 import argparse
 import time
+import numpy as np
+import torch
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--source", "-s", default="*",
@@ -20,6 +21,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import preprocessing_utils as putils
 from utils.utils import get_freer_gpu
+from denoising.ssim import _fspecial_gauss_1d, stat_gaussian_filter
 
 #crop_shape = (32,32)
 
@@ -63,7 +65,6 @@ def get_planes_and_dump(source, dir_name):
     np.save(os.path.join(dir_name,"noised_planes", 'readout_test'),
             n_r[int(s*0.8):])
 
-
     s = len(clear_collection_planes)
     p = np.random.permutation(s)
     c_c = clear_collection_planes[p]
@@ -86,23 +87,36 @@ def get_planes_and_dump(source, dir_name):
 def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
     for s in ['readout_', 'collection_']:
         for ss in ['train', 'val', 'test']:
+            #create channel dimension
             clear_planes = np.load(os.path.join(dir_name,
                                                  "clear_planes",
-                                                 s+ss+".npy"))
+                                                 s+ss+".npy"))[:,None]
             noised_planes = np.load(os.path.join(dir_name,
                                                  "noised_planes",
-                                                 s+ss+".npy"))
+                                                 s+ss+".npy"))[:,None]
             clear_min,\
             clear_max = putils.get_normalization(clear_planes)
             
             noised_min,\
             noised_max = putils.get_normalization(noised_planes)
+
+            win = _fspecial_gauss_1d(17,4).unsqueeze(1)
+            filt_1 = stat_gaussian_filter(torch.Tensor(noised_planes).to(0),
+                                                win.to(0)).cpu()
+
+            win = _fspecial_gauss_1d(101,32).unsqueeze(1)
+            filt_2 = stat_gaussian_filter(torch.Tensor(noised_planes).to(0),
+                                                win.to(0)).cpu()
+
+            noised_planes = np.concatenate([noised_planes,
+                                            np.array(filt_1),
+                                            np.array(filt_2),],1)
             
             clear_crops = []
             noised_crops = []
             for clear_plane, noised_plane in zip(clear_planes,noised_planes):
 
-                idx = putils.get_crop(clear_plane,
+                idx = putils.get_crop(clear_plane[0],
                                       n_crops = n_crops,
                                       crop_shape = crop_shape,
                                       p = p)

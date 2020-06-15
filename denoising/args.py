@@ -1,7 +1,7 @@
 import os
 
 class Args:
-    def __init__(self, dir_name, epochs, model, device):
+    def __init__(self, dir_name, epochs, model, device, loss_fn):
         self.crop_size = (32,32)
         self.crop_p = 0.500000
         self.dev_ids = None
@@ -11,22 +11,23 @@ class Args:
         self.epochs = epochs
         self.model = model
         self.device = device
+        self.loss_fn = loss_fn
 
         self.batch_size = 64#512
         self.test_batch_size = 64#512
         self.num_workers = 8
 
         #model parameters
-        self.a = 1#0.84
+        self.a = 0.84
         self.k = 1
-        self.in_channels = 1
+        self.in_channels = 3
         self.hidden_channels = 32
         self.lr = 1e-3
         self.decay_lr = 0.9
         self.warmup_epoch = 0
 
         #logs
-        self.plot_dataset = True#False
+        self.plot_dataset = False#False
 
         self.epoch_log = 1
         self.epoch_test_start = 0
