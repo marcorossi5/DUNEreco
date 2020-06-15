@@ -123,5 +123,5 @@ def get_crop(clear_plane, n_crops=1000,
     w = (np.minimum(np.maximum(samples[:,0], c_x), x-c_x),
         np.minimum(np.maximum(samples[:,1], c_y), y-c_y)) #crops centers
 
-    return((w[0][:,None,None]+np.arange(-c_x,c_x)[None,None])[:,:,:,None],
-           (w[1][:,None,None]+np.arange(-c_y,c_y)[None,None])[:,:,None,:])
+    return((w[0][:,None]+np.arange(-c_x,c_x)[None])[:,None,:,None],
+           (w[1][:,None]+np.arange(-c_y,c_y)[None])[:,None,None,:])

@@ -5,7 +5,7 @@ import numpy as np
 from model_utils import plot_crops
 from model_utils import plot_wires
 
-from denoising.ssim import _fspecial_gauss_1d, stat_gaussian_filter
+from ssim import _fspecial_gauss_1d, stat_gaussian_filter
 
 
 class CropLoader(torch.utils.data.Dataset):
@@ -73,11 +73,11 @@ class CropLoader(torch.utils.data.Dataset):
                        collection_noise,
                        "_".join(["collection_noisy",name]),sample,wire)
 
-        self.clear_crops = torch.cat([collection_clear, readout_clear])
-        self.noised_crops = torch.cat([collection_noise, readout_noise])
+        #self.clear_crops = torch.cat([collection_clear, readout_clear])
+        #self.noised_crops = torch.cat([collection_noise, readout_noise])
 
-        #self.clear_crops = collection_clear
-        #self.noised_crops = collection_noise
+        self.clear_crops = collection_clear
+        self.noised_crops = collection_noise
 
         self.clear_crops = self.clear_crops
         self.noised_crops = self.noised_crops

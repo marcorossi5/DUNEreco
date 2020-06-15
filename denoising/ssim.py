@@ -42,9 +42,9 @@ def stat_gaussian_filter(input, win):
     """
     N, C, H, W = input.shape
     k = win.shape[-1]
-    input = F.pad(input, (k//2,k//2), value=input.mean())
+    input = F.pad(input, (k//2,k//2), value=input.mean().item())
     out = F.conv2d(input, win, groups=C)
-    out = F.pad(out, (0,0,k//2, k//2), value=input.mean())
+    out = F.pad(out, (0,0,k//2, k//2), value=input.mean().item())
     out = F.conv2d(out, win.transpose(2, 3), groups=C)
     return out
 

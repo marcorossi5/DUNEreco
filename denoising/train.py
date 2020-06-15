@@ -36,7 +36,7 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
     ssim_loss = []
 
     mse_loss = torch.nn.MSELoss(reduction='none')
-    a = model.a
+    a = args.a
 
     for i, (clear, noised) in enumerate(test_data):
         clear = clear.to(args.device)
@@ -44,12 +44,7 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
 
         denoised_img = model(noised)
 
-        l = 1 - ssim.stat_ssim(denoised_img,
-                               clear,
-                               data_range=1.,
-                               size_average=True)
-
-        ssim_loss.append((a*l+(1-a)*(denoised_img-clear).abs().mean()).cpu().item())
+        ssim_loss.append(model.loss_fn(denoised_img,clear).cpu().item())
         
         mse_ = mse_loss(denoised_img, clear).mean([-1,-2])[:,0]
 

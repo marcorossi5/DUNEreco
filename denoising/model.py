@@ -16,7 +16,7 @@ def get_CNN(args):
     input_channels = args.in_channels
     hidden_channels = args.hidden_channels
     patch_size = args.crop_size
-    loss_fn = args.loss_fn
+    loss_fn = eval(args.loss_fn)(args.a)
     #a
 
     class GraphConv(nn.Module):
@@ -76,9 +76,9 @@ def get_CNN(args):
             self.loss_fn = loss_fn
             self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
-                PreProcessBlock(3, input_channels, hidden_channels),
-                PreProcessBlock(5, input_channels, hidden_channels),
-                PreProcessBlock(7, input_channels, hidden_channels),
+                PreProcessBlock(3, input_channels*3, hidden_channels),
+                PreProcessBlock(5, input_channels*3, hidden_channels),
+                PreProcessBlock(7, input_channels*3, hidden_channels),
                 ])
             self.residual_1 = Residual(hidden_channels*3, hidden_channels*3)
             self.residual_2 = Residual(hidden_channels*3, hidden_channels*3)
@@ -99,7 +99,7 @@ def get_CNN(args):
                                         self.preprocessing_blocks], dim=1)
             residual_1 = self.residual_1(processed_image) + processed_image
             residual_2 = self.residual_2(residual_1) + residual_1
-            return self.act(self.downsample(residual_2)+image)
+            return self.act(self.downsample(residual_2)+image[:,:1])
         
         def forward(self, noised_image=None, clear_image=None):
             out = self.fit_image(noised_image)
@@ -116,7 +116,7 @@ def get_GCNN(args):
     input_channels = args.in_channels
     hidden_channels = args.hidden_channels
     patch_size = args.crop_size
-    loss_fn = args.loss_fn
+    loss_fn = eval(args.loss_fn)(args.a)
     #a
 
     l_mask = local_mask(patch_size)
@@ -179,9 +179,9 @@ def get_GCNN(args):
             self.patch_size = patch_size
             self.k = k
             self.preprocessing_blocks = nn.ModuleList([
-                PreProcessBlock(k, 3, input_channels, hidden_channels),
-                PreProcessBlock(k, 5, input_channels, hidden_channels),
-                PreProcessBlock(k, 7, input_channels, hidden_channels),
+                PreProcessBlock(k, 3, input_channels*3, hidden_channels),
+                PreProcessBlock(k, 5, input_channels*3, hidden_channels),
+                PreProcessBlock(k, 7, input_channels*3, hidden_channels),
             ])
             self.residual_1 = Residual(k, hidden_channels*3, hidden_channels*3)
             self.residual_2 = Residual(k, hidden_channels*3, hidden_channels*3)
@@ -211,7 +211,7 @@ def get_GCNN(args):
             result = self.relu(result)
             
             graph = get_graph(result,self.k,l_mask)
-            return self.act(self.GC_3(result,graph) + image)
+            return self.act(self.GC_3(result,graph) + image[:,:1])
 
 
         def forward(self, noised_image=None, clear_image=None):
@@ -229,7 +229,7 @@ def get_GCNNv2(args):
     input_channels = args.in_channels
     hidden_channels = args.hidden_channels
     patch_size = args.crop_size
-    loss_fn = args.loss_fn
+    loss_fn = eval(args.loss_fn)(args.a)
     #a
     l_mask = local_mask(patch_size)
 
@@ -335,9 +335,9 @@ def get_GCNNv2(args):
             self.patch_size = patch_size
             self.k = k
             self.preprocessing_blocks = nn.ModuleList([
-                PreProcessBlock(k, 3, input_channels, hidden_channels),
-                PreProcessBlock(k, 5, input_channels, hidden_channels),
-                PreProcessBlock(k, 7, input_channels, hidden_channels),
+                PreProcessBlock(k, 3, input_channels*3, hidden_channels),
+                PreProcessBlock(k, 5, input_channels*3, hidden_channels),
+                PreProcessBlock(k, 7, input_channels*3, hidden_channels),
             ])
             self.LPF_1 = LPF(k, hidden_channels*3, hidden_channels*3)
             self.LPF_2 = LPF(k, hidden_channels*3, hidden_channels*3)
@@ -385,7 +385,7 @@ def get_GCNNv2(args):
             y = self.relu(self.bn_2(self.GC_2(y, graph)))
 
             graph = get_graph(y, self.k, l_mask)
-            return self.act(self.GC_3(y, graph) + x)
+            return self.act(self.GC_3(y, graph) + x[:,:1])
 
         def forward(self, noised_image=None, clear_image=None):
             out = self.fit_image(noised_image)
@@ -402,7 +402,7 @@ def get_CNNv2(args):
     input_channels = args.in_channels
     hidden_channels = args.hidden_channels
     patch_size = args.crop_size
-    loss_fn = args.loss_fn
+    loss_fn = eval(args.loss_fn)(args.a)
     #a
 
 
@@ -502,9 +502,9 @@ def get_CNNv2(args):
             self.loss_fn = loss_fn
             self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
-                PreProcessBlock(3, input_channels, hidden_channels),
-                PreProcessBlock(5, input_channels, hidden_channels),
-                PreProcessBlock(7, input_channels, hidden_channels),
+                PreProcessBlock(3, input_channels*3, hidden_channels),
+                PreProcessBlock(5, input_channels*3, hidden_channels),
+                PreProcessBlock(7, input_channels*3, hidden_channels),
             ])
             self.LPF_1 = LPF(hidden_channels*3, hidden_channels*3)
             self.LPF_2 = LPF(hidden_channels*3, hidden_channels*3)
@@ -545,7 +545,7 @@ def get_CNNv2(args):
 
             y = self.relu(self.bn_1(self.GC_1(y)))
             y = self.relu(self.bn_2(self.GC_2(y)))
-            return self.act(self.GC_3(y) + x)
+            return self.act(self.GC_3(y) + x[:,:1])
 
         def forward(self, noised_image=None, clear_image=None):
             out = self.fit_image(noised_image)
@@ -553,6 +553,6 @@ def get_CNNv2(args):
                 return out, self.loss_fn(clear_image, out)
             return out
 
-    cnnv2 = CNNv2(input_channels, hidden_channels, patch_size, eval(loss_fn))
+    cnnv2 = CNNv2(input_channels, hidden_channels, patch_size, loss_fn)
 
     return cnnv2

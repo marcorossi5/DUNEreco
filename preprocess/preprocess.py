@@ -121,8 +121,12 @@ def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
                                       crop_shape = crop_shape,
                                       p = p)
 
-                clear_crops.append(clear_plane[idx])
-                noised_crops.append(noised_plane[idx])
+                idx_clear = np.zeros([n_crops,1,1,1]).astype(int)
+                idx_noisy = np.arange(3, dtype=np.int32).reshape(1,-1,1,1)
+                idx_noisy = np.repeat(idx_noisy, n_crops,0)
+
+                clear_crops.append(clear_plane[tuple([idx_clear]+idx)])
+                noised_crops.append(noised_plane[tuple([idx_noisy]+idx)])
 
             clear_crops = np.concatenate(clear_crops, 0)
             noised_crops = np.concatenate(noised_crops, 0)

@@ -59,7 +59,7 @@ def inference(args, model):
     labels = [[],[]]
     p_x, p_y = model.patch_size
     split_size = args.test_batch_size
-    a = model.a
+    a = args.a
     #print('Number of planes to be tested:', len(test_data))
     for i, data in enumerate(test_data):
         for (clear, noised) in data:
@@ -84,12 +84,7 @@ def inference(args, model):
             #                               args.test_batch_size)]
             psnr.append(compute_psnr(clear, res[i][-1]))
             mse.append(mse_loss(clear, res[i][-1]).item())
-            l = 1 - ssim.ssim(res[i][-1].unsqueeze(1),
-                               clear,
-                               data_range=1.,
-                               size_average=True)
-            ssim_loss.append((a*l+(1-a)*(res[i][-1].unsqueeze(1)\
-            							 -clear).abs().mean()).cpu().item())
+            ssim_loss.append(model.loss_fn(clear,res[i][-1]).cpu().item())
         labels[i] = np.concatenate(labels[i])[:,0]
         noisy[i] = np.concatenate(noisy[i])[:,0] 
         res[i] = np.concatenate(res[i])
