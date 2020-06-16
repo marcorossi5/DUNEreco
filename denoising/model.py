@@ -107,7 +107,7 @@ def get_CNN(args):
                 return out, loss(out, clear_image)
             return out
 
-    cnn = CNN(input_channels, hidden_channels, patch_size, eval(loss_fn))
+    cnn = CNN(input_channels, hidden_channels, patch_size, loss_fn)
         
     return cnn
 
@@ -220,7 +220,7 @@ def get_GCNN(args):
                 return out, loss_fn(out, clear_image)
             return out
                         
-    gcnn = GCNN(k, input_channels, hidden_channels, patch_size, eval(loss_fn))
+    gcnn = GCNN(k, input_channels, hidden_channels, patch_size, loss_fn)
 
     return gcnn
 
@@ -393,7 +393,7 @@ def get_GCNNv2(args):
                 return out, loss_fn(clear_image, out)
             return out
 
-    gcnnv2 = GCNNv2(k, input_channels, hidden_channels, patch_size, eval(loss_fn))
+    gcnnv2 = GCNNv2(k, input_channels, hidden_channels, patch_size, loss_fn)
 
     return gcnnv2
 

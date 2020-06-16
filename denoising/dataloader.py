@@ -93,13 +93,17 @@ class PlaneLoader(torch.utils.data.Dataset):
 
         fname = os.path.join(data_dir, 'clear_planes/%s.npy'%file)
         self.clear_planes = torch.Tensor(np.load(fname)).unsqueeze(1)
-
+        '''
         fname = os.path.join(data_dir,
                              'clear_crops/postprocess_collection_%s_%d_%f.npy'%(name,
                                                                 patch_size,
                                                                 p))
         clear_norm = np.load(fname)
-        self.clear_planes = (self.clear_planes/clear_norm[0])/(clear_norm[1]-clear_norm[0])
+        '''
+        M = self.clear_planes.max()
+        assert M != 0
+        m = self.clear_planes.min()
+        self.clear_planes = (self.clear_planes-m)/(M-m)
 
         if args.plot_dataset:
             sample = torch.randint(0,self.clear_planes.shape[0],(25,))
@@ -111,14 +115,19 @@ class PlaneLoader(torch.utils.data.Dataset):
 
         fname = os.path.join(data_dir, 'noised_planes/%s.npy'%file)
         self.noised_planes = torch.Tensor(np.load(fname)).unsqueeze(1)
+        
+        M = self.noised_planes.max()
+        assert M != 0
+        m = self.noised_planes.min()
 
+        '''
         fname = os.path.join(data_dir,
                              'noised_crops/postprocess_collection_%s_%d_%f.npy'%(name,
                                                                 patch_size,
                                                                 p))
         noisy_norm = np.load(fname)
-
-        self.noised_planes = (self.noised_planes/noisy_norm[0])/(noisy_norm[1]-noisy_norm[0])
+        '''
+        self.noised_planes = (self.noised_planes-m)/(M-m)
 
         if args.plot_dataset:
             plot_wires(args.dir_testing,
@@ -126,16 +135,16 @@ class PlaneLoader(torch.utils.data.Dataset):
                        "_".join([file, "noisy"]),sample,wire)
 
         win = _fspecial_gauss_1d(17,4).unsqueeze(1)
-        filt_1 = stat_gaussian_filter(noised_planes.to(0),
+        filt_1 = stat_gaussian_filter(self.noised_planes.to(0),
                                       win.to(0)).cpu()
 
         win = _fspecial_gauss_1d(101,32).unsqueeze(1)
-        filt_2 = stat_gaussian_filter(noised_planes.to(0),
+        filt_2 = stat_gaussian_filter(self.noised_planes.to(0),
                                       win.to(0)).cpu()
 
-        noised_planes = torch.cat([noised_planes,
-                                   filt_1,
-                                   filt_2,],1)
+        self.noised_planes = torch.cat([self.noised_planes,
+                                        filt_1,
+                                        filt_2,],1)
     def __len__(self):
         return len(self.noised_planes)
     def __getitem__(self, index):

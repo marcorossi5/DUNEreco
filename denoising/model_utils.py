@@ -149,11 +149,13 @@ def split_img(image, patch_size):
 def recombine_img(splits, splits_shape, pad):
     """
     Parameters:
-        image: shape (N*split_x*split_y,C,W,H)
+        splits: image of shape (N*split_x*split_y,C,W,H)
         split_shape: shape ((N, split_x, split_y, C, p_x, p_y))
         pad: shape (..,..,..,..)
     """
     b, a_x, a_y, C, p_x, p_y = splits_shape
+    C = splits.shape[1]
+    splits_shape = (b, a_x, a_y, C, p_x, p_y)
 
     splits = splits.unsqueeze(1).reshape(splits_shape)
     splits = splits.permute(0,1,4,3,2,5)

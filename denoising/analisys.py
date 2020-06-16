@@ -32,7 +32,7 @@ parser.add_argument("--model", "-m", default="CNN", type=str,
                     help="either CNN or GCNN")
 parser.add_argument("--device", "-d", default="0", type=str,
                     help="-1 (automatic)/ -2 (cpu) / gpu number")
-PARSER.add_argument("--loss_fn", "-l", default="ssim", type=str,
+parser.add_argument("--loss_fn", "-l", default="ssim", type=str,
                     help="mse, ssim, ssim_l1, ssim_l2")
 
 def inference(args, model):
@@ -276,11 +276,7 @@ def make_plots(args):
 def main(args):
     mpl.rcParams.update({'font.size': 22})
     
-    model = eval('get_' + args.model)(args.k,
-                                args.in_channels,
-                                args.hidden_channels,
-                                args.crop_size,
-                                args.a)
+    model = eval('get_' + args.model)(args)
     model = MyDataParallel(model, device_ids=args.dev_ids)
     model = model.to(args.device)
     model.eval()
