@@ -23,10 +23,10 @@ class CropLoader(torch.utils.data.Dataset):
             sample = torch.randint(0,readout_clear.shape[0],(25,))
             wire = torch.randint(0,patch_size, (25,))
             plot_crops(args.dir_testing,
-                       readout_clear,
+                       readout_clear[:,0],
                        "_".join(["readout_clear",name]),sample)
             plot_wires(args.dir_testing,
-                       readout_clear,
+                       readout_clear[:,0],
                        "_".join(["readout_clear",name]),sample,wire)
 
         fname = os.path.join(data_dir,
@@ -36,10 +36,10 @@ class CropLoader(torch.utils.data.Dataset):
         readout_noise = torch.Tensor(np.load(fname))
         if args.plot_dataset:
             plot_crops(args.dir_testing,
-                       readout_noise,
+                       readout_noise[:,0],
                        "_".join(["readout_noisy",name]),sample)
             plot_wires(args.dir_testing,
-                       readout_noise,
+                       readout_noise[:,0],
                        "_".join(["readout_noisy",name]),sample,wire)
         
 
@@ -52,10 +52,10 @@ class CropLoader(torch.utils.data.Dataset):
             sample = torch.randint(0,collection_clear.shape[0],(25,))
             wire = torch.randint(0,patch_size, (25,))
             plot_crops(args.dir_testing,
-                       collection_clear,
+                       collection_clear[:,0],
                        "_".join(["collection_clear",name]),sample)
             plot_wires(args.dir_testing,
-                       collection_clear,
+                       collection_clear[:,0],
                        "_".join(["collection_clear",name]),sample, wire)
 
         
@@ -67,10 +67,10 @@ class CropLoader(torch.utils.data.Dataset):
         collection_noise = torch.Tensor(np.load(fname))
         if args.plot_dataset:
             plot_crops(args.dir_testing,
-                       collection_noise,
+                       collection_noise[:,0],
                        "_".join(["collection_noisy",name]),sample)
             plot_wires(args.dir_testing,
-                       collection_noise,
+                       collection_noise[:,0],
                        "_".join(["collection_noisy",name]),sample,wire)
 
         #self.clear_crops = torch.cat([collection_clear, readout_clear])

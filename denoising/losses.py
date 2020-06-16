@@ -26,7 +26,7 @@ class loss_ssim_l2(loss):
         super().__init__(a,data_range,size_average)
     def __call__(self,*args):
         loss1 = 1-ssim.stat_ssim(*args,
-                             data_range=self.data_range.,
+                             data_range=self.data_range,
                              size_average=self.size_average)
         loss2 = nn.MSELoss()(*args)
         return self.a*loss1 + (1-self.a)*loss2

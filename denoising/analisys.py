@@ -66,7 +66,7 @@ def inference(args, model):
             labels[i] += [clear]
             noisy[i] += [noised]
             
-            crops, crops_shape, pad = split_img(noised, (p_x,p_y))
+            crops, crops_shape, pad = split_img(noised,(p_x,p_y))
             loader = torch.split(crops, split_size)
             dn = []
             for chunk in loader:

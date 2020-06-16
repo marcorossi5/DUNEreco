@@ -106,7 +106,7 @@ def calculate_pad(shape1, shape2):
     y -> dim=-1
     """
     return_pad = [0, 0, 0, 0]
-    _, im_x, im_y = shape1
+    _, _, im_x, im_y = shape1
     pad_x, pad_y = shape2
     
     if (pad_x - (im_x%pad_x))%2 == 0:
@@ -126,8 +126,13 @@ def calculate_pad(shape1, shape2):
 
 
 def split_img(image, patch_size):
+    """
+    Parameters:
+        image: shape (N,C,W,H)
+    """
     p_x, p_y = patch_size
-    image = image.squeeze(1)
+    N, C, _,_ = image.shape
+    #image = image.squeeze(1)
     pad = calculate_pad(image.shape, patch_size)
     image = F.pad(image, pad,
                  mode='constant', value=image.mean())
@@ -135,20 +140,27 @@ def split_img(image, patch_size):
     splits = torch.stack(torch.split(image, p_y,-1),1)
     splits = torch.stack(torch.split(splits, p_x,-2),1)
 
-    splits_shape = splits.shape
+    splits_shape = splits.shape #(N, split_x, split_y, C, p_x, p_y)
 
-    splits = splits.view(-1, p_x, p_y).unsqueeze(1)
+    splits = splits.view(-1, C, p_x, p_y)#.unsqueeze(1)
 
     return splits, splits_shape, pad
 
 def recombine_img(splits, splits_shape, pad):
-    b, a_x, a_y, p_x, p_y = splits_shape
+    """
+    Parameters:
+        image: shape (N*split_x*split_y,C,W,H)
+        split_shape: shape ((N, split_x, split_y, C, p_x, p_y))
+        pad: shape (..,..,..,..)
+    """
+    b, a_x, a_y, C, p_x, p_y = splits_shape
 
     splits = splits.unsqueeze(1).reshape(splits_shape)
-    splits = splits.permute(0,1,3,2,4)
-    img = splits.reshape(-1, a_x*p_x, a_y*p_y)
+    splits = splits.permute(0,1,4,3,2,5)
+    img = splits.reshape(-1, a_x*p_x,C, a_y*p_y)
+    img = img.permute(0,2,1,3)
 
-    return img[:, pad[-2]:-pad[-1], pad[0]:-pad[1]]
+    return img[:,:, pad[-2]:-pad[-1], pad[0]:-pad[1]]
 
 class MyDataParallel(nn.DataParallel):
     """Allow calling model's attributes"""
