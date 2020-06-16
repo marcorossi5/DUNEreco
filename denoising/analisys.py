@@ -87,7 +87,7 @@ def inference(args, model):
             ssim_loss.append(model.loss_fn(clear,res[i][-1]).cpu().item())
         labels[i] = np.concatenate(labels[i])[:,0]
         noisy[i] = np.concatenate(noisy[i])[:,0] 
-        res[i] = np.concatenate(res[i])
+        res[i] = np.concatenate(res[i])[:,0]
     #res[i] is a np array with shape [batch,row,col]
     #the same for labels[i]
     

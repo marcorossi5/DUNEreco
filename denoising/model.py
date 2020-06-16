@@ -76,9 +76,9 @@ def get_CNN(args):
             self.loss_fn = loss_fn
             self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
-                PreProcessBlock(3, input_channels*3, hidden_channels),
-                PreProcessBlock(5, input_channels*3, hidden_channels),
-                PreProcessBlock(7, input_channels*3, hidden_channels),
+                PreProcessBlock(3, input_channels, hidden_channels),
+                PreProcessBlock(5, input_channels, hidden_channels),
+                PreProcessBlock(7, input_channels, hidden_channels),
                 ])
             self.residual_1 = Residual(hidden_channels*3, hidden_channels*3)
             self.residual_2 = Residual(hidden_channels*3, hidden_channels*3)
@@ -179,9 +179,9 @@ def get_GCNN(args):
             self.patch_size = patch_size
             self.k = k
             self.preprocessing_blocks = nn.ModuleList([
-                PreProcessBlock(k, 3, input_channels*3, hidden_channels),
-                PreProcessBlock(k, 5, input_channels*3, hidden_channels),
-                PreProcessBlock(k, 7, input_channels*3, hidden_channels),
+                PreProcessBlock(k, 3, input_channels, hidden_channels),
+                PreProcessBlock(k, 5, input_channels, hidden_channels),
+                PreProcessBlock(k, 7, input_channels, hidden_channels),
             ])
             self.residual_1 = Residual(k, hidden_channels*3, hidden_channels*3)
             self.residual_2 = Residual(k, hidden_channels*3, hidden_channels*3)
@@ -335,9 +335,9 @@ def get_GCNNv2(args):
             self.patch_size = patch_size
             self.k = k
             self.preprocessing_blocks = nn.ModuleList([
-                PreProcessBlock(k, 3, input_channels*3, hidden_channels),
-                PreProcessBlock(k, 5, input_channels*3, hidden_channels),
-                PreProcessBlock(k, 7, input_channels*3, hidden_channels),
+                PreProcessBlock(k, 3, input_channels, hidden_channels),
+                PreProcessBlock(k, 5, input_channels, hidden_channels),
+                PreProcessBlock(k, 7, input_channels, hidden_channels),
             ])
             self.LPF_1 = LPF(k, hidden_channels*3, hidden_channels*3)
             self.LPF_2 = LPF(k, hidden_channels*3, hidden_channels*3)
@@ -502,9 +502,9 @@ def get_CNNv2(args):
             self.loss_fn = loss_fn
             self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
-                PreProcessBlock(3, input_channels*3, hidden_channels),
-                PreProcessBlock(5, input_channels*3, hidden_channels),
-                PreProcessBlock(7, input_channels*3, hidden_channels),
+                PreProcessBlock(3, input_channels, hidden_channels),
+                PreProcessBlock(5, input_channels, hidden_channels),
+                PreProcessBlock(7, input_channels, hidden_channels),
             ])
             self.LPF_1 = LPF(hidden_channels*3, hidden_channels*3)
             self.LPF_2 = LPF(hidden_channels*3, hidden_channels*3)

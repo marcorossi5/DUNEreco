@@ -119,7 +119,7 @@ class PlaneLoader(torch.utils.data.Dataset):
         M = self.noised_planes.max()
         assert M != 0
         m = self.noised_planes.min()
-
+        
         '''
         fname = os.path.join(data_dir,
                              'noised_crops/postprocess_collection_%s_%d_%f.npy'%(name,

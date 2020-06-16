@@ -121,12 +121,15 @@ def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
                                       crop_shape = crop_shape,
                                       p = p)
 
-                idx_clear = np.zeros([n_crops,1,1,1]).astype(int)
-                idx_noisy = np.arange(3, dtype=np.int32).reshape(1,-1,1,1)
-                idx_noisy = np.repeat(idx_noisy, n_crops,0)
+                #idx_clear = np.zeros([n_crops,1,1,1]).astype(int)
+                #idx_noisy = np.arange(3, dtype=np.int32).reshape(1,-1,1,1)
+                #idx_noisy = np.repeat(idx_noisy, n_crops,0)
 
-                clear_crops.append(clear_plane[tuple([idx_clear]+idx)])
-                noised_crops.append(noised_plane[tuple([idx_noisy]+idx)])
+                #clear_crops.append(clear_plane[tuple([idx_clear]+idx)])
+                #noised_crops.append(noised_plane[tuple([idx_noisy]+idx)])
+                clear_crops.append(clear_plane[idx])
+                noised_crops.append(noised_plane[idx])
+
 
             clear_crops = np.concatenate(clear_crops, 0)
             noised_crops = np.concatenate(noised_crops, 0)
@@ -141,7 +144,7 @@ def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
                                 "noised_crops",
                                 "%s%s_%d_%f"%(s, ss, crop_shape[0], p)),
                     (noised_crops-noised_min)/(noised_max-noised_min))
-
+            '''
             np.save(os.path.join(dir_name,
                                 "clear_crops",
                                 "postprocess_%s%s_%d_%f"%(s, ss, crop_shape[0], p)),
@@ -153,6 +156,7 @@ def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
                                 "postprocess_%s%s_%d_%f"%(s, ss, crop_shape[0], p)),
                     np.array([noised_min, noised_max])
                     )
+            '''
             
 def main(source, dir_name, n_crops, crop_edge, percentage):
     crop_shape = (crop_edge, crop_edge)
