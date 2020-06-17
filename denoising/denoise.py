@@ -22,7 +22,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import get_freer_gpu
 
 PARSER = argparse.ArgumentParser()
-PARSER.add_argument("--dir_name", "-p", default="../datasets",
+PARSER.add_argument("--dir_name", "-p", default="../datasets/denoising",
                     type=str, help='Directory path to datasets')
 PARSER.add_argument("--epochs", "-n", default=50, type=int,
                     help="training epochs")
@@ -32,6 +32,9 @@ PARSER.add_argument("--device", "-d", default="0", type=str,
                     help="-1 (automatic)/ -2 (cpu) / gpu number")
 PARSER.add_argument("--loss_fn", "-l", default="ssim", type=str,
                     help="mse, ssim, ssim_l1, ssim_l2")
+PARSER.add_argument("--lr", default=1e-3, type=float,
+                    help="training epochs")
+
 
 
 def main(args):
@@ -54,7 +57,8 @@ def main(args):
     model = model.to(args.device)
 
     #train
-    train.train(args, train_data, test_data, model)
+    return train.train(args, train_data, test_data, model)
+    
 
 if __name__ == '__main__':
     ARGS = vars(PARSER.parse_args())

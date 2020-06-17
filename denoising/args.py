@@ -1,7 +1,8 @@
 import os
+from datetime import datetime as dtm
 
 class Args:
-    def __init__(self, dir_name, epochs, model, device, loss_fn):
+    def __init__(self, dir_name, epochs, model, device, loss_fn, lr, out_name=None):
         self.crop_size = (32,32)
         self.crop_p = 0.500000
         self.dev_ids = None
@@ -22,12 +23,13 @@ class Args:
         self.k = 1
         self.in_channels = 1
         self.hidden_channels = 32
-        self.lr = 1e-3
+        self.lr = lr
         self.decay_lr = 0.9
-        self.warmup_epoch = 0
+        self.warmup_epoch = 999999999
 
         #logs
-        self.plot_dataset = False#False
+        self.plot_dataset = False
+        self.plot_acts = False
 
         self.epoch_log = 1
         self.epoch_test_start = 0
@@ -40,8 +42,12 @@ class Args:
         self.epoch_save = 5
 
         #build directories
-        self.dir_output = "./denoising/output"
-        self.dir_timings = self.dir_output + "/timings"
+        if out_name = None:
+            t = dtm.now().strftime("%y%m%d_%H%M%S")
+            self.dir_output = "./denoising/output/%s"%t
+        else:
+            self.dir_output = "./denoising/output/%s"%out_name
+        #self.dir_timings = self.dir_output + "/timings"
         self.dir_testing = self.dir_output + "/testing"
         self.dir_final_test = self.dir_output + "/final_test"
         self.dir_metrics = self.dir_output + "/metrics"
