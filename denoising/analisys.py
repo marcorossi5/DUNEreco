@@ -38,7 +38,7 @@ parser.add_argument("--loss_fn", "-l", default="ssim", type=str,
 def inference(args, model):
     #load dataset
     test_data = [torch.utils.data.DataLoader(PlaneLoader(args,
-    												  'test,'
+                                                      'test,'
                                                       'collection'),
                                         num_workers=args.num_workers),
                  torch.utils.data.DataLoader(PlaneLoader(args,

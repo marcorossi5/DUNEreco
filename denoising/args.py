@@ -42,7 +42,7 @@ class Args:
         self.epoch_save = 5
 
         #build directories
-        if out_name = None:
+        if out_name == None:
             t = dtm.now().strftime("%y%m%d_%H%M%S")
             self.dir_output = "./denoising/output/%s"%t
         else:

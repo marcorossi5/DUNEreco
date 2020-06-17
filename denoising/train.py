@@ -58,14 +58,14 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
                            denoised_img.shape[0],
                            (25,)).cpu().detach().numpy()
     if args.plot_acts:
-    	plot_crops(args.dir_testing,
-        	       denoised_img.cpu().detach().numpy()[:,0],
-            	   "act_epoch%d_DN"%epoch,
-               	   sample)
-    	plot_crops(args.dir_testing,
-        	       clear.cpu().detach().numpy()[:,0],
-            	   "act_epoch%d_label"%epoch,
-               	   sample)
+        plot_crops(args.dir_testing,
+                   denoised_img.cpu().detach().numpy()[:,0],
+                   "act_epoch%d_DN"%epoch,
+                   sample)
+        plot_crops(args.dir_testing,
+                   clear.cpu().detach().numpy()[:,0],
+                   "act_epoch%d_label"%epoch,
+                   sample)
 
 
     return np.array([np.mean(ssim_loss), np.std(ssim_loss)/np.sqrt(i+1),
@@ -147,7 +147,7 @@ def train(args, train_data, test_data, model):
                                        test_metrics[-1][5]))
             print('Test time: %.4f\n'%(tm.time()-start))
 
-        	if test_metrics[-1][0] + test_metrics[-1][1] < best_loss:
+            if test_metrics[-1][0] + test_metrics[-1][1] < best_loss:
                 best_loss = test_metrics[-1][0]
                 best_loss_std = test_metrics[-1][1]
                 bname = os.path.join(args.dir_final_test, 'best_model.txt')
@@ -165,7 +165,7 @@ def train(args, train_data, test_data, model):
                 print('saved model at: %s'%fname)
                 best_model_name = fname
         else:
-        	if epoch % args.epoch_save == 0:
+            if epoch % args.epoch_save == 0:
                 fname = os.path.join(args.dir_saved_models,
                         args.model + '.dat')
                 torch.save(model.state_dict(), fname)
