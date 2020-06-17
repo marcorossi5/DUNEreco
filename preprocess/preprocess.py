@@ -18,7 +18,7 @@ parser.add_argument("--percentage", "-x", default=0.5, type=float,
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import preprocessing_utils as putils
+import putils
 from utils.utils import get_freer_gpu
 from denoising.ssim import _fspecial_gauss_1d, stat_gaussian_filter
 
@@ -28,22 +28,21 @@ r_step = 800
 c_step = 960
 rc_step = 2*r_step + c_step
 
-
 def get_planes_and_dump(dname):
-    clear_readout = []
-    noisy_readout = []
-    clear_collection = []
-    noisy_collection = []
+    readout_clear = []
+    readout_noisy = []
+    collection_clear = []
+    collection_noisy = []
 
-    path_clear = glob.glob("dname/evts/*noiseoff*")
-    path_noisy = glob.glob("dname/evts/*noiseon*")
+    path_clear = glob.glob(f'{dname}/evts/*noiseoff*')
+    path_noisy = glob.glob(f'{dname}/evts/*noiseon*')
 
-    for file_clear, file_noise in zip(path_clear, path_noisy):
+    for file_clear, file_noisy in zip(path_clear, path_noisy):
         c = np.load(file_clear)[:,2:]
         n = np.load(file_noisy)[:,2:]
         for i in range(APAs):
-            readout_clear.append(c[i*rc_step:2*i*rc_step+2*r_step])
-            readout_noisy.append(n[i*rc_step:2*i*rc_step+2*r_step])
+            readout_clear.append(c[i*rc_step:i*rc_step+2*r_step])
+            readout_noisy.append(n[i*rc_step:i*rc_step+2*r_step])
             collection_clear.append(c[i*rc_step+2*r_step:(i+1)*rc_step])
             collection_noisy.append(n[i*rc_step+2*r_step:(i+1)*rc_step])
     
@@ -52,10 +51,10 @@ def get_planes_and_dump(dname):
     readout_clear = np.stack(readout_clear,0)[:,None]
     readout_noisy = np.stack(readout_noisy,0)[:,None]
 
-    print("Collection clear planes: " collection_clear.shape)
-    print("Collection noisy planes: " collection_noisy.shape)
-    print("Readout clear planes: " readout_clear.shape)
-    print("Readout noisy planes: " readout_noisy.shape)
+    print("\tCollection clear planes: ", collection_clear.shape)
+    print("\tCollection noisy planes: ", collection_noisy.shape)
+    print("\tReadout clear planes: ", readout_clear.shape)
+    print("\tReadout noisy planes: ", readout_noisy.shape)
 
     fname = os.path.join(dname, "planes", "readout_clear")
     np.save(fname,
@@ -75,43 +74,42 @@ def get_planes_and_dump(dname):
 
 def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
     for s in ['readout', 'collection']:
-            fname = os.path.join(dir_name,"planes",f'{s}_clear.npy')
-            clear_planes = np.load(fname)[:,0]
+        fname = os.path.join(dir_name,"planes",f'{s}_clear.npy')
+        clear_planes = np.load(fname)[:,0]
 
-            fname = os.path.join(dir_name,"planes",f'{s}_noisy.npy')
-            clear_planes = np.load(fname)[:,0]
+        fname = os.path.join(dir_name,"planes",f'{s}_noisy.npy')
+        clear_planes = np.load(fname)[:,0]
 
-            clear_m = clear_planes.min()
-            clear_M = clear_planes.max()
-            noisy_m = noisy_planes.min()
-            noisy_M = noisy_planes.max()
+        clear_m = clear_planes.min()
+        clear_M = clear_planes.max()
+        noisy_m = noisy_planes.min()
+        noisy_M = noisy_planes.max()
 
-            clear_crops = []
-            noisy_crops = []
-            for clear_plane, noisy_plane in zip(clear_planes,noisy_planes):
+        clear_crops = []
+        noisy_crops = []
+        for clear_plane, noisy_plane in zip(clear_planes,noisy_planes):
+            idx = putils.get_crop(clear_plane[0],
+                                  n_crops = n_crops,
+                                  crop_shape = crop_shape,
+                                  p = p)
+            clear_crops.append(clear_plane[idx])
+            noisy_crops.append(noisy_plane[idx])
 
-                idx = putils.get_crop(clear_plane[0],
-                                      n_crops = n_crops,
-                                      crop_shape = crop_shape,
-                                      p = p)
-                clear_crops.append(clear_plane[idx])
-                noisy_crops.append(noisy_plane[idx])
+        clear_crops = np.concatenate(clear_crops, 0)[:,0]
+        noisy_crops = np.concatenate(noisy_crops, 0)[:,0]
 
-            clear_crops = np.concatenate(clear_crops, 0)[:,0]
-            noisy_crops = np.concatenate(noisy_crops, 0)[:,0]
+        print(f'{s} clear crops', clear_crops.shape)
+        print(f'{s} noisy crops', noisy_crops.shape)
 
-            print(f'{s} clear crops', clear_crops.shape)
-            print(f'{s} noisy crops', noisy_crops.shape)
+        fname = os.path.join(dir_name,
+                             f'{s}_clear_{crop_shape[0]}_{p}')
+        np.save(fname,
+                (clear_crops-clear_m)/(clear_M-clear_m))
 
-            fname = os.path.join(dir_name,
-                                 f'{s}_clear_{crop_shape[0]}_{p}')
-            np.save(fname,
-                    (clear_crops-clear_m)/(clear_M-clear_m))
-
-            fname = os.path.join(dir_name,
-                                 f'{s}_noisy_{crop_shape[0]}_{p}')
-            np.save(fname,
-                    (noisy_crops-noisy_m)/(noisy_M-noisy_m))
+        fname = os.path.join(dir_name,
+                             f'{s}_noisy_{crop_shape[0]}_{p}')
+        np.save(fname,
+                (noisy_crops-noisy_m)/(noisy_M-noisy_m))
             
 def main(dir_name, n_crops, crop_edge, percentage):
     crop_shape = (crop_edge, crop_edge)
@@ -120,11 +118,12 @@ def main(dir_name, n_crops, crop_edge, percentage):
             os.mkdir(os.path.join(dir_name,i))
 
     for s in ['train', 'test', 'val']:
+        print(f'\n{s}')
         dname = os.path.join(dir_name, s)
         get_planes_and_dump(dname)
 
     dname = os.path.join(dir_name, 'train')
-    crop_planes_and_dump(dir_name, n_crops, crop_shape, percentage)
+    crop_planes_and_dump(dname, n_crops, crop_shape, percentage)
     
 if __name__ == '__main__':
     args = vars(parser.parse_args())
