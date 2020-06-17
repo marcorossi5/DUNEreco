@@ -9,7 +9,7 @@ import torch
 parser = argparse.ArgumentParser()
 parser.add_argument("--dir_name", "-p", default="../datasets/denoising",
                     type=str, help='Directory path to datasets')
-parser.add_argument("--n_crops", "-n", default=500, type=int,
+parser.add_argument("--n_crops", "-n", default=1000, type=int,
                     help="number of crops for each plane")
 parser.add_argument("--crop_edge", "-c", default=32, type=int,
                     help="crop shape")
@@ -41,8 +41,10 @@ def get_planes_and_dump(dname):
         c = np.load(file_clear)[:,2:]
         n = np.load(file_noisy)[:,2:]
         for i in range(APAs):
-            readout_clear.append(c[i*rc_step:i*rc_step+2*r_step])
-            readout_noisy.append(n[i*rc_step:i*rc_step+2*r_step])
+            readout_clear.append(c[i*rc_step:i*rc_step+r_step])
+            readout_noisy.append(n[i*rc_step:i*rc_step+r_step])
+            readout_clear.append(c[i*rc_step+r_step:i*rc_step+2*r_step])
+            readout_noisy.append(n[i*rc_step+r_step:i*rc_step+2*r_step])
             collection_clear.append(c[i*rc_step+2*r_step:(i+1)*rc_step])
             collection_noisy.append(n[i*rc_step+2*r_step:(i+1)*rc_step])
     
@@ -58,19 +60,19 @@ def get_planes_and_dump(dname):
 
     fname = os.path.join(dname, "planes", "readout_clear")
     np.save(fname,
-            np.stack(readout_clear,0)[:,None])
+            np.stack(readout_clear,0))
 
     fname = os.path.join(dname, "planes", "readout_noisy")
     np.save(fname,
-            np.stack(readout_noisy,0)[:,None])
+            np.stack(readout_noisy,0))
 
     fname = os.path.join(dname, "planes", "collection_clear")
     np.save(fname,
-            np.stack(collection_clear,0)[:,None])
+            np.stack(collection_clear,0))
 
     fname = os.path.join(dname, "planes", "collection_noisy")
     np.save(fname,
-            np.stack(collection_noisy,0)[:,None])
+            np.stack(collection_noisy,0))
 
 def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
     for s in ['readout', 'collection']:
@@ -78,7 +80,7 @@ def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
         clear_planes = np.load(fname)[:,0]
 
         fname = os.path.join(dir_name,"planes",f'{s}_noisy.npy')
-        clear_planes = np.load(fname)[:,0]
+        noisy_planes = np.load(fname)[:,0]
 
         clear_m = clear_planes.min()
         clear_M = clear_planes.max()
@@ -88,18 +90,18 @@ def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
         clear_crops = []
         noisy_crops = []
         for clear_plane, noisy_plane in zip(clear_planes,noisy_planes):
-            idx = putils.get_crop(clear_plane[0],
+            idx = putils.get_crop(clear_plane,
                                   n_crops = n_crops,
                                   crop_shape = crop_shape,
                                   p = p)
             clear_crops.append(clear_plane[idx])
             noisy_crops.append(noisy_plane[idx])
 
-        clear_crops = np.concatenate(clear_crops, 0)[:,0]
-        noisy_crops = np.concatenate(noisy_crops, 0)[:,0]
+        clear_crops = np.concatenate(clear_crops, 0)[:,None]
+        noisy_crops = np.concatenate(noisy_crops, 0)[:,None]
 
-        print(f'{s} clear crops', clear_crops.shape)
-        print(f'{s} noisy crops', noisy_crops.shape)
+        print(f'\n{s} clear crops:', clear_crops.shape)
+        print(f'{s} noisy crops:', noisy_crops.shape)
 
         fname = os.path.join(dir_name,
                              f'{s}_clear_{crop_shape[0]}_{p}')
@@ -118,7 +120,7 @@ def main(dir_name, n_crops, crop_edge, percentage):
             os.mkdir(os.path.join(dir_name,i))
 
     for s in ['train', 'test', 'val']:
-        print(f'\n{s}')
+        print(f'\n{s}:')
         dname = os.path.join(dir_name, s)
         get_planes_and_dump(dname)
 
