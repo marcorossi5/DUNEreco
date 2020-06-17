@@ -76,10 +76,10 @@ def get_planes_and_dump(dname):
 
 def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
     for s in ['readout', 'collection']:
-        fname = os.path.join(dir_name,"planes",f'{s}_clear.npy')
+        fname = os.path.join(dir_name,'planes',f'{s}_clear.npy')
         clear_planes = np.load(fname)[:,0]
 
-        fname = os.path.join(dir_name,"planes",f'{s}_noisy.npy')
+        fname = os.path.join(dir_name,'planes',f'{s}_noisy.npy')
         noisy_planes = np.load(fname)[:,0]
 
         clear_m = clear_planes.min()
@@ -103,12 +103,12 @@ def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
         print(f'\n{s} clear crops:', clear_crops.shape)
         print(f'{s} noisy crops:', noisy_crops.shape)
 
-        fname = os.path.join(dir_name,
+        fname = os.path.join(dir_name,'crops',
                              f'{s}_clear_{crop_shape[0]}_{p}')
         np.save(fname,
                 (clear_crops-clear_m)/(clear_M-clear_m))
 
-        fname = os.path.join(dir_name,
+        fname = os.path.join(dir_name,'crops',
                              f'{s}_noisy_{crop_shape[0]}_{p}')
         np.save(fname,
                 (noisy_crops-noisy_m)/(noisy_M-noisy_m))

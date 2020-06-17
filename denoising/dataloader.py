@@ -9,143 +9,59 @@ from ssim import _fspecial_gauss_1d, stat_gaussian_filter
 
 
 class CropLoader(torch.utils.data.Dataset):
-    def __init__(self, args, name):
+    def __init__(self, args, folder, channel):
         data_dir = args.dataset_dir
         patch_size = args.crop_size[0]
         p = args.crop_p
 
-        fname = os.path.join(data_dir,
-                             'clear_crops/readout_%s_%d_%f.npy'%(name,
-                                                                patch_size,
-                                                                p))
-        readout_clear = torch.Tensor(np.load(fname))
+        fname = os.path.join(data_dir,'train','crops',
+                             f'{channel}_clear_{patch_size}_{p}.npy')
+        self.clear = torch.Tensor(np.load(fname))
+
+        fname = os.path.join(data_dir,'train','crops',
+                             f'{channel}_noisy_{patch_size}_{p}.npy')
+        self.noisy = torch.Tensor(np.load(fname))
+
         if args.plot_dataset:
-            sample = torch.randint(0,readout_clear.shape[0],(25,))
+            sample = torch.randint(0,self.clear.shape[0],(25,))
             wire = torch.randint(0,patch_size, (25,))
             plot_crops(args.dir_testing,
-                       readout_clear[:,0],
-                       "_".join(["readout_clear",name]),sample)
+                       clear[:,0],
+                       "_".join([channel,'clear',folder]),sample)
             plot_wires(args.dir_testing,
-                       readout_clear[:,0],
-                       "_".join(["readout_clear",name]),sample,wire)
-
-        fname = os.path.join(data_dir,
-                             'noised_crops/readout_%s_%d_%f.npy'%(name,
-                                                                patch_size,
-                                                                p))
-        readout_noise = torch.Tensor(np.load(fname))
-        if args.plot_dataset:
+                       clear[:,0],
+                       "_".join([channel,'clear',folder]),sample, wire)
             plot_crops(args.dir_testing,
-                       readout_noise[:,0],
-                       "_".join(["readout_noisy",name]),sample)
+                       noisy[:,0],
+                       "_".join([channel,'noisy',folder]),sample)
             plot_wires(args.dir_testing,
-                       readout_noise[:,0],
-                       "_".join(["readout_noisy",name]),sample,wire)
-        
-
-        fname = os.path.join(data_dir,
-                             'clear_crops/collection_%s_%d_%f.npy'%(name,
-                                                                patch_size,
-                                                                p))
-        collection_clear = torch.Tensor(np.load(fname))
-        if args.plot_dataset:
-            sample = torch.randint(0,collection_clear.shape[0],(25,))
-            wire = torch.randint(0,patch_size, (25,))
-            plot_crops(args.dir_testing,
-                       collection_clear[:,0],
-                       "_".join(["collection_clear",name]),sample)
-            plot_wires(args.dir_testing,
-                       collection_clear[:,0],
-                       "_".join(["collection_clear",name]),sample, wire)
-
-        
-
-        fname = os.path.join(data_dir,
-                             'noised_crops/collection_%s_%d_%f.npy'%(name,
-                                                                patch_size,
-                                                                p))
-        collection_noise = torch.Tensor(np.load(fname))
-        if args.plot_dataset:
-            plot_crops(args.dir_testing,
-                       collection_noise[:,0],
-                       "_".join(["collection_noisy",name]),sample)
-            plot_wires(args.dir_testing,
-                       collection_noise[:,0],
-                       "_".join(["collection_noisy",name]),sample,wire)
-
-        #self.clear_crops = torch.cat([collection_clear, readout_clear])
-        #self.noised_crops = torch.cat([collection_noise, readout_noise])
-
-        self.clear_crops = collection_clear
-        self.noised_crops = collection_noise
-
-        self.clear_crops = self.clear_crops
-        self.noised_crops = self.noised_crops
-     
+                       noisy[:,0],
+                       "_".join([channel,'noisy',folder]),sample,wire)
     def __len__(self):
-        return len(self.noised_crops)
+        return len(self.noisy)
     def __getitem__(self, index):
-        return self.clear_crops[index], self.noised_crops[index]
+        return self.clear[index], self.noisy[index]
 
 class PlaneLoader(torch.utils.data.Dataset):
-    def __init__(self, args, file):
-        data_dir = args.dataset_dir
+    def __init__(self, args, folder, channel):
+        data_dir = os.path.join(args.dataset_dir, folder)
 
-        fname = os.path.join(data_dir, 'clear_planes/%s.npy'%file)
-        self.clear_planes = torch.Tensor(np.load(fname)).unsqueeze(1)
-        '''
-        fname = os.path.join(data_dir,
-                             'clear_crops/postprocess_collection_%s_%d_%f.npy'%(name,
-                                                                patch_size,
-                                                                p))
-        clear_norm = np.load(fname)
-        '''
-        M = self.clear_planes.max()
-        assert M != 0
-        m = self.clear_planes.min()
-        self.clear_planes = (self.clear_planes-m)/(M-m)
-
-        if args.plot_dataset:
-            sample = torch.randint(0,self.clear_planes.shape[0],(25,))
-            wire = torch.randint(0,self.clear_planes.shape[2], (25,))
-
-            plot_wires(args.dir_testing,
-                       self.clear_planes[:,0],
-                       "_".join([file, "clear"]),sample,wire)
-
-        fname = os.path.join(data_dir, 'noised_planes/%s.npy'%file)
-        self.noised_planes = torch.Tensor(np.load(fname)).unsqueeze(1)
+        fname = os.path.join(data_dir, 'planes', f'{channel}_clear.npy')
+        self.clear = torch.Tensor(np.load(fname))
         
-        M = self.noised_planes.max()
-        assert M != 0
-        m = self.noised_planes.min()
+        fname = os.path.join(data_dir, 'planes', f'{channel}_noisy.npy')
+        self.noisy = torch.Tensor(np.load(fname))
         
-        '''
-        fname = os.path.join(data_dir,
-                             'noised_crops/postprocess_collection_%s_%d_%f.npy'%(name,
-                                                                patch_size,
-                                                                p))
-        noisy_norm = np.load(fname)
-        '''
-        self.noised_planes = (self.noised_planes-m)/(M-m)
-
         if args.plot_dataset:
+            sample = torch.randint(0,self.clear.shape[0],(25,))
+            wire = torch.randint(0,self.clear.shape[2], (25,))
             plot_wires(args.dir_testing,
-                       self.noised_planes[:,0],
-                       "_".join([file, "noisy"]),sample,wire)
-
-        win = _fspecial_gauss_1d(17,4).unsqueeze(1)
-        filt_1 = stat_gaussian_filter(self.noised_planes.to(0),
-                                      win.to(0)).cpu()
-
-        win = _fspecial_gauss_1d(101,32).unsqueeze(1)
-        filt_2 = stat_gaussian_filter(self.noised_planes.to(0),
-                                      win.to(0)).cpu()
-
-        self.noised_planes = torch.cat([self.noised_planes,
-                                        filt_1,
-                                        filt_2,],1)
+                       self.clear[:,0],
+                       "_".join([folder, file, "clear"]),sample,wire)
+            plot_wires(args.dir_testing,
+                       self.noisy[:,0],
+                       "_".join([folder, file, "noisy"]),sample,wire)
     def __len__(self):
-        return len(self.noised_planes)
+        return len(self.noisy)
     def __getitem__(self, index):
-        return self.clear_planes[index], self.noised_planes[index]
+        return self.clear[index], self.noisy[index]

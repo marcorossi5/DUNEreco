@@ -42,11 +42,11 @@ def main(args):
     torch.cuda.set_enabled_lms(True)
     print_summary_file(args)
     #load datasets
-    train_data = torch.utils.data.DataLoader(CropLoader(args, "train"),
+    train_data = torch.utils.data.DataLoader(CropLoader(args,'train','collection'),
                                             shuffle=True,
                                             batch_size=args.batch_size,
                                             num_workers=args.num_workers)
-    test_data = torch.utils.data.DataLoader(CropLoader(args, "val"),
+    test_data = torch.utils.data.DataLoader(PlaneLoader(args,'val','collection'),
                                             shuffle=True,
                                             batch_size=args.batch_size,
                                             num_workers=args.num_workers)
