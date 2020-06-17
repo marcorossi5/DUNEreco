@@ -9,7 +9,7 @@ import torch
 parser = argparse.ArgumentParser()
 parser.add_argument("--dir_name", "-p", default="../datasets/denoising",
                     type=str, help='Directory path to datasets')
-parser.add_argument("--n_crops", "-n", default=1000, type=int,
+parser.add_argument("--n_crops", "-n", default=5000, type=int,
                     help="number of crops for each plane")
 parser.add_argument("--crop_edge", "-c", default=32, type=int,
                     help="crop shape")

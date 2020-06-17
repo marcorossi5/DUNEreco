@@ -55,8 +55,6 @@ class Args:
 
         if not os.path.isdir(self.dir_output):
             os.mkdir(self.dir_output)
-        if not os.path.isdir(self.dir_timings):
-            os.mkdir(self.dir_timings)
         if not os.path.isdir(self.dir_testing):
             os.mkdir(self.dir_testing)
         if not os.path.isdir(self.dir_final_test):

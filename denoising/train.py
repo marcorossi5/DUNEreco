@@ -8,14 +8,13 @@ import matplotlib.pyplot as plt
 from model_utils import split_img
 from model_utils import recombine_img
 from model_utils import plot_crops
-import ssim
 
 import time as tm
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import compute_psnr
 
-def train_epoch(args, epoch, train_data, model, optimizer, scheduler, mse_loss):
+def train_epoch(args, epoch, train_data, model, optimizer, scheduler):
     model.train()
     for i, (clear, noised) in enumerate(train_data):
         clear = clear.to(args.device)
@@ -28,38 +27,32 @@ def train_epoch(args, epoch, train_data, model, optimizer, scheduler, mse_loss):
         scheduler.step()
     return np.array([loss.mean().item()])
 
-
-def test_epoch(args, epoch, test_data, model, mse_loss):
+def test_epoch(args, epoch, test_data, model):
     model.eval()
     mse = []
     psnr = []
     loss = []
+    res = []
 
-    mse_loss = torch.nn.MSELoss(reduction='none')
-    a = args.a
+    for (clear, noisy) in test_data:        
+        crops, crops_shape, pad = split_img(noisy,model.patch_size)
+        loader = torch.split(crops,args.test_batch_size)
+        dn = []
+        for chunk in loader:
+            answer = model(chunk.to(args.device)).cpu().data
+            dn.append(answer)
+        dn = torch.cat(dn)
+        dn = recombine_img(dn, crops_shape, pad)
+        loss.append(model.loss_fn(clear,dn).cpu().item())
+        res.append(dn)
+    res = torch.cat(res)
 
-    for i, (clear, noised) in enumerate(test_data):
-        clear = clear.to(args.device)
-        noised = noised.to(args.device)
-
-        denoised_img = model(noised)
-
-        loss.append(model.loss_fn(denoised_img,clear).cpu().item())
-        
-        mse_ = mse_loss(denoised_img, clear).mean([-1,-2])[:,0]
-
-        mse.append(mse_.mean().cpu().item())
-        m = clear.max(-1).values.max(-1).values
-
-        res = (m/mse_).mean().cpu().detach().numpy()
-        psnr.append(10*np.log10(res))
-
-    sample = torch.randint(0,
-                           denoised_img.shape[0],
-                           (25,)).cpu().detach().numpy()
     if args.plot_acts:
+        sample = torch.randint(0,
+                           res.shape[0],
+                           (25,)).cpu().detach().numpy()
         plot_crops(args.dir_testing,
-                   denoised_img.cpu().detach().numpy()[:,0],
+                   res.cpu().detach().numpy()[:,0],
                    "act_epoch%d_DN"%epoch,
                    sample)
         plot_crops(args.dir_testing,
@@ -67,8 +60,7 @@ def test_epoch(args, epoch, test_data, model, mse_loss):
                    "act_epoch%d_label"%epoch,
                    sample)
 
-
-    return np.array([np.mean(ssim_loss), np.std(ssim_loss)/np.sqrt(i+1),
+    return np.array([np.mean(loss), np.std(loss)/np.sqrt(i+1),
                 np.mean(psnr), np.std(psnr)/np.sqrt(i+1),
                 np.mean(mse), np.std(mse)/np.sqrt(i+1)])
 
@@ -114,13 +106,12 @@ def train(args, train_data, test_data, model):
 
     # start main loop
     time_all = np.zeros(args.epochs)
-    mse_loss = torch.nn.MSELoss()
     
     while epoch <= args.epochs:
         time_start = tm.time()
         # train
         loss = train_epoch(args, epoch, train_data, model,
-                          optimizer, scheduler, mse_loss)
+                          optimizer, scheduler)
         loss_sum.append(loss)
 
         time_end = tm.time()
@@ -135,7 +126,7 @@ def train(args, train_data, test_data, model):
             test_epochs.append(epoch)
             start = tm.time()
             test_metrics.append(test_epoch(args, epoch, test_data,
-                                           model, mse_loss))
+                                           model))
             
             print('Test loss: %.5f +- %.5f,\
                    psnr: %.5f +- %.5f,\

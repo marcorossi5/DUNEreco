@@ -47,8 +47,6 @@ def main(args):
                                             batch_size=args.batch_size,
                                             num_workers=args.num_workers)
     test_data = torch.utils.data.DataLoader(PlaneLoader(args,'val','collection'),
-                                            shuffle=True,
-                                            batch_size=args.batch_size,
                                             num_workers=args.num_workers)
     
     #build model
