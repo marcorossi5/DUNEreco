@@ -131,8 +131,6 @@ def main(dir_name, n_crops, crop_edge, percentage):
         fname = os.path.join(dir_name,'_'.join([s,'normalization']))
         np.save(fname,[m,M])
 
-
-
     dname = os.path.join(dir_name, 'train')
     crop_planes_and_dump(dname, n_crops, crop_shape, percentage)
     

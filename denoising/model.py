@@ -92,7 +92,8 @@ def get_CNN(args):
                 nn.LeakyReLU(0.05),
                 GraphConv(hidden_channels, input_channels)
             )
-            self.act = nn.Sigmoid()
+            #self.act = nn.Sigmoid()
+            self.act = nn.Identity()
 
         def fit_image(self, image):
             processed_image = torch.cat([block(image) for block in
@@ -194,7 +195,8 @@ def get_GCNN(args):
 
             self.relu = nn.LeakyReLU(0.05)
             
-            self.act = nn.Sigmoid()
+            #self.act = nn.Sigmoid()
+            self.act = nn.Identity()
 
         def fit_image(self, image):
             processed_image = torch.cat([block(image) for block in
@@ -353,7 +355,8 @@ def get_GCNNv2(args):
             self.GC_3 = GraphConv(hidden_channels, input_channels)
 
             self.relu = nn.LeakyReLU(0.05)
-            self.act = nn.Sigmoid()
+            #self.act = nn.Sigmoid()
+            self.act = nn.Identity()
 
             self.a0 = nn.Parameter(torch.randn(1), requires_grad=True)
             self.a1 = nn.Parameter(torch.randn(1), requires_grad=True)
@@ -520,7 +523,8 @@ def get_CNNv2(args):
             self.GC_3 = GraphConv(hidden_channels, input_channels)
 
             self.relu = nn.LeakyReLU(0.05)            
-            self.act = nn.Sigmoid()
+            #self.act = nn.Sigmoid()
+            self.act = nn.Identity()
 
             self.a0 = nn.Parameter(torch.randn(1), requires_grad=True)
             self.a1 = nn.Parameter(torch.randn(1), requires_grad=True)
