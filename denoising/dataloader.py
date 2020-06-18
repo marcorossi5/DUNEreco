@@ -10,6 +10,15 @@ from ssim import _fspecial_gauss_1d, stat_gaussian_filter
 
 class CropLoader(torch.utils.data.Dataset):
     def __init__(self, args, folder, channel):
+        """
+        This function loads the crops for training.
+        Crops are normalized in the [0,1] range with the minmax
+        normalization\.
+        Parameters:
+            args: Args object
+            folder: str, one of ['train','val','test']
+            channel: str, one of ['readout','collection']
+        """
         data_dir = args.dataset_dir
         patch_size = args.crop_size[0]
         p = args.crop_p
@@ -54,6 +63,15 @@ class CropLoader(torch.utils.data.Dataset):
 
 class PlaneLoader(torch.utils.data.Dataset):
     def __init__(self, args, folder, channel):
+        """
+        This function loads the planes for inference.
+        Only noisy planes are normalized since clear planes don't
+        need to be scaled at inference time.
+        Parameters:
+            args: Args object
+            folder: str, one of ['train','val','test']
+            channel: str, one of ['readout','collection']
+        """
         data_dir = os.path.join(args.dataset_dir, folder)
 
         fname = os.path.join(data_dir, 'planes', f'{channel}_clear.npy')

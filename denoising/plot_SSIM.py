@@ -10,6 +10,8 @@ from args import Args
 
 from ssim import stat_ssim
 
+from dataloader import PlaneLoader
+
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument("--dir_name", "-p", default="../datasets",
                     type=str, help='Directory path to datasets')
@@ -18,14 +20,10 @@ PARSER.add_argument("--device", "-d", default="0", type=str,
 
 def main(args):
     """Main function: plots SSIM of a batch of crops to select k1, k2 parameters"""
-    fname = os.path.join(args.dataset_dir,
-                             'clear_crops/collection_val_32_0.500000.npy')
-    clear = torch.Tensor(np.load(fname)[:2048]).unsqueeze(1).to(args.device)
-
-
-    fname = os.path.join(args.dataset_dir,
-                             'noised_crops/collection_val_32_0.500000.npy')
-    noisy = torch.Tensor(np.load(fname)[:2048]).unsqueeze(1).to(args.device)
+    data = PlaneLoader(args, 'val', 'collection')
+    clear = data.clear.to(args.device)
+    noisy = data.noisy * (data.norm[1]-data.norm[0]) + data.norm[0]
+    noisy = noisy.to(args.device)
 
     print("Number of crops: ", len(clear))
     print("MSE: ", torch.nn.MSELoss()(noisy, clear))
