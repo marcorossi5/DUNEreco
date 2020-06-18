@@ -14,6 +14,9 @@ from model_utils import MyDataParallel
 from model_utils import split_img
 from model_utils import recombine_img
 from model_utils import plot_wires
+
+from train import test_epoch
+
 import ssim
 
 
@@ -35,174 +38,90 @@ parser.add_argument("--device", "-d", default="0", type=str,
 parser.add_argument("--loss_fn", "-l", default="ssim", type=str,
                     help="mse, ssim, ssim_l1, ssim_l2")
 
-def inference(args, model):
+def inference(args, model, channel):
+    """
+    This function tests the model against one kind of planes and plots
+    planes, histograms, and wire signals
+
+    Parameters:
+        args: Args object
+        model: nn.Module object
+        channel: str, either 'collection' or 'readout'
+
+    Outputs:
+        np array of metrics
+    """
     #load dataset
-    test_data = [torch.utils.data.DataLoader(PlaneLoader(args,
-                                                      'test,'
-                                                      'collection'),
+    data = PlaneLoader(args, 'test', 'collection')
+    args.plot_acts = False
+    test_data = torch.utils.data.DataLoader(data[0],
+                                        num_workers=args.num_workers)
+    x, res = test_epoch(args, None, test_data, model)
+
+
+    data = [PlaneLoader(args, 'test', 'collection'),
+            PlaneLoader(args, 'test', 'readout')]
+
+    test_data = [torch.utils.data.DataLoader(data[0],
                                         num_workers=args.num_workers),
-                 torch.utils.data.DataLoader(PlaneLoader(args,
-                                                      'test',
-                                                      'readout'),
+                 torch.utils.data.DataLoader(data[1],
                                         num_workers=args.num_workers)]
+    diff = np.abs(res-data.clear)
 
-    #test_data = [load_planes(args.dataset_dir, 'collection_test'),
-    #             load_planes(args.dataset_dir, 'readout_test')]
-    legend = ['collection', 'readout']
-
-    mse_loss = torch.nn.MSELoss()
-    ssim_loss = []
-    psnr = []
-    mse = []
-    res = [[],[]]
-    noisy = [[],[]]
-    labels = [[],[]]
-    p_x, p_y = model.patch_size
-    split_size = args.test_batch_size
-    a = args.a
-    #print('Number of planes to be tested:', len(test_data))
-    for i, data in enumerate(test_data):
-        for (clear, noised, norm) in data:
-            labels[i] += [clear]
-            noisy[i] += [noised]
-            
-            crops, crops_shape, pad = split_img(noised,(p_x,p_y))
-            loader = torch.split(crops, split_size)
-            dn = []
-            for chunk in loader:
-                answer = model(chunk.to(args.device)).cpu().data
-                dn.append(answer)
-
-            dn = torch.cat(dn)
-
-            dn = recombine_img(dn, crops_shape, pad)
-
-            res[i] += [dn]
-
-            #res[i] += [model.forward_image(noised,
-            #                               args.device,
-            #                               args.test_batch_size)]
-            psnr.append(compute_psnr(clear, res[i][-1]))
-            mse.append(mse_loss(clear, res[i][-1]).item())
-            ssim_loss.append(model.loss_fn(clear,res[i][-1]).cpu().item())
-        labels[i] = np.concatenate(labels[i])[:,0]
-        noisy[i] = np.concatenate(noisy[i])[:,0] 
-        res[i] = np.concatenate(res[i])[:,0]
-    
-    diff = [np.abs(res[i] - labels[i]) for i in range(len(res))]
-
-    fname = os.path.join(args.dir_final_test, 'residuals.png')
+    fname = os.path.join(args.dir_final_test, f'{channel}_residuals.png')
     fig = plt.figure(figsize=(20,25))
-    plt.suptitle('Final denoising test')
+    plt.suptitle(f'Final denoising test on {channel} planes')
 
     ax = fig.add_subplot(411)
-    ax.title.set_text('Sample of Clear image')
-    z = ax.imshow(labels[0][0])
+    ax.title.set_text(r'Sample of $I_{Clear}$ image')
+    z = ax.imshow(data.clear[0][0])
     fig.colorbar(z, ax=ax)
 
     ax = fig.add_subplot(412)
-    ax.title.set_text('Sample of Denoised image')
-    z = ax.imshow(res[0][0])
+    ax.title.set_text(r'Sample of $I_{DN}$ image')
+    z = ax.imshow(res[0,0])
     fig.colorbar(z, ax=ax)
 
     ax = fig.add_subplot(413)
-    ax.title.set_text('Sample of |Denoised - Clear|')
-    z = ax.imshow(diff[0][0])
+    ax.title.set_text(r'Sample of $|I_{DN} - I_{Clear}|$')
+    z = ax.imshow(diff[0,0])
     fig.colorbar(z, ax=ax)
 
     ax = fig.add_subplot(427)
-    ax.hist([i[0].flatten() for i in diff], 100,
-             stacked=True, label=legend,
-             density=True, histtype='step')
+    ax.hist(diff[0].flatten(), 100, density=True)
     ax.set_yscale('log')
     ax.legend()
-    ax.title.set_text('Sample of histogram of |Diff|')
+    ax.title.set_text(r'Sample of histogram of $|I_{DN} - I_{Clear}|$')
 
     ax = fig.add_subplot(428)
-    ax.hist([i.flatten() for i in diff], 100,
-             stacked=True, label=legend,
-             density=True, histtype='step')
+    ax.hist(diff.flatten(), 100, density=True)
     ax.set_yscale('log')
     ax.legend()
-    ax.title.set_text('Histogram of all |Diff|')
+    ax.title.set_text(r'Histogram of all $|I_{DN} - I_{Clear}|$')
 
     plt.savefig(fname)
     plt.close()
 
-    sample = torch.randint(0, len(labels[0]),(25,))
-    wire = torch.randint(0, labels[0][0].shape[0],(25,))
+    sample = torch.randint(0, data.clear.shape[0],(25,))
+    wire = torch.randint(0, data.clear.shape[-1],(25,))
 
     plot_wires(args.dir_final_test,
-               labels[0],
-               "collection_label",
+               data.clear[0,0],
+               f"{channel}_label",
                sample,
                wire)
     plot_wires(args.dir_final_test,
-               res[0],
-               "collection_DN",
+               res[0,0],
+               f"{channel}_DN",
                sample,
                wire)
     plot_wires(args.dir_final_test,
-               noisy[0],
-               "collection_noisy",
+               data.noisy[0,0],
+               f"{channel}_noisy",
                sample,
                wire)
 
-    sample = torch.randint(0, len(labels[1]),(25,))
-    wire = torch.randint(0, labels[1][0].shape[0],(25,))
-
-    plot_wires(args.dir_final_test,
-               labels[1],
-               "readout_label",
-               sample,
-               wire)
-    plot_wires(args.dir_final_test,
-               res[1],
-               "readout_DN",
-               sample,
-               wire)
-    plot_wires(args.dir_final_test,
-               noisy[1],
-               "readout_noisy",
-               sample,
-               wire)
-    '''
-    fname = os.path.join(args.dir_final_test, 'wire.png')
-    fig = plt.figure(figsize=(20,25))
-    ax = fig.add_subplot(231)
-    ax.title.set_text('Collection Wire %d DN'%800)
-    ax.plot(res[0][0][800], linewidth=0.3)
-
-    ax = fig.add_subplot(232)
-    ax.title.set_text('Collection Wire %d noisy'%800)
-    ax.plot(noisy[0][0][800], linewidth=0.3)
-
-    ax = fig.add_subplot(233)
-    ax.title.set_text('Collection Wire %d labels'%800)
-    ax.plot(labels[0][0][800], linewidth=0.3)
-
-    ax = fig.add_subplot(234)
-    ax.title.set_text('Readout Wire %d DN'%700)
-    ax.plot(res[1][0][700], linewidth=0.3)
-
-    ax = fig.add_subplot(235)
-    ax.title.set_text('Readout Wire %d noisy'%700)
-    ax.plot(noisy[1][0][700], linewidth=0.3)
-
-    ax = fig.add_subplot(236)
-    ax.title.set_text('Readout Wire %d labels'%700)
-    ax.plot(labels[1][0][700], linewidth=0.3)
-
-    plt.savefig(fname)
-    plt.close()
-    '''
-
-    return np.array([np.mean(ssim_loss),
-                     np.std(ssim_loss)/np.sqrt(len(ssim_loss)),
-                     np.mean(psnr),
-                     np.std(psnr)/np.sqrt(len(psnr)),
-                     np.mean(mse),
-                     np.std(mse)/np.sqrt(len(psnr))])
+    return x
 
 def make_plots(args):
     fname = os.path.join(args.dir_metrics, 'loss_sum.npy')
@@ -221,28 +140,42 @@ def make_plots(args):
     test_metrics = np.load(fname)
 
     fname = os.path.join(args.dir_metrics, 'metrics.png')
-    fig = plt.figure(figsize=(20,20))
+    fig = plt.figure(figsize=(20,30))
     ax = fig.add_subplot(121)
     ax.title.set_text('Metrics')
     ax.set_xlabel('Epochs')
     ax.set_ylabel('Metrics')
-    ax.plot(loss_avg, color='g', label='train ssim')
+    ax.plot(loss_avg, color='g', label='train loss')
     ax.plot(loss_sum[0], color='g', alpha=0.2)
     #ax.plot(perc_avg, color='r', label='perc loss')
     #ax.plot(loss_sum[1], color='r', alpha=0.2)
     ax.errorbar(test_epochs,test_metrics[0],
-                yerr=test_metrics[1], label='test ssim')
-    ax.errorbar(test_epochs,test_metrics[4],
-                yerr=test_metrics[5], label='test mse')
+                yerr=test_metrics[1], label='val loss')
+    #ax.errorbar(test_epochs,test_metrics[4],
+    #            yerr=test_metrics[5], label='test mse')
     ax.set_yscale('log')
     ax.legend()
 
-    ax = fig.add_subplot(122)
-    ax.title.set_text('pSNR (over validation set)')
+    ax = fig.add_subplot(322)
+    ax.title.set_text('validation ssim')
     ax.set_xlabel('Epochs')
-    ax.set_ylabel('pSNR [dB]')
+    ax.set_ylabel('ssim')
     ax.errorbar(test_epochs,test_metrics[2],
                 yerr=test_metrics[3])
+
+    ax = fig.add_subplot(324)
+    ax.title.set_text('validation pSNR')
+    ax.set_xlabel('Epochs')
+    ax.set_ylabel('pSNR [dB]')
+    ax.errorbar(test_epochs,test_metrics[4],
+                yerr=test_metrics[5])
+
+    ax = fig.add_subplot(326)
+    ax.title.set_text('validation mse')
+    ax.set_xlabel('Epochs')
+    ax.set_ylabel('mse')
+    ax.errorbar(test_epochs,test_metrics[6],
+                yerr=test_metrics[7])
     plt.savefig(fname)
     plt.close()
     print('saved image at: %s'%fname)
@@ -265,10 +198,13 @@ def main(args):
     start = tm.time()
     make_plots(args)
     metrics = inference(args, model)
+
     print('Final test time: %.4f\n'%(tm.time()-start))
-    print('Final test ssim: %.4f +/- %.4f'%(metrics[0], metrics[1]))
-    print('Final test psnr: %.4f +/- %.4f'%(metrics[2], metrics[3]))
-    print('Final test mse: %.4f +/- %.4f'%(metrics[4], metrics[5]))
+
+    print('Final test loss: %.5f +/- %.5f'%(metrics[0], metrics[1]))
+    print('Final test ssim: %.5f +/- %.5f'%(metrics[2], metrics[3]))
+    print('Final test psnr: %.5f +/- %.5f'%(metrics[4], metrics[5]))
+    print('Final test mse: %.5f +/- %.5f'%(metrics[6], metrics[7]))
     
 if __name__ == '__main__':
     args = vars(parser.parse_args())

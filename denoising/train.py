@@ -30,6 +30,12 @@ def train_epoch(args, epoch, train_data, model, optimizer, scheduler):
     return np.array([loss.mean().item()])
 
 def test_epoch(args, epoch, test_data, model):
+    """
+
+    Outputs:
+        np.array containing n metrics, shape (2*n)
+        torch.tensor containing denoised data, shape (batch,C,W,H)
+    """
     model.eval()
     mse = []
     psnr = []
@@ -55,18 +61,21 @@ def test_epoch(args, epoch, test_data, model):
         ssim.append(1-loss_ssim()(clear,dn).cpu().item())
         mse.append(torch.nn.MSELoss()(clear,dn).cpu().item())
         psnr.append(compute_psnr(clear,dn))
+        res.append(dn.cpu().detach())
+    res = torch.cat(res)
+    answer = answer.cpu().detach()
         
     #plot the last crops chunk
     if args.plot_acts:
         sample = torch.randint(0,
                            answer.shape[0],
-                           (25,)).cpu().detach().numpy()
+                           (25,))
         plot_crops(args.dir_testing,
-                   answer.cpu().detach().numpy()[:,0],
+                   answer[:,0],
                    "act_epoch%d_DN"%epoch,
                    sample)
         plot_crops(args.dir_testing,
-                   answer.cpu().detach().numpy()[:,0],
+                   answer[:,0],
                    "act_epoch%d_label"%epoch,
                    sample)
     
@@ -74,7 +83,7 @@ def test_epoch(args, epoch, test_data, model):
     return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
                 np.mean(ssim), np.std(ssim)/np.sqrt(n),
                 np.mean(psnr), np.std(psnr)/np.sqrt(n),
-                np.mean(mse), np.std(mse)/np.sqrt(n)])
+                np.mean(mse), np.std(mse)/np.sqrt(n)]), res
 
 ########### main train function
 def train(args, train_data, test_data, model):
@@ -135,20 +144,14 @@ def train(args, train_data, test_data, model):
             print('test start ...')
             test_epochs.append(epoch)
             start = tm.time()
-            test_metrics.append(test_epoch(args, epoch, test_data,
-                                           model))
+            x, _ = test_epoch(args, epoch, test_data, model)
+            test_metrics.append(x)
             '''
             print('Test loss: %.5f +- %.5f,\
                    ssim: %.5f +- %.5f,\
                    psnr: %.5f +- %.5f,\
-                   mse: %.5e +- %.5e'%(test_metrics[-1][0],
-                                       test_metrics[-1][1],
-                                       test_metrics[-1][2],
-                                       test_metrics[-1][3],
-                                       test_metrics[-1][4],
-                                       test_metrics[-1][5],
-                                       test_metrics[-1][6],
-                                       test_metrics[-1][7]))
+                   mse: %.5e +- %.5e'%(x[0], x[1], x[2], x[3],
+                                       x[4], x[5], x[6], x[7]))
             print('Test time: %.4f\n'%(tm.time()-start))
             '''
 
