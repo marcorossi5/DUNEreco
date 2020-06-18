@@ -39,7 +39,7 @@ class Args:
         self.load_epoch = 25
 
         self.save = True
-        self.epoch_save = 5
+        #self.epoch_save = 5
 
         #build directories
         if out_name == None:

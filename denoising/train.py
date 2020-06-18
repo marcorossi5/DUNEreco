@@ -54,7 +54,7 @@ def test_epoch(args, epoch, test_data, model):
         loss.append(model.loss_fn(clear,dn).cpu().item())
         ssim.append(1-loss_ssim()(clear,dn).cpu().item())
         mse.append(torch.nn.MSELoss()(clear,dn).cpu().item())
-        psnr.append(compute_psnr(clear,dn).cpu().item())
+        psnr.append(compute_psnr(clear,dn))
         
     #plot the last crops chunk
     if args.plot_acts:
@@ -152,26 +152,27 @@ def train(args, train_data, test_data, model):
             print('Test time: %.4f\n'%(tm.time()-start))
             '''
 
+            #save the model if it is the best one
             if test_metrics[-1][0] + test_metrics[-1][1] < best_loss:
                 best_loss = test_metrics[-1][0]
                 best_loss_std = test_metrics[-1][1]
+
+                #switch to keep all the history of saved models 
+                #or just the best one
+                if args.save:
+                    fname = os.path.join(args.dir_saved_models,
+                             f'{args.model}_{epoch}.dat')
+                else:
+                    fname = os.path.join(args.dir_saved_models,
+                             f'{args.model}.dat')
+                torch.save(model.state_dict(), fname)
+                print('saved model at: %s'%fname)
+                best_model_name = fname
                 bname = os.path.join(args.dir_final_test, 'best_model.txt')
                 with open(bname, 'w') as f:
                     f.write(fname)
                     f.close()
                 print('updated best model at: ',bname)
-
-        # save model checkpoints or save just best model
-        if epoch % args.epoch_save == 0:
-            if args.save:
-                fname = os.path.join(args.dir_saved_models,
-                         f'{args.model}_{epoch}.dat')
-            else:
-                fname = os.path.join(args.dir_saved_models,
-                         f'{args.model}.dat')
-            torch.save(model.state_dict(), fname)
-            print('saved model at: %s'%fname)
-            best_model_name = fname
 
         epoch += 1
     

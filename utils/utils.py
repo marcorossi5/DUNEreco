@@ -26,7 +26,7 @@ def compute_psnr(image, noised):
 
     if mse == 0:
         return 0
-    return 10 * np.log10(m/mse)
+    return 10 * np.log10(m/np.sqrt(mse))
 
 def smooth(smoothed, scalars, weight):#weight between 0 and 1
     assert len(scalars) - len(smoothed) == 1
