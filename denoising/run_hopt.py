@@ -49,10 +49,10 @@ def build_and_train_model(setup):
     loss, var_loss, _ = denoise.main(args)
     if setup['scan']:
         res = {'loss': loss ,
-                'loss_variance': var_loss
+                'loss_variance': var_loss,
                'status': STATUS_OK}
     else:
-        res = 
+        res = args
     return res
 
 def main():
@@ -117,3 +117,7 @@ def main():
 
     # save the model to file
     #model.save(folder)
+if __name__ == '__main__':
+    START = tm.time()
+    main()
+    print('Program done in %f'%(tm.time()-START))
