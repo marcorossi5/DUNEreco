@@ -21,8 +21,8 @@ def compute_psnr(image, noised):
     """
     Alert: only from images with max value = 1
     """
-    mse = nn.MSELoss()(image, noised).item()
-    m = image.max().item()
+    mse = nn.MSELoss()(image, noised).cpu().item()
+    m = image.max().cpu().item()
 
     if mse == 0:
         return 0

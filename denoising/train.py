@@ -40,7 +40,7 @@ def test_epoch(args, epoch, test_data, model):
     for clear, noisy, norm in test_data:
         clear = clear.to(args.device)
         noisy = noisy.to(args.device)
-        norm = norm.to(args.device)
+        norm = norm[0].to(args.device)
         crops, crops_shape, pad = split_img(noisy,model.patch_size)
         loader = torch.split(crops,args.test_batch_size)
         dn = []

@@ -62,17 +62,19 @@ class PlaneLoader(torch.utils.data.Dataset):
                        self.noisy[:,0],
                        "_".join([folder, file, "noisy"]),sample,wire)
         
-        self.clear_M = self.clear.max()
-        self.clear_m = self.clear.min()
+        clear_M = self.clear.max()
+        clear_m = self.clear.min()
 
-        self.noisy_M = self.noisy.max()
-        self.noisy_m = self.noisy.min()
+        noisy_M = self.noisy.max()
+        noisy_m = self.noisy.min()
 
-        self.clear = (self.clear-self.clear_m)/(self.clear_M-self.clear_m)
-        self.noisy = (self.noisy-self.noisy_m)/(self.noisy_M-self.noisy_m)
+
+        self.clear = (self.clear-clear_m)/(clear_M-clear_m)
+        self.noisy = (self.noisy-noisy_m)/(noisy_M-noisy_m)
+
+        self.norm = torch.stack([clear_M, clear_m, noisy_M, noisy_m])
 
     def __len__(self):
         return len(self.noisy)
     def __getitem__(self, index):
-        return self.clear[index], self.noisy[index],
-              [self.clear_M, self.clear_m, self.noisy_M, self.noisy_m]
+        return self.clear[index], self.noisy[index], self.norm

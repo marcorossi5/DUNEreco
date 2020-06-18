@@ -14,7 +14,6 @@ from model import  *
 from args import Args
 
 from model_utils import MyDataParallel
-from model_utils import MyDataLoader
 from model_utils import print_summary_file
 
 import train
@@ -47,9 +46,9 @@ def main(args):
                                             shuffle=True,
                                             batch_size=args.batch_size,
                                             num_workers=args.num_workers)
-    test_data = torch.utils.data.MyDataLoader(PlaneLoader(args,'val','collection'),
+    test_data = torch.utils.data.DataLoader(PlaneLoader(args,'val','collection'),
                                             num_workers=args.num_workers)
-    
+
     #build model
     model = eval('get_' + args.model)(args)
     model = MyDataParallel(model, device_ids=args.dev_ids)
