@@ -22,11 +22,11 @@ def compute_psnr(image, noised):
     Alert: only from images with max value = 1
     """
     mse = nn.MSELoss()(image, noised).cpu().item()
-    m = image.max().cpu().item()
+    m2 = image.max().cpu().item()**2
 
     if mse == 0:
         return 0
-    return 10 * np.log10(m/np.sqrt(mse))
+    return 10 * np.log10(m2/mse)
 
 def smooth(smoothed, scalars, weight):#weight between 0 and 1
     assert len(scalars) - len(smoothed) == 1
