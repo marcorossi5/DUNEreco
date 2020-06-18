@@ -62,7 +62,7 @@ def inference(args, model):
     a = args.a
     #print('Number of planes to be tested:', len(test_data))
     for i, data in enumerate(test_data):
-        for (clear, noised) in data:
+        for (clear, noised, norm) in data:
             labels[i] += [clear]
             noisy[i] += [noised]
             
@@ -88,34 +88,8 @@ def inference(args, model):
         labels[i] = np.concatenate(labels[i])[:,0]
         noisy[i] = np.concatenate(noisy[i])[:,0] 
         res[i] = np.concatenate(res[i])[:,0]
-    #res[i] is a np array with shape [batch,row,col]
-    #the same for labels[i]
     
-    #printing a single plane
-    '''
-    fname = os.path.join(args.dir_final_test, 'final_test.png')
-    fig = plt.figure(figsize=(20,25))
-    plt.suptitle('Final test denoising example')
-    ax = fig.add_subplot(311)
-    ax.title.set_text('Noised image')
-    z = ax.imshow(noised[0,0])
-    fig.colorbar(z, ax=ax)
-
-    ax = fig.add_subplot(312)
-    ax.title.set_text('Clear image')
-    z = ax.imshow(clear[0,0])
-    fig.colorbar(z, ax=ax)
-
-    ax = fig.add_subplot(313)
-    ax.title.set_text('Denoised image')
-    z = ax.imshow(res[0,0])
-    fig.colorbar(z, ax=ax)
-    plt.savefig(fname)
-    plt.close()
-    '''
     diff = [np.abs(res[i] - labels[i]) for i in range(len(res))]
-    #print('first', diff[0].min(), diff[0].max())
-    #print('all', diff[].min(), diff.max())
 
     fname = os.path.join(args.dir_final_test, 'residuals.png')
     fig = plt.figure(figsize=(20,25))

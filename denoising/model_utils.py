@@ -166,7 +166,6 @@ def recombine_img(splits, splits_shape, pad):
 
 class MyDataParallel(nn.DataParallel):
     """Allow calling model's attributes"""
-
     def __getattr__(self, name):
         try:
             return super().__getattr__(name)

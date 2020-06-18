@@ -61,7 +61,18 @@ class PlaneLoader(torch.utils.data.Dataset):
             plot_wires(args.dir_testing,
                        self.noisy[:,0],
                        "_".join([folder, file, "noisy"]),sample,wire)
+        
+        self.clear_M = self.clear.max()
+        self.clear_m = self.clear.min()
+
+        self.noisy_M = self.noisy.max()
+        self.noisy_m = self.noisy.min()
+
+        self.clear = (self.clear-self.clear_m)/(self.clear_M-self.clear_m)
+        self.noisy = (self.noisy-self.noisy_m)/(self.noisy_M-self.noisy_m)
+
     def __len__(self):
         return len(self.noisy)
     def __getitem__(self, index):
-        return self.clear[index], self.noisy[index]
+        return self.clear[index], self.noisy[index],
+              [self.clear_M, self.clear_m, self.noisy_M, self.noisy_m]

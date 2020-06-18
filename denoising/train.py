@@ -9,6 +9,8 @@ from model_utils import split_img
 from model_utils import recombine_img
 from model_utils import plot_crops
 
+from losses import loss_ssim
+
 import time as tm
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -33,36 +35,46 @@ def test_epoch(args, epoch, test_data, model):
     psnr = []
     loss = []
     res = []
+    ssim = []
 
-    for (clear, noisy) in test_data:        
+    for clear, noisy, norm in test_data:
+        clear = clear.to(args.device)
+        noisy = noisy.to(args.device)
+        norm = norm.to(args.device)
         crops, crops_shape, pad = split_img(noisy,model.patch_size)
         loader = torch.split(crops,args.test_batch_size)
         dn = []
         for chunk in loader:
-            answer = model(chunk.to(args.device)).cpu().data
+            answer = model(chunk.to(args.device)).data
             dn.append(answer)
         dn = torch.cat(dn)
         dn = recombine_img(dn, crops_shape, pad)
+        clear = clear * (norm[0]-norm[1]) + norm[1]
+        dn = dn * (norm[2]-norm[3]) + norm[3]
         loss.append(model.loss_fn(clear,dn).cpu().item())
-        res.append(dn)
-    res = torch.cat(res)
-
+        ssim.append(1-loss_ssim()(clear,dn).cpu().item())
+        mse.append(torch.nn.MSELoss()(clear,dn).cpu().item())
+        psnr.append(compute_psnr(clear,dn).cpu().item())
+        
+    #plot the last crops chunk
     if args.plot_acts:
         sample = torch.randint(0,
-                           res.shape[0],
+                           answer.shape[0],
                            (25,)).cpu().detach().numpy()
         plot_crops(args.dir_testing,
-                   res.cpu().detach().numpy()[:,0],
+                   answer.cpu().detach().numpy()[:,0],
                    "act_epoch%d_DN"%epoch,
                    sample)
         plot_crops(args.dir_testing,
-                   clear.cpu().detach().numpy()[:,0],
+                   answer.cpu().detach().numpy()[:,0],
                    "act_epoch%d_label"%epoch,
                    sample)
-
-    return np.array([np.mean(loss), np.std(loss)/np.sqrt(i+1),
-                np.mean(psnr), np.std(psnr)/np.sqrt(i+1),
-                np.mean(mse), np.std(mse)/np.sqrt(i+1)])
+    
+    n = len(loss)
+    return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
+                np.mean(ssim), np.std(ssim)/np.sqrt(n),
+                np.mean(psnr), np.std(psnr)/np.sqrt(n),
+                np.mean(mse), np.std(mse)/np.sqrt(n)])
 
 ########### main train function
 def train(args, train_data, test_data, model):
@@ -96,7 +108,6 @@ def train(args, train_data, test_data, model):
         test_metrics = []
         test_epochs = []
     best_loss = 1e6
-    best_model_name
 
         
     # initialize optimizer
@@ -115,7 +126,6 @@ def train(args, train_data, test_data, model):
         loss_sum.append(loss)
 
         time_end = tm.time()
-        time_all[epoch - 1] = time_end - time_start
         if epoch % args.epoch_log == 0:
             print("\nEpoch: %d, Loss: %.5f, time: %.5f"%(epoch,
                                                       loss_sum[-1][0],
@@ -127,16 +137,20 @@ def train(args, train_data, test_data, model):
             start = tm.time()
             test_metrics.append(test_epoch(args, epoch, test_data,
                                            model))
-            
+            '''
             print('Test loss: %.5f +- %.5f,\
+                   ssim: %.5f +- %.5f,\
                    psnr: %.5f +- %.5f,\
                    mse: %.5e +- %.5e'%(test_metrics[-1][0],
                                        test_metrics[-1][1],
                                        test_metrics[-1][2],
                                        test_metrics[-1][3],
                                        test_metrics[-1][4],
-                                       test_metrics[-1][5]))
+                                       test_metrics[-1][5],
+                                       test_metrics[-1][6],
+                                       test_metrics[-1][7]))
             print('Test time: %.4f\n'%(tm.time()-start))
+            '''
 
             if test_metrics[-1][0] + test_metrics[-1][1] < best_loss:
                 best_loss = test_metrics[-1][0]
@@ -148,29 +162,19 @@ def train(args, train_data, test_data, model):
                 print('updated best model at: ',bname)
 
         # save model checkpoints or save just best model
-        if args.save:
-            if epoch % args.epoch_save == 0:
+        if epoch % args.epoch_save == 0:
+            if args.save:
                 fname = os.path.join(args.dir_saved_models,
-                        args.model + '_%d'%epoch + '.dat')
-                torch.save(model.state_dict(), fname)
-                print('saved model at: %s'%fname)
-                best_model_name = fname
-        else:
-            if epoch % args.epoch_save == 0:
+                         f'{args.model}_{epoch}.dat')
+            else:
                 fname = os.path.join(args.dir_saved_models,
-                        args.model + '.dat')
-                torch.save(model.state_dict(), fname)
-                print('saved model at: %s'%fname)
-                best_model_name = fname
+                         f'{args.model}.dat')
+            torch.save(model.state_dict(), fname)
+            print('saved model at: %s'%fname)
+            best_model_name = fname
 
-                
         epoch += 1
     
-    #saving data
-    #timings
-    #fname = os.path.join(args.dir_timings, 'all_timings')
-    #np.save(fname, time_all)
-
     #loss_sum
     loss_sum = np.stack(loss_sum,1)
     fname = os.path.join(args.dir_metrics, 'loss_sum')
