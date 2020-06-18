@@ -16,7 +16,7 @@ import time as tm
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import compute_psnr
 
-def train_epoch(args, epoch, train_data, model, optimizer, scheduler):
+def train_epoch(args, epoch, train_data, model, optimizer):
     model.train()
     for i, (clear, noised) in enumerate(train_data):
         clear = clear.to(args.device)
@@ -25,8 +25,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, scheduler):
         denoised_img, loss = model(noised, clear)
         loss.mean().backward()
         optimizer.step()
-    if epoch > args.warmup_epoch:
-        scheduler.step()
+
     return np.array([loss.mean().item()])
 
 def test_epoch(args, epoch, test_data, model):
@@ -120,10 +119,10 @@ def train(args, train_data, test_data, model):
 
         
     # initialize optimizer
-    optimizer=  optim.Adam(list(model.parameters()), lr=args.lr)
-    scheduler = optim.lr_scheduler.LambdaLR(optimizer,
-                                            lambda x: args.decay_lr**x)
-
+    optimizer=  optim.Adam(list(model.parameters()), lr=args.optim['lr'],
+                           weight_decay=args.optim['w_decay'],
+                           amsgrad=args.optim['amsgrad'])
+    
     # start main loop
     time_all = np.zeros(args.epochs)
     

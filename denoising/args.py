@@ -2,7 +2,9 @@ import os
 from datetime import datetime as dtm
 
 class Args:
-    def __init__(self, dir_name, epochs, model, device, loss_fn, lr, out_name=None, scan=False):
+    def __init__(self, dir_name, epochs, model,\
+                 device, loss_fn, optim=None,\
+                 out_name=None, scan=False,batch_size=64):
         self.crop_size = (32,32)
         self.crop_p = 0.500000
         self.dev_ids = None
@@ -24,9 +26,14 @@ class Args:
         self.k = 1
         self.in_channels = 1
         self.hidden_channels = 32
-        self.lr = lr
-        self.decay_lr = 0.9
-        self.warmup_epoch = 999999999
+        if optim is not None:
+            self.optim = optim
+        else:
+            self.optim = {
+                'lr': 1e-4,
+                'w_decay': 0,
+                'amsgrad': False
+            }
 
         #logs
         self.plot_dataset = False

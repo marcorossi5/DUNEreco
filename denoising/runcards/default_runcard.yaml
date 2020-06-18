@@ -6,10 +6,10 @@ dir_name: ../datasets/denoising
 model: CNNv2
 
 # Number of ecpochs
-epochs: 100
+epochs: 30
 
 # Batch size
-#batch_size: 64
+batch_size: hp.quniform('batch_size',64,128,5)
 
 # Loss function, available options are:
 # mse, ssim, ssim_l1, ssim_l2
@@ -27,7 +27,11 @@ device: '0'
 # options are: Adam, RMSprop, Adagrad, SGD
 #optimizer: hp.choice('optimizer', ['Adam', 'RMSprop', 'Adagrad'])
 # Learning rate
-lr: hp.loguniform('lr', -10, 0)
+optim:
+  lr: hp.loguniform('lr', -10, 0)
+  w_decay: hp.choice('w_decay', [0, hp.loguniform('decay',-6,-2)])
+  amsgrad: hp.choice('amsgrad', [True, False])
+
 
 # Output folder
 out_name: None
