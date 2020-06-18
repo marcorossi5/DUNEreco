@@ -82,11 +82,6 @@ def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
         fname = os.path.join(dir_name,'planes',f'{s}_noisy.npy')
         noisy_planes = np.load(fname)[:,0]
 
-        clear_m = clear_planes.min()
-        clear_M = clear_planes.max()
-        noisy_m = noisy_planes.min()
-        noisy_M = noisy_planes.max()
-
         clear_crops = []
         noisy_crops = []
         for clear_plane, noisy_plane in zip(clear_planes,noisy_planes):
@@ -105,13 +100,11 @@ def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
 
         fname = os.path.join(dir_name,'crops',
                              f'{s}_clear_{crop_shape[0]}_{p}')
-        np.save(fname,
-                (clear_crops-clear_m)/(clear_M-clear_m))
+        np.save(fname, clear_crops)
 
         fname = os.path.join(dir_name,'crops',
                              f'{s}_noisy_{crop_shape[0]}_{p}')
-        np.save(fname,
-                (noisy_crops-noisy_m)/(noisy_M-noisy_m))
+        np.save(fname,noisy_crops)
             
 def main(dir_name, n_crops, crop_edge, percentage):
     crop_shape = (crop_edge, crop_edge)
@@ -123,6 +116,22 @@ def main(dir_name, n_crops, crop_edge, percentage):
         print(f'\n{s}:')
         dname = os.path.join(dir_name, s)
         get_planes_and_dump(dname)
+
+    #save the normalization
+    for s in ['readout', 'collection']:
+        fname = os.path.join(dir_name, 'train/planes', '_'.join([s,'clear.npy']))
+        c = np.load(fname)
+
+        fname = os.path.join(dir_name, 'train/planes', '_'.join([s,'noisy.npy']))
+        n = np.load(fname)
+
+        m = min(c.min(), n.min())
+        M = max(c.max(), n.max())
+
+        fname = os.path.join(dir_name,'_'.join([s,'normalization']))
+        np.save(fname,[m,M])
+
+
 
     dname = os.path.join(dir_name, 'train')
     crop_planes_and_dump(dname, n_crops, crop_shape, percentage)

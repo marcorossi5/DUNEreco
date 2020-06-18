@@ -54,8 +54,7 @@ def test_epoch(args, epoch, test_data, model):
             dn.append(answer)
         dn = torch.cat(dn)
         dn = recombine_img(dn, crops_shape, pad)
-        clear = clear * (norm[0]-norm[1]) + norm[1]
-        dn = dn * (norm[0]-norm[1]) + norm[1]
+        dn = dn * (norm[1]-norm[0]) + norm[0]
         loss.append(model.loss_fn(clear,dn).cpu().item())
         ssim.append(1-loss_ssim()(clear,dn).cpu().item())
         mse.append(torch.nn.MSELoss()(clear,dn).cpu().item())
@@ -119,8 +118,8 @@ def train(args, train_data, test_data, model):
 
         
     # initialize optimizer
-    optimizer=  optim.Adam(list(model.parameters()), lr=args.optim['lr'],
-                           amsgrad=args.optim['amsgrad'])
+    optimizer=  optim.Adam(list(model.parameters()), lr=args.lr,
+                           amsgrad=args.amsgrad)
     
     # start main loop
     time_all = np.zeros(args.epochs)
