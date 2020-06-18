@@ -104,7 +104,7 @@ def get_CNN(args):
         def forward(self, noised_image=None, clear_image=None):
             out = self.fit_image(noised_image)
             if self.training:
-                return out, loss(out, clear_image)
+                return out, self.loss_fn(out, clear_image)
             return out
 
     cnn = CNN(input_channels, hidden_channels, patch_size, loss_fn)
@@ -217,7 +217,7 @@ def get_GCNN(args):
         def forward(self, noised_image=None, clear_image=None):
             out = self.fit_image(noised_image)
             if self.training:
-                return out, loss_fn(out, clear_image)
+                return out, self.loss_fn(out, clear_image)
             return out
                         
     gcnn = GCNN(k, input_channels, hidden_channels, patch_size, loss_fn)
@@ -390,7 +390,7 @@ def get_GCNNv2(args):
         def forward(self, noised_image=None, clear_image=None):
             out = self.fit_image(noised_image)
             if self.training:
-                return out, loss_fn(clear_image, out)
+                return out, self.loss_fn(clear_image, out)
             return out
 
     gcnnv2 = GCNNv2(k, input_channels, hidden_channels, patch_size, loss_fn)
