@@ -27,17 +27,15 @@ from utils.utils import get_freer_gpu
 from utils.utils import moving_average
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--dir_name", "-p", default="../datasets",
+parser.add_argument("--dir_name", "-p", default="../datasets/denoising",
                     type=str, help='Directory path to datasets')
-parser.add_argument("--epochs", "-n", default=0, type=int,
-                    help="training epochs")
 parser.add_argument("--model", "-m", default="CNN", type=str,
                     help="either CNN or GCNN")
 parser.add_argument("--device", "-d", default="0", type=str,
                     help="-1 (automatic)/ -2 (cpu) / gpu number")
 parser.add_argument("--loss_fn", "-l", default="ssim", type=str,
                     help="mse, ssim, ssim_l1, ssim_l2")
-PARSER.add_argument("--out_name", default=None, type=str,
+parser.add_argument("--out_name", default=None, type=str,
                     help="Output directory")
 
 
@@ -57,11 +55,14 @@ def inference(args, model, channel):
     #load dataset
     data = PlaneLoader(args, 'test', 'collection')
     args.plot_acts = False
-    test_data = torch.utils.data.DataLoader(data[0],
+    test_data = torch.utils.data.DataLoader(data,
                                         num_workers=args.num_workers)
     x, res = test_epoch(args, None, test_data, model)
 
-    diff = np.abs(res-data.clear)
+    clear = data.clear * (data.norm[0]-data.norm[1]) + data.norm[1]
+    noisy = data.noisy * (data.norm[2]-data.norm[3]) + data.norm[3]
+
+    diff = np.abs(res-clear)
 
     fname = os.path.join(args.dir_final_test, f'{channel}_residuals.png')
     fig = plt.figure(figsize=(20,25))
@@ -69,7 +70,7 @@ def inference(args, model, channel):
 
     ax = fig.add_subplot(411)
     ax.title.set_text(r'Sample of $I_{Clear}$ image')
-    z = ax.imshow(data.clear[0][0])
+    z = ax.imshow(clear[0,0])
     fig.colorbar(z, ax=ax)
 
     ax = fig.add_subplot(412)
@@ -91,27 +92,26 @@ def inference(args, model, channel):
     ax = fig.add_subplot(428)
     ax.hist(diff.flatten(), 100, density=True)
     ax.set_yscale('log')
-    ax.legend()
     ax.title.set_text(r'Histogram of all $|I_{DN} - I_{Clear}|$')
 
     plt.savefig(fname)
     plt.close()
 
-    sample = torch.randint(0, data.clear.shape[0],(25,))
-    wire = torch.randint(0, data.clear.shape[-1],(25,))
+    sample = torch.randint(0, clear.shape[0],(25,))
+    wire = torch.randint(0, clear.shape[-2],(25,))
 
     plot_wires(args.dir_final_test,
-               data.clear[0,0],
+               clear,
                f"{channel}_label",
                sample,
                wire)
     plot_wires(args.dir_final_test,
-               res[0,0],
+               res,
                f"{channel}_DN",
                sample,
                wire)
     plot_wires(args.dir_final_test,
-               data.noisy[0,0],
+               noisy,
                f"{channel}_noisy",
                sample,
                wire)
@@ -216,6 +216,8 @@ if __name__ == '__main__':
     else:
         dev = torch.device('cpu')
     args['device'] = dev
+    args['epochs'] = None
+    args['lr'] = None
     args['loss_fn'] = "_".join(["loss", args['loss_fn']])
     print('Working on device: {}\n'.format(args['device']))
     args = Args(**args)

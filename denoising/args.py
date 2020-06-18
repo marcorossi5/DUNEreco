@@ -2,7 +2,7 @@ import os
 from datetime import datetime as dtm
 
 class Args:
-    def __init__(self, dir_name, epochs, model, device, loss_fn, lr, out_name=None):
+    def __init__(self, dir_name, epochs, model, device, loss_fn, lr, out_name=None, scan=False):
         self.crop_size = (32,32)
         self.crop_p = 0.500000
         self.dev_ids = None
@@ -13,6 +13,7 @@ class Args:
         self.model = model
         self.device = device
         self.loss_fn = loss_fn
+        self.scan = scan
 
         self.batch_size = 64#512
         self.test_batch_size = 64#512

@@ -56,7 +56,7 @@ def test_epoch(args, epoch, test_data, model):
         dn = torch.cat(dn)
         dn = recombine_img(dn, crops_shape, pad)
         clear = clear * (norm[0]-norm[1]) + norm[1]
-        dn = dn * (norm[2]-norm[3]) + norm[3]
+        dn = dn * (norm[0]-norm[1]) + norm[1]
         loss.append(model.loss_fn(clear,dn).cpu().item())
         ssim.append(1-loss_ssim()(clear,dn).cpu().item())
         mse.append(torch.nn.MSELoss()(clear,dn).cpu().item())
@@ -71,11 +71,11 @@ def test_epoch(args, epoch, test_data, model):
                            answer.shape[0],
                            (25,))
         plot_crops(args.dir_testing,
-                   answer[:,0],
+                   answer,
                    "act_epoch%d_DN"%epoch,
                    sample)
         plot_crops(args.dir_testing,
-                   answer[:,0],
+                   answer,
                    "act_epoch%d_label"%epoch,
                    sample)
     
@@ -135,7 +135,7 @@ def train(args, train_data, test_data, model):
         loss_sum.append(loss)
 
         time_end = tm.time()
-        if epoch % args.epoch_log == 0:
+        if epoch % args.epoch_log == 0 and (not args.scan):
             print("\nEpoch: %d, Loss: %.5f, time: %.5f"%(epoch,
                                                       loss_sum[-1][0],
                                                       time_all[epoch - 1]))
@@ -146,14 +146,14 @@ def train(args, train_data, test_data, model):
             start = tm.time()
             x, _ = test_epoch(args, epoch, test_data, model)
             test_metrics.append(x)
-            '''
-            print('Test loss: %.5f +- %.5f,\
-                   ssim: %.5f +- %.5f,\
-                   psnr: %.5f +- %.5f,\
-                   mse: %.5e +- %.5e'%(x[0], x[1], x[2], x[3],
-                                       x[4], x[5], x[6], x[7]))
-            print('Test time: %.4f\n'%(tm.time()-start))
-            '''
+            if not args.scan:
+                print('Test loss: %.5f +- %.5f,\
+                       ssim: %.5f +- %.5f,\
+                       psnr: %.5f +- %.5f,\
+                       mse: %.5e +- %.5e'%(x[0], x[1], x[2], x[3],
+                                           x[4], x[5], x[6], x[7]))
+                print('Test time: %.4f\n'%(tm.time()-start))
+            
 
             #save the model if it is the best one
             if test_metrics[-1][0] + test_metrics[-1][1] < best_loss:
@@ -169,13 +169,15 @@ def train(args, train_data, test_data, model):
                     fname = os.path.join(args.dir_saved_models,
                              f'{args.model}.dat')
                 torch.save(model.state_dict(), fname)
-                print('saved model at: %s'%fname)
+                if not args.scan:
+                    print('saved model at: %s'%fname)
                 best_model_name = fname
                 bname = os.path.join(args.dir_final_test, 'best_model.txt')
                 with open(bname, 'w') as f:
                     f.write(fname)
                     f.close()
-                print('updated best model at: ',bname)
+                if not args.scan:
+                    print('updated best model at: ',bname)
 
         epoch += 1
     

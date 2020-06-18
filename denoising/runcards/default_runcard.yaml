@@ -1,0 +1,33 @@
+# dataset folder
+dir_name: ../datasets
+
+# Select model, available options are:
+# cnn, cnnv2, gcnn, gcnnv2
+model: cnnv2
+
+# Number of ecpochs
+epochs: 100
+
+# Batch size
+#batch_size: 64
+
+# Loss function, available options are:
+# mse, ssim, ssim_l1, ssim_l2
+loss_fn: 'loss_ssim_l2'
+#loss_fn: hp.choice('loss_fn', ['loss_mse',
+#                               'loss_ssim',
+#                               'loss_ssim_l1',
+#                               'loss_ssim_l2'])
+
+# Main GPU, available options are:
+# 0,1,2,3
+device: '0'
+
+# Optimizer parameters
+# options are: Adam, RMSprop, Adagrad, SGD
+#optimizer: hp.choice('optimizer', ['Adam', 'RMSprop', 'Adagrad'])
+# Learning rate
+lr: hp.loguniform('lr', -10, 0)
+
+# Output folder
+out_name: None

@@ -186,11 +186,12 @@ def plot_crops(out_dir, imgs, name, sample):
     Plot ADC colormap of channel vs time of 5x5 samples
     Parameters:
         d: string, directory path of output img
-        imgs: torch.Tensor of shape (#images,w,h)
+        imgs: torch.Tensor of shape (#images,C,w,h)
         name: string, additional string to output name
         sample: torch.Tensor selected image indices to be printed
         wire: torch.Tensor, selected wires indices to be printed
     """
+    imgs = imgs.permute(0,2,3,1).squeeze(-1)
     samples = imgs[sample]
     
     fname = os.path.join(out_dir, "_".join([name,"crops.png"]))
@@ -208,11 +209,12 @@ def plot_wires(out_dir, imgs, name, sample, wire):
     Plot ADC vs time of 5x5 channels
     Parameters:
         out_dir: string, directory path of output img
-        imgs: torch.Tensor of shape (#images,w,h)
+        imgs: torch.Tensor of shape (#images,C,w,h)
         name: string, additional string to output name
         sample: torch.Tensor selected image indices to be printed
         wire: torch.Tensor, selected wires indices to be printed
     """
+    imgs = imgs.permute(0,2,3,1).squeeze(-1)
     samples = imgs[sample]
     
     fname = os.path.join(out_dir, "_".join([name,"wires.png"]))

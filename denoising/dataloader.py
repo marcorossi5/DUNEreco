@@ -26,16 +26,16 @@ class CropLoader(torch.utils.data.Dataset):
             sample = torch.randint(0,self.clear.shape[0],(25,))
             wire = torch.randint(0,patch_size, (25,))
             plot_crops(args.dir_testing,
-                       clear[:,0],
+                       clear,
                        "_".join([channel,'clear',folder]),sample)
             plot_wires(args.dir_testing,
-                       clear[:,0],
+                       clear,
                        "_".join([channel,'clear',folder]),sample, wire)
             plot_crops(args.dir_testing,
-                       noisy[:,0],
+                       noisy,
                        "_".join([channel,'noisy',folder]),sample)
             plot_wires(args.dir_testing,
-                       noisy[:,0],
+                       noisy,
                        "_".join([channel,'noisy',folder]),sample,wire)
     def __len__(self):
         return len(self.noisy)
@@ -56,10 +56,10 @@ class PlaneLoader(torch.utils.data.Dataset):
             sample = torch.randint(0,self.clear.shape[0],(25,))
             wire = torch.randint(0,self.clear.shape[2], (25,))
             plot_wires(args.dir_testing,
-                       self.clear[:,0],
+                       self.clear,
                        "_".join([folder, file, "clear"]),sample,wire)
             plot_wires(args.dir_testing,
-                       self.noisy[:,0],
+                       self.noisy,
                        "_".join([folder, file, "noisy"]),sample,wire)
         
         clear_M = self.clear.max()
