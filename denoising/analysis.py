@@ -86,7 +86,6 @@ def inference(args, model, channel):
     ax = fig.add_subplot(427)
     ax.hist(diff[0].flatten(), 100, density=True)
     ax.set_yscale('log')
-    ax.legend()
     ax.title.set_text(r'Sample of histogram of $|I_{DN} - I_{Clear}|$')
 
     ax = fig.add_subplot(428)
@@ -200,6 +199,8 @@ def main(args):
     print('Final test ssim: %.5f +/- %.5f'%(metrics[2], metrics[3]))
     print('Final test psnr: %.5f +/- %.5f'%(metrics[4], metrics[5]))
     print('Final test mse: %.5f +/- %.5f'%(metrics[6], metrics[7]))
+
+    return metrics[0], metrics[1]
     
 if __name__ == '__main__':
     args = vars(parser.parse_args())

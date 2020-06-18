@@ -11,7 +11,7 @@ class Args:
         self.dataset_dir = dir_name
         self.epochs = epochs
         self.model = model
-        self.device = device
+        self.device = 'cuda:{}'.format(device)
         self.loss_fn = loss_fn
         self.scan = scan
 

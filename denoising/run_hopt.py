@@ -23,7 +23,7 @@ def run_hyperparameter_scan(search_space, max_evals, cluster, folder):
     pprint.pprint(best_setup)
     with open('%s/best-model.yaml' % folder, 'w') as wfp:
         yaml.dump(best_setup, wfp, default_flow_style=False)
-    log = '%s/hyperopt_log_{}.pickle'.format(time()) % folder
+    log = '%s/hyperopt_log_{}.pickle'.format(tm()) % folder
     with open(log, 'wb') as wfp:
         print(f'[+] Saving trials in {log}')
         pickle.dump(trials.trials, wfp)
@@ -41,10 +41,10 @@ def load_yaml(runcard_file):
 def build_and_train_model(setup):
     """Training model"""
     print('[+] Training model')
-    if setup['model'] not in ('cnn', 'cnnv2', 'gcnn', 'gcnnv2'):
+    if setup['model'] not in ('CNN', 'CNNv2', 'GCNN', 'GCNNv2'):
         raise ValueError('Invalid input: choose one model at a time.')
 
-    args = Args(setup)
+    args = Args(**setup)
     
     loss, var_loss, _ = denoise.main(args)
     if setup['scan']:
@@ -52,13 +52,13 @@ def build_and_train_model(setup):
                 'loss_variance': var_loss,
                'status': STATUS_OK}
     else:
-        res = args
+        res = args, loss, var_loss
     return res
 
 def main():
     """Parsing command line arguments"""
     parser = argparse.ArgumentParser(description='Train a generative model.')
-    parser.add_argument('runcard', action='store', type=str,
+    parser.add_argument('--runcard', action='store', type=str,
                         help='A yaml file with the setup.')
     parser.add_argument('--output', '-o', type=str, required=True, 
                         help='The output folder')
@@ -68,8 +68,6 @@ def main():
                         help='Enable hyperopt scan.')
     parser.add_argument('--cluster', default=None, 
                         type=str, help='Enable cluster scan.')
-    parser.add_argument('--plot-samples', action='store_true', dest='plot_samples',
-                        help='Generate document with reference and model samples')
     args = parser.parse_args()
 
     # check input is coherent
@@ -102,15 +100,15 @@ def main():
     print('\n\n\n\n\nTrain best model')
     ARGS = build_and_train_model(setup)
     print('\nBest model analysis')
-    analysis.main(ARGS)
+    loss, var_loss = analysis.main(ARGS)
 
     # write out a file with basic information on the run
     with open('%s/info.txt' % folder,'w') as f:
-        print('# %s' % model.description(), file=f)
+        print('# %s' % ARGS.model, file=f)
         print('# created on %s with the command:'
               % datetime.datetime.utcnow(), file=f)
         print('# '+' '.join(sys.argv), file=f)
-        print('# final loss:\t%f\traw loss:\t%f' % loss, file=f)
+        print('# final loss:\t%f +/- %f' % (loss,var_loss), file=f)
 
     # copy runcard to output folder
     shutil.copyfile(args.runcard, f'{folder}/input-runcard.json')
@@ -118,6 +116,6 @@ def main():
     # save the model to file
     #model.save(folder)
 if __name__ == '__main__':
-    START = tm.time()
+    START = tm()
     main()
-    print('Program done in %f'%(tm.time()-START))
+    print('Program done in %f'%(tm()-START))

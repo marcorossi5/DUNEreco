@@ -1,9 +1,9 @@
 # dataset folder
-dir_name: ../datasets
+dir_name: ../datasets/denoising
 
 # Select model, available options are:
-# cnn, cnnv2, gcnn, gcnnv2
-model: cnnv2
+# CNN, CNNv2, GCNN, GCNNv2
+model: CNNv2
 
 # Number of ecpochs
 epochs: 100
