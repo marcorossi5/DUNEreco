@@ -52,7 +52,7 @@ def build_and_train_model(setup):
                 'loss_variance': var_loss,
                'status': STATUS_OK}
     else:
-        res = args, loss, var_loss
+        res = args
     return res
 
 def main():
