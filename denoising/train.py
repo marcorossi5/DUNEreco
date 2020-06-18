@@ -120,7 +120,6 @@ def train(args, train_data, test_data, model):
         
     # initialize optimizer
     optimizer=  optim.Adam(list(model.parameters()), lr=args.optim['lr'],
-                           weight_decay=args.optim['w_decay'],
                            amsgrad=args.optim['amsgrad'])
     
     # start main loop
@@ -130,7 +129,7 @@ def train(args, train_data, test_data, model):
         time_start = tm.time()
         # train
         loss = train_epoch(args, epoch, train_data, model,
-                          optimizer, scheduler)
+                          optimizer)
         loss_sum.append(loss)
 
         time_end = tm.time()

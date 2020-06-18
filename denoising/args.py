@@ -3,7 +3,7 @@ from datetime import datetime as dtm
 
 class Args:
     def __init__(self, dir_name, epochs, model,\
-                 device, loss_fn, optim=None,\
+                 device, loss_fn, lr=1e-4, amsgrad=False,\
                  out_name=None, scan=False,batch_size=64):
         self.crop_size = (32,32)
         self.crop_p = 0.500000
@@ -26,14 +26,9 @@ class Args:
         self.k = 1
         self.in_channels = 1
         self.hidden_channels = 32
-        if optim is not None:
-            self.optim = optim
-        else:
-            self.optim = {
-                'lr': 1e-4,
-                'w_decay': 0,
-                'amsgrad': False
-            }
+        
+        self.lr = lr
+        self.amsgrad = amsgrad
 
         #logs
         self.plot_dataset = False
@@ -50,7 +45,7 @@ class Args:
         #self.epoch_save = 5
 
         #build directories
-        if out_name == None:
+        if out_name is None:
             t = dtm.now().strftime("%y%m%d_%H%M%S")
             self.dir_output = "./denoising/output/%s"%t
         else:

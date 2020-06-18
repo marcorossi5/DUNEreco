@@ -27,11 +27,8 @@ device: '0'
 # options are: Adam, RMSprop, Adagrad, SGD
 #optimizer: hp.choice('optimizer', ['Adam', 'RMSprop', 'Adagrad'])
 # Learning rate
-optim:
-  lr: hp.loguniform('lr', -10, 0)
-  w_decay: hp.choice('w_decay', [0, hp.loguniform('decay',-6,-2)])
-  amsgrad: hp.choice('amsgrad', [True, False])
-
+lr: hp.loguniform('lr', -10, 0)
+amsgrad: hp.choice('amsgrad', [True, False])
 
 # Output folder
 out_name: None
