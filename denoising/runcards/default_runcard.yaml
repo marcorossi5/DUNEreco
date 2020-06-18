@@ -20,8 +20,8 @@ loss_fn: 'loss_ssim_l2'
 #                               'loss_ssim_l2'])
 
 # Main GPU, available options are:
-# 0,1,2,3
-device: '0'
+# cuda:0, cuda:1, cuda:2, cuda:3
+device: 'cuda:0'
 
 # Optimizer parameters
 # options are: Adam, RMSprop, Adagrad, SGD

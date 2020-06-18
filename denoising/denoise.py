@@ -26,8 +26,8 @@ PARSER.add_argument("--dir_name", "-p", default="../datasets/denoising",
                     type=str, help='Directory path to datasets')
 PARSER.add_argument("--epochs", "-n", default=50, type=int,
                     help="training epochs")
-PARSER.add_argument("--model", "-m", default="cnn", type=str,
-                    help="cnn, gcnn, gcnn, gcnnv2")
+PARSER.add_argument("--model", "-m", default="CNN", type=str,
+                    help="CNN, CNNv2, GCNN, GCNNv2")
 PARSER.add_argument("--device", "-d", default="0", type=str,
                     help="-1 (automatic)/ -2 (cpu) / gpu number")
 PARSER.add_argument("--loss_fn", "-l", default="ssim", type=str,

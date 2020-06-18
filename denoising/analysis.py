@@ -59,8 +59,8 @@ def inference(args, model, channel):
                                         num_workers=args.num_workers)
     x, res = test_epoch(args, None, test_data, model)
 
-    clear = data.clear * (data.norm[0]-data.norm[1]) + data.norm[1]
-    noisy = data.noisy * (data.norm[2]-data.norm[3]) + data.norm[3]
+    clear = data.clear
+    noisy = data.noisy * (data.norm[1]-data.norm[0]) + data.norm[0]
 
     diff = np.abs(res-clear)
 
@@ -172,7 +172,7 @@ def make_plots(args):
                 yerr=test_metrics[7])
     plt.savefig(fname)
     plt.close()
-    print('saved image at: %s'%fname)
+    print('Saved image at: %s'%fname)
 
 def main(args):
     mpl.rcParams.update({'font.size': 22})

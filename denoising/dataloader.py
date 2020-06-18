@@ -77,7 +77,7 @@ class PlaneLoader(torch.utils.data.Dataset):
         self.norm = np.load(fname)
 
         #clear planes don't need to be normalized
-        self.clear = self.clear
+        self.clear = clear
         self.noisy = (noisy-self.norm[0])/(self.norm[1]-self.norm[0])
 
 
