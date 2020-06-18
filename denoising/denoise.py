@@ -35,8 +35,6 @@ PARSER.add_argument("--loss_fn", "-l", default="ssim", type=str,
 PARSER.add_argument("--lr", default=1e-3, type=float,
                     help="training epochs")
 
-
-
 def main(args):
     """This is the main function"""
     torch.cuda.set_enabled_lms(True)

@@ -37,6 +37,9 @@ parser.add_argument("--device", "-d", default="0", type=str,
                     help="-1 (automatic)/ -2 (cpu) / gpu number")
 parser.add_argument("--loss_fn", "-l", default="ssim", type=str,
                     help="mse, ssim, ssim_l1, ssim_l2")
+PARSER.add_argument("--out_name", default=None, type=str,
+                    help="Output directory")
+
 
 def inference(args, model, channel):
     """
@@ -58,14 +61,6 @@ def inference(args, model, channel):
                                         num_workers=args.num_workers)
     x, res = test_epoch(args, None, test_data, model)
 
-
-    data = [PlaneLoader(args, 'test', 'collection'),
-            PlaneLoader(args, 'test', 'readout')]
-
-    test_data = [torch.utils.data.DataLoader(data[0],
-                                        num_workers=args.num_workers),
-                 torch.utils.data.DataLoader(data[1],
-                                        num_workers=args.num_workers)]
     diff = np.abs(res-data.clear)
 
     fname = os.path.join(args.dir_final_test, f'{channel}_residuals.png')
@@ -197,7 +192,7 @@ def main(args):
 
     start = tm.time()
     make_plots(args)
-    metrics = inference(args, model)
+    metrics = inference(args, model,'collection')
 
     print('Final test time: %.4f\n'%(tm.time()-start))
 

@@ -54,7 +54,7 @@ class Args:
         self.dir_saved_models = self.dir_output + "/model_save"
 
         if not os.path.isdir(self.dir_output):
-            os.mkdir(self.dir_output)
+            os.makedirs(self.dir_output)
         if not os.path.isdir(self.dir_testing):
             os.mkdir(self.dir_testing)
         if not os.path.isdir(self.dir_final_test):
