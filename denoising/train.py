@@ -11,7 +11,7 @@ from model_utils import plot_crops
 
 from losses import loss_ssim
 
-import time as tm
+from time import time as tm
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import compute_psnr
@@ -114,33 +114,33 @@ def train(args, train_data, test_data, model):
         loss_sum = []
         test_metrics = []
         test_epochs = []
-    best_loss = 1e6
-
+    best_loss = 1e10
+    best_loss_std = 0
+    best_model_name = os.path.join(args.dir_saved_models,
+                             f'{args.model}_-1.dat')
         
     # initialize optimizer
     optimizer=  optim.Adam(list(model.parameters()), lr=args.lr,
                            amsgrad=args.amsgrad)
     
     # start main loop
-    time_all = np.zeros(args.epochs)
-    
     while epoch <= args.epochs:
-        time_start = tm.time()
+        time_start = tm()
         # train
         loss = train_epoch(args, epoch, train_data, model,
                           optimizer)
         loss_sum.append(loss)
 
-        time_end = tm.time()
+        time_end = tm()
         if epoch % args.epoch_log == 0 and (not args.scan):
             print("\nEpoch: %d, Loss: %.5f, time: %.5f"%(epoch,
                                                       loss_sum[-1][0],
-                                                      time_all[epoch - 1]))
+                                                      time_end))
         # test
         if epoch % args.epoch_test == 0 and epoch>=args.epoch_test_start:
             print('test start ...')
             test_epochs.append(epoch)
-            start = tm.time()
+            start = tm()
             x, _ = test_epoch(args, epoch, test_data, model)
             test_metrics.append(x)
             if not args.scan:
@@ -149,7 +149,7 @@ def train(args, train_data, test_data, model):
                        psnr: %.5f +- %.5f,\
                        mse: %.5e +- %.5e'%(x[0], x[1], x[2], x[3],
                                            x[4], x[5], x[6], x[7]))
-                print('Test time: %.4f\n'%(tm.time()-start))
+                print('Test time: %.4f\n'%(tm()-start))
             
 
             #save the model if it is the best one

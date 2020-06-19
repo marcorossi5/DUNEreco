@@ -17,8 +17,8 @@ class Args:
         self.loss_fn = loss_fn
         self.scan = scan
 
-        self.batch_size = 64#512
-        self.test_batch_size = 64#512
+        self.batch_size = batch_size#64#512
+        self.test_batch_size = batch_size#64#512
         self.num_workers = 8
 
         #model parameters

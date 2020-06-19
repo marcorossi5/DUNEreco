@@ -9,8 +9,8 @@ model: CNNv2
 epochs: 30
 
 # Batch size
-batch_size: hp.quniform('batch_size',64,128,5)
-
+#batch_size: hp.quniform('batch_size',64,128,5)
+batch_size: hp.choice('batch_size',[2048, 1024, 512])
 # Loss function, available options are:
 # mse, ssim, ssim_l1, ssim_l2
 loss_fn: 'loss_ssim_l2'

@@ -13,7 +13,7 @@ from ssim import stat_ssim
 from dataloader import PlaneLoader
 
 PARSER = argparse.ArgumentParser()
-PARSER.add_argument("--dir_name", "-p", default="../datasets",
+PARSER.add_argument("--dir_name", "-p", default="../datasets/denoising",
                     type=str, help='Directory path to datasets')
 PARSER.add_argument("--device", "-d", default="0", type=str,
                     help="-1 (automatic)/ -2 (cpu) / gpu number")
@@ -25,7 +25,7 @@ def main(args):
     noisy = data.noisy * (data.norm[1]-data.norm[0]) + data.norm[0]
     noisy = noisy.to(args.device)
 
-    print("Number of crops: ", len(clear))
+    print("Number of planes: ", len(clear))
     print("MSE: ", torch.nn.MSELoss()(noisy, clear))
 
     y = []
@@ -59,6 +59,7 @@ if __name__ == '__main__':
     print('Working on device: {}\n'.format(ARGS['device']))
     ARGS['epochs'] = None
     ARGS['model'] = None
+    ARGS['loss_fn'] = None
     ARGS = Args(**ARGS)
     START = tm.time()
     main(ARGS)
