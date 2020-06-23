@@ -53,8 +53,13 @@ class CropLoader(torch.utils.data.Dataset):
                              '_'.join([channel,'normalization.npy']))
         m, M = np.load(fname)
 
+        hits = torch.clone(clear)
+        hits[hits!=0] = 1 
+
         self.clear = (clear-m)/(M-m)
         self.noisy = (noisy-m)/(M-m)
+
+        self.clear = torch.cat([self.clear, hits],1)
 
     def __len__(self):
         return len(self.noisy)
@@ -94,10 +99,13 @@ class PlaneLoader(torch.utils.data.Dataset):
                              '_'.join([channel,'normalization.npy']))
         self.norm = np.load(fname)
 
+        hits = torch.clone(clear)
+        hits[hits!=0] = 1
         #clear planes don't need to be normalized
         self.clear = clear
         self.noisy = (noisy-self.norm[0])/(self.norm[1]-self.norm[0])
 
+        self.clear = torch.cat([self.clear, hits],1)
 
     def __len__(self):
         return len(self.noisy)

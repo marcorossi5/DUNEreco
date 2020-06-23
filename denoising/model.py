@@ -507,16 +507,21 @@ def get_CNNv2(args):
             self.preprocessing_blocks = nn.ModuleList([
                 PreProcessBlock(3, input_channels, hidden_channels),
                 PreProcessBlock(5, input_channels, hidden_channels),
-                PreProcessBlock(7, input_channels, hidden_channels),
+                PreProcessBlock(7, input_channels, hidden_channels)
             ])
-            self.LPF_1 = LPF(hidden_channels*3, hidden_channels*3)
-            self.LPF_2 = LPF(hidden_channels*3, hidden_channels*3)
-            self.LPF_3 = LPF(hidden_channels*3, hidden_channels*3)
-            self.LPF_4 = LPF(hidden_channels*3, hidden_channels*3)
+            self.hit_block = nn.Sequential([
+                PreProcessBlock(3, input_channels, hidden_channels),
+                GraphConv(hidden_channels, 1),
+                nn.Sigmoid()
+                ])
+            self.LPF_1 = LPF(hidden_channels*3+1, hidden_channels*3+1)
+            self.LPF_2 = LPF(hidden_channels*3+1, hidden_channels*3+1)
+            self.LPF_3 = LPF(hidden_channels*3+1, hidden_channels*3+1)
+            self.LPF_4 = LPF(hidden_channels*3+1, hidden_channels*3+1)
 
-            self.HPF = HPF(hidden_channels*3, hidden_channels*3)
+            self.HPF = HPF(hidden_channels*3+1, hidden_channels*3+1)
 
-            self.GC_1 = GraphConv(hidden_channels*3, hidden_channels*2)
+            self.GC_1 = GraphConv(hidden_channels*3+1, hidden_channels*2)
             self.bn_1 = nn.BatchNorm2d(hidden_channels*2)
             self.GC_2 = GraphConv(hidden_channels*2, hidden_channels)
             self.bn_2 = nn.BatchNorm2d(hidden_channels)
@@ -537,9 +542,13 @@ def get_CNNv2(args):
             self.b3 = nn.Parameter(torch.randn(1), requires_grad=True)
             self.b4 = nn.Parameter(torch.randn(1), requires_grad=True)
 
+            self.xent = nn.BCELoss()
+
         def fit_image(self, x):
             y = torch.cat([block(x) for block in
                                         self.preprocessing_blocks], dim=1)
+            hits = self.hits(x)
+            y = torch.cat([y,hits],1)
             y_hpf = self.HPF(y)
 
             y = self.LPF_1(y*(1-self.a0) + self.b0*y_hpf)
@@ -549,13 +558,14 @@ def get_CNNv2(args):
 
             y = self.relu(self.bn_1(self.GC_1(y)))
             y = self.relu(self.bn_2(self.GC_2(y)))
-            return self.act(self.GC_3(y) + x[:,:1])
+            return self.act(self.GC_3(y) + x), hits
 
         def forward(self, noised_image=None, clear_image=None):
-            out = self.fit_image(noised_image)
+            out, hits = self.fit_image(noised_image)
             if self.training:
-                return out, self.loss_fn(clear_image, out)
-            return out
+                loss_hits = self.xent(hits, clear_image[:,1:2])
+                return self.loss_fn(clear_image, out) + loss_hits, loss_hits
+            return torch.cat([out, hits],1)
 
     cnnv2 = CNNv2(input_channels, hidden_channels, patch_size, loss_fn)
 

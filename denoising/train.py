@@ -22,7 +22,7 @@ def train_epoch(args, epoch, train_data, model, optimizer):
         clear = clear.to(args.device)
         noised = noised.to(args.device)
         optimizer.zero_grad()
-        denoised_img, loss = model(noised, clear)
+        loss, loss_hits = model(noised, clear)
         loss.mean().backward()
         optimizer.step()
 
@@ -43,7 +43,8 @@ def test_epoch(args, epoch, test_data, model):
     ssim = []
 
     for clear, noisy, norm in test_data:
-        clear = clear.to(args.device)
+        clear = clear[:,:1].to(args.device)
+        hits = clear[:,1:2].to(args.device)
         noisy = noisy.to(args.device)
         norm = norm[0].to(args.device)
         crops, crops_shape, pad = split_img(noisy,model.patch_size)
@@ -54,8 +55,10 @@ def test_epoch(args, epoch, test_data, model):
             dn.append(answer)
         dn = torch.cat(dn)
         dn = recombine_img(dn, crops_shape, pad)
-        dn = dn * (norm[1]-norm[0]) + norm[0]
-        loss.append(model.loss_fn(clear,dn).cpu().item())
+        dn_hits = dn[:,1:2]
+        dn = dn[:,:1] * (norm[1]-norm[0]) + norm[0]
+        loss.append((model.loss_fn(clear,dn)
+                    +model.xent(hits,dn_hits)).cpu().item())
         ssim.append(1-loss_ssim()(clear,dn).cpu().item())
         mse.append(torch.nn.MSELoss()(clear,dn).cpu().item())
         psnr.append(compute_psnr(clear,dn))
@@ -69,12 +72,16 @@ def test_epoch(args, epoch, test_data, model):
                            answer.shape[0],
                            (25,))
         plot_crops(args.dir_testing,
-                   answer,
+                   answer[:,:1],
                    "act_epoch%d_DN"%epoch,
                    sample)
         plot_crops(args.dir_testing,
                    answer,
                    "act_epoch%d_label"%epoch,
+                   sample)
+        plot_crops(args.dir_testing,
+                   answer[:,1:2],
+                   "act_epoch%d_DNhits"%epoch,
                    sample)
     
     n = len(loss)
