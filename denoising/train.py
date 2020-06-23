@@ -31,26 +31,27 @@ def train_epoch(args, epoch, train_data, model, optimizer):
         hits= hits.cpu().detach()
 
         #plot the last crops chunk
-        if args.plot_acts:
-            sample = torch.randint(0,
-                           answer.shape[0],
-                           (25,))
-            plot_crops(args.dir_testing,
-                   out,
-                   "act_epoch%d_DN"%epoch,
-                   sample)
-            plot_crops(args.dir_testing,
-                   hits,
-                   "act_epoch%d_DNhits"%epoch,
-                   sample)
-            plot_crops(args.dir_testing,
-                   clear[:,:1],
-                   "act_epoch%d_DN"%epoch,
-                   sample)
-            plot_crops(args.dir_testing,
-                   clear[:,1:2],
-                   "act_epoch%d_hits"%epoch,
-                   sample)
+    if args.plot_acts:
+        sample = torch.randint(0,
+                        out.shape[0],
+                       (25,))
+        plot_crops(args.dir_testing,
+                out,
+               "act_epoch%d_DN"%epoch,
+               sample)
+        plot_crops(args.dir_testing,
+                hits,
+               "act_epoch%d_DNhits"%epoch,
+               sample)
+        plot_crops(args.dir_testing,
+                clear[:,:1],
+               "act_epoch%d_clear"%epoch,
+               sample)
+        plot_crops(args.dir_testing,
+                clear[:,1:2],
+               "act_epoch%d_hits"%epoch,
+               sample)
+    print(loss_hits.mean().item())
 
     return np.array([loss.mean().item()])
 
