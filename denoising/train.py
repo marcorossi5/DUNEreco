@@ -22,9 +22,35 @@ def train_epoch(args, epoch, train_data, model, optimizer):
         clear = clear.to(args.device)
         noised = noised.to(args.device)
         optimizer.zero_grad()
-        loss, loss_hits = model(noised, clear)
+        loss, loss_hits, out, hits = model(noised, clear)
         loss.mean().backward()
         optimizer.step()
+
+        out = out.cpu().detach()
+        clear = clear.cpu().detach()
+        hits= hits.cpu().detach()
+
+        #plot the last crops chunk
+        if args.plot_acts:
+            sample = torch.randint(0,
+                           answer.shape[0],
+                           (25,))
+            plot_crops(args.dir_testing,
+                   out,
+                   "act_epoch%d_DN"%epoch,
+                   sample)
+            plot_crops(args.dir_testing,
+                   hits,
+                   "act_epoch%d_DNhits"%epoch,
+                   sample)
+            plot_crops(args.dir_testing,
+                   clear[:,:1],
+                   "act_epoch%d_DN"%epoch,
+                   sample)
+            plot_crops(args.dir_testing,
+                   clear[:,1:2],
+                   "act_epoch%d_hits"%epoch,
+                   sample)
 
     return np.array([loss.mean().item()])
 
@@ -64,33 +90,7 @@ def test_epoch(args, epoch, test_data, model):
         psnr.append(compute_psnr(clear,dn))
         res.append(dn.cpu().detach())
     res = torch.cat(res)
-    answer = answer.cpu().detach()
-    clear = clear.cpu().detach()
-    hits = hits.cpu().detach()
-        
-    #plot the last crops chunk
-    if args.plot_acts:
-        sample = torch.randint(0,
-                           answer.shape[0],
-                           (25,))
-        plot_crops(args.dir_testing,
-                   answer[:,:1],
-                   "act_epoch%d_DN"%epoch,
-                   sample)
-        plot_crops(args.dir_testing,
-                   clear,
-                   "act_epoch%d_label"%epoch,
-                   sample)
-        plot_crops(args.dir_testing,
-                   answer[:,1:2],
-                   "act_epoch%d_DNhits"%epoch,
-                   sample)
-        plot_crops(args.dir_testing,
-                   hits,
-                   "act_epoch%d_hits"%epoch,
-                   sample)
-        
-    
+
     n = len(loss)
     return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
                 np.mean(ssim), np.std(ssim)/np.sqrt(n),
@@ -145,7 +145,7 @@ def train(args, train_data, test_data, model):
                           optimizer)
         loss_sum.append(loss)
 
-        time_end = tm()
+        time_end = time_start-tm()
         if epoch % args.epoch_log == 0 and (not args.scan):
             print("\nEpoch: %d, Loss: %.5f, time: %.5f"%(epoch,
                                                       loss_sum[-1][0],

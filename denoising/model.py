@@ -563,7 +563,8 @@ def get_CNNv2(args):
             out, hits = self.fit_image(noised_image)
             if self.training:
                 loss_hits = self.xent(hits, clear_image[:,1:2])
-                return self.loss_fn(clear_image[:,:1], out) + loss_hits, loss_hits
+                return self.loss_fn(clear_image[:,:1], out) + loss_hits,\
+                       loss_hits, out.data, hits.data
             return torch.cat([out, hits],1)
 
     cnnv2 = CNNv2(input_channels, hidden_channels, patch_size, loss_fn)
