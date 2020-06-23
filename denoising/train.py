@@ -43,8 +43,8 @@ def test_epoch(args, epoch, test_data, model):
     ssim = []
 
     for clear, noisy, norm in test_data:
-        clear = clear[:,:1].to(args.device)
         hits = clear[:,1:2].to(args.device)
+        clear = clear[:,:1].to(args.device)        
         noisy = noisy.to(args.device)
         norm = norm[0].to(args.device)
         crops, crops_shape, pad = split_img(noisy,model.patch_size)
@@ -65,6 +65,8 @@ def test_epoch(args, epoch, test_data, model):
         res.append(dn.cpu().detach())
     res = torch.cat(res)
     answer = answer.cpu().detach()
+    clear = clear.cpu().detach()
+    hits = hits.cpu().detach()
         
     #plot the last crops chunk
     if args.plot_acts:
@@ -76,13 +78,18 @@ def test_epoch(args, epoch, test_data, model):
                    "act_epoch%d_DN"%epoch,
                    sample)
         plot_crops(args.dir_testing,
-                   answer,
+                   clear,
                    "act_epoch%d_label"%epoch,
                    sample)
         plot_crops(args.dir_testing,
                    answer[:,1:2],
                    "act_epoch%d_DNhits"%epoch,
                    sample)
+        plot_crops(args.dir_testing,
+                   hits,
+                   "act_epoch%d_hits"%epoch,
+                   sample)
+        
     
     n = len(loss)
     return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),

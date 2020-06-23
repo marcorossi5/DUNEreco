@@ -32,8 +32,10 @@ PARSER.add_argument("--device", "-d", default="0", type=str,
                     help="-1 (automatic)/ -2 (cpu) / gpu number")
 PARSER.add_argument("--loss_fn", "-l", default="ssim", type=str,
                     help="mse, ssim, ssim_l1, ssim_l2")
-PARSER.add_argument("--lr", default=1e-3, type=float,
+PARSER.add_argument("--lr", default=0.009032117010326078, type=float,
                     help="training epochs")
+PARSER.add_argument("--out_name", default=None, type=str,
+                    help="Output directory")
 
 def main(args):
     """This is the main function"""

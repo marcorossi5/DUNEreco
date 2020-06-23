@@ -3,8 +3,8 @@ from datetime import datetime as dtm
 
 class Args:
     def __init__(self, dir_name, epochs, model,\
-                 device, loss_fn, lr=1e-4, amsgrad=False,\
-                 out_name=None, scan=False,batch_size=64):
+                 device, loss_fn, lr=0.009032117010326078, amsgrad=True,\
+                 out_name=None, scan=False, batch_size=512):
         self.crop_size = (32,32)
         self.crop_p = 0.500000
         self.dev_ids = None
@@ -17,8 +17,8 @@ class Args:
         self.loss_fn = loss_fn
         self.scan = scan
 
-        self.batch_size = batch_size#64#512
-        self.test_batch_size = batch_size#64#512
+        self.batch_size = batch_size
+        self.test_batch_size = batch_size
         self.num_workers = 8
 
         #model parameters

@@ -509,11 +509,10 @@ def get_CNNv2(args):
                 PreProcessBlock(5, input_channels, hidden_channels),
                 PreProcessBlock(7, input_channels, hidden_channels)
             ])
-            self.hit_block = nn.Sequential([
+            self.hit_block = nn.Sequential(
                 PreProcessBlock(3, input_channels, hidden_channels),
                 GraphConv(hidden_channels, 1),
-                nn.Sigmoid()
-                ])
+                nn.Sigmoid())
             self.LPF_1 = LPF(hidden_channels*3+1, hidden_channels*3+1)
             self.LPF_2 = LPF(hidden_channels*3+1, hidden_channels*3+1)
             self.LPF_3 = LPF(hidden_channels*3+1, hidden_channels*3+1)
@@ -547,7 +546,7 @@ def get_CNNv2(args):
         def fit_image(self, x):
             y = torch.cat([block(x) for block in
                                         self.preprocessing_blocks], dim=1)
-            hits = self.hits(x)
+            hits = self.hit_block(x)
             y = torch.cat([y,hits],1)
             y_hpf = self.HPF(y)
 
@@ -564,7 +563,7 @@ def get_CNNv2(args):
             out, hits = self.fit_image(noised_image)
             if self.training:
                 loss_hits = self.xent(hits, clear_image[:,1:2])
-                return self.loss_fn(clear_image, out) + loss_hits, loss_hits
+                return self.loss_fn(clear_image[:,:1], out) + loss_hits, loss_hits
             return torch.cat([out, hits],1)
 
     cnnv2 = CNNv2(input_channels, hidden_channels, patch_size, loss_fn)
