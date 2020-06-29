@@ -269,13 +269,14 @@ def plot_ROI_stats(args,epoch,clear,dn,t):
         clear: targets, torch.Tensor of shape (1,C,w,h) 
         t: threshold, float in [0,1]      
     """
-    y_pred = clear.detach().cpu().numpy().flatten()
-    y_true = dn.detach().cpu().numpy().flatten()
+    y_true = clear.detach().cpu().numpy().flatten().astype(int)
+    y_pred = dn.detach().cpu().numpy().flatten()
     cm = confusion_matrix(y_true, y_pred>t)
     fname = os.path.join(args.dir_testing, 'cm.txt')
     with open(fname, 'a+') as f:
         print_cm(cm, f)
         f.close()
+    print(f'Updated confusion matrix file at {fname}')
 
     fname = os.path.join(args.dir_testing, f'scores_epoch{epoch}.png')
     fig = plt.figure()
@@ -284,5 +285,7 @@ def plot_ROI_stats(args,epoch,clear,dn,t):
     ax.hist(y_pred[mask],100, histtype='step', label='hit')
     ax.hist(y_pred[~mask],100, histtype='step', label='no hit')
     ax.legend()
+    ax_set_yscale('log')
     plt.savefig(fname, bbox='tight',dpi=300)
     plt.close()
+    print(f'Saved plot at {fname}')

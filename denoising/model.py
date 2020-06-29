@@ -693,7 +693,7 @@ def get_ROI(args):
     class ROI(nn.Module):
         def __init__(self, input_channels, hidden_channels, patch_size, loss_fn):
             super().__init__()
-            
+            self.patch_size = patch_size            
             self.hit_block = ROI_finder(3,input_channels,hidden_channels)
 
             self.xent = nn.BCELoss()
@@ -706,9 +706,9 @@ def get_ROI(args):
             out = torch.zeros_like(noised_image).data
             if self.training:
                 loss_hits = self.xent(hits, clear_image[:,1:2])
-                return loss_hits, out, hits.data
+                return loss_hits,loss_hits, out, hits.data
             return torch.cat([out, hits],1)
 
-    cnnv2 = ROI(input_channels, hidden_channels, patch_size, loss_fn)
+    roi = ROI(input_channels, hidden_channels, patch_size, loss_fn)
 
-    return cnnv2
+    return roi
