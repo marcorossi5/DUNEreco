@@ -4,7 +4,7 @@ from datetime import datetime as dtm
 class Args:
     def __init__(self, dir_name, epochs, model,\
                  device, loss_fn, lr=0.009032117010326078, amsgrad=True,\
-                 out_name=None, scan=False, batch_size=512):
+                 out_name=None, scan=False, batch_size=256):
         self.crop_size = (32,32)
         self.crop_p = 0.500000
         self.dev_ids = None
@@ -32,11 +32,11 @@ class Args:
 
         #logs
         self.plot_dataset = False
-        self.plot_acts = False
+        self.plot_acts = True
 
         self.epoch_log = 1
         self.epoch_test_start = 0
-        self.epoch_test = 1
+        self.epoch_test = 5
 
         self.load = False
         self.load_epoch = 25

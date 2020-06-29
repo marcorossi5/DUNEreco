@@ -146,7 +146,7 @@ def train(args, train_data, test_data, model):
                           optimizer)
         loss_sum.append(loss)
 
-        time_end = time_start-tm()
+        time_end = tm()-time_start
         if epoch % args.epoch_log == 0 and (not args.scan):
             print("\nEpoch: %d, Loss: %.5f, time: %.5f"%(epoch,
                                                       loss_sum[-1][0],

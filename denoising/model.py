@@ -341,14 +341,20 @@ def get_GCNNv2(args):
                 PreProcessBlock(k, 5, input_channels, hidden_channels),
                 PreProcessBlock(k, 7, input_channels, hidden_channels),
             ])
-            self.LPF_1 = LPF(k, hidden_channels*3, hidden_channels*3)
-            self.LPF_2 = LPF(k, hidden_channels*3, hidden_channels*3)
-            self.LPF_3 = LPF(k, hidden_channels*3, hidden_channels*3)
-            self.LPF_4 = LPF(k, hidden_channels*3, hidden_channels*3)
 
-            self.HPF = HPF(k, hidden_channels*3, hidden_channels*3)
+            self.hit_P = PreProcessBlock(k,3, input_channels, hidden_channels)
+            self.hit_G = GraphConv(hidden_channels, 1)
+            self.hit_a = nn.Sigmoid()
+ 
 
-            self.GC_1 = GraphConv(hidden_channels*3, hidden_channels*2)
+            self.LPF_1 = LPF(k, hidden_channels*3+1, hidden_channels*3+1)
+            self.LPF_2 = LPF(k, hidden_channels*3+1, hidden_channels*3+1)
+            self.LPF_3 = LPF(k, hidden_channels*3+1, hidden_channels*3+1)
+            self.LPF_4 = LPF(k, hidden_channels*3+1, hidden_channels*3+1)
+
+            self.HPF = HPF(k, hidden_channels*3+1, hidden_channels*3+1)
+
+            self.GC_1 = GraphConv(hidden_channels*3+1, hidden_channels*2)
             self.bn_1 = nn.BatchNorm2d(hidden_channels*2)
             self.GC_2 = GraphConv(hidden_channels*2, hidden_channels)
             self.bn_2 = nn.BatchNorm2d(hidden_channels)
@@ -368,10 +374,16 @@ def get_GCNNv2(args):
             self.b2 = nn.Parameter(torch.randn(1), requires_grad=True)
             self.b3 = nn.Parameter(torch.randn(1), requires_grad=True)
             self.b4 = nn.Parameter(torch.randn(1), requires_grad=True)
+            self.xent = nn.BCELoss()
 
         def fit_image(self, x):
             y = torch.cat([block(x) for block in
                                         self.preprocessing_blocks], dim=1)
+
+            hits = self.hit_P(x)
+            graph = get_graph(hits, self.k, l_mask)
+            hits = self.hit_a(self.hit_G(hits,graph))
+            y = torch.cat([y,hits],1)
             y_hpf = self.HPF(y)
 
             y = self.LPF_1(y*(1-self.a0) + self.b0*y_hpf)
@@ -388,14 +400,15 @@ def get_GCNNv2(args):
             y = self.relu(self.bn_2(self.GC_2(y, graph)))
 
             graph = get_graph(y, self.k, l_mask)
-            return self.act(self.GC_3(y, graph) + x[:,:1])
+            return self.act(self.GC_3(y, graph) + x), hits
 
         def forward(self, noised_image=None, clear_image=None):
-            out = self.fit_image(noised_image)
+            out, hits = self.fit_image(noised_image)
             if self.training:
-                return out, self.loss_fn(clear_image, out)
-            return out
-
+                loss_hits = self.xent(hits, clear_image[:,1:2])
+                return self.loss_fn(clear_image[:,:1], out) + loss_hits,\
+                       loss_hits, out.data, hits.data
+            return torch.cat([out, hits],1)
     gcnnv2 = GCNNv2(k, input_channels, hidden_channels, patch_size, loss_fn)
 
     return gcnnv2
