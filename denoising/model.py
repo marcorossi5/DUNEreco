@@ -239,12 +239,10 @@ def get_GCNNv2(args):
         def __init__(self, input_channels, out_channels, search_area=None):
             super().__init__()
             self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
-            #self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
             self.NLA = NonLocalAggregation(input_channels, out_channels)
 
         def forward(self, x, graph):
             return torch.mean(torch.stack([self.conv1(x),
-                                           #self.conv2(x),
                                            self.NLA(x, graph)]), dim=0)
 
     class PreProcessBlock(nn.Module):
@@ -276,6 +274,29 @@ def get_GCNNv2(args):
             graph = get_graph(x,self.k,l_mask)
             x = self.activ(self.GC(x, graph))
             return x
+
+    class ROI_finder(nn.Module):
+        def __init__(self, k, kernel_size, input_channels, hidden_channels):
+            super().__init__()
+
+            self.P = PreProcessBlock(k,kernel_size,
+                                     input_channels, hidden_channels)
+            
+            self.GC_1 = GraphConv(hidden_channels, hidden_channels)
+            self.GC_2 = GraphConv(hidden_channels, hidden_channels)
+            self.GC_3 = GraphConv(hidden_channels, 1)
+
+            self.act = nn.Sigmoid()
+
+            self.activ = nn.LeakyReLU(0.05)
+            
+        def forward(self, x):
+            x = self.P(x)
+            graph = get_graph(x, self.k, l_mask)
+            
+            x = self.activ(self.GC_1(x, graph))
+            x = self.activ(self.GC_2(x, graph))
+            return self.act(self.GC_3(x, graph))
 
     class HPF(nn.Module):
         """High Pass Filter"""
@@ -342,10 +363,7 @@ def get_GCNNv2(args):
                 PreProcessBlock(k, 7, input_channels, hidden_channels),
             ])
 
-            self.hit_P = PreProcessBlock(k,3, input_channels, hidden_channels)
-            self.hit_G = GraphConv(hidden_channels, 1)
-            self.hit_a = nn.Sigmoid()
- 
+            self.hit_block = ROI_finder(k, 3, input_channels,hidden_channels) 
 
             self.LPF_1 = LPF(k, hidden_channels*3+1, hidden_channels*3+1)
             self.LPF_2 = LPF(k, hidden_channels*3+1, hidden_channels*3+1)
@@ -380,9 +398,7 @@ def get_GCNNv2(args):
             y = torch.cat([block(x) for block in
                                         self.preprocessing_blocks], dim=1)
 
-            hits = self.hit_P(x)
-            graph = get_graph(hits, self.k, l_mask)
-            hits = self.hit_a(self.hit_G(hits,graph))
+            hits = self.hit_block(x)
             y = torch.cat([y,hits],1)
             y_hpf = self.HPF(y)
 
@@ -427,13 +443,11 @@ def get_CNNv2(args):
             super().__init__()
             
             self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
-            #self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
-            self.conv3 = nn.Conv2d(input_channels, out_channels, 7, padding=3)
+            self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
 
         def forward(self, x):
             return torch.mean(torch.stack([self.conv1(x),
-                                           #self.conv2(x),
-                                           self.conv3(x)]), dim=0)
+                                           self.conv2(x)]), dim=0)
 
     class PreProcessBlock(nn.Module):
         def __init__(self, kernel_size, input_channels, out_channels):
@@ -463,6 +477,29 @@ def get_CNNv2(args):
             x = self.activ(self.GC(x))
             return x
 
+    class ROI_finder(nn.Module):
+        def __init__(self, kernel_size,input_channels, hidden_channels):
+            super().__init__()
+
+            self.P = PreProcessBlock(kernel_size,
+                                     input_channels, hidden_channels)
+            
+            self.GC_1 = GraphConv(hidden_channels, hidden_channels)
+            self.GC_2 = GraphConv(hidden_channels, hidden_channels)
+            self.GC_3 = GraphConv(hidden_channels, 1)
+
+            self.act = nn.Sigmoid()
+
+            self.activ = nn.LeakyReLU(0.05)
+            
+        def forward(self, x):
+
+            x = self.P(x)
+            
+            x = self.activ(self.GC_1(x))
+            x = self.activ(self.GC_2(x))
+            return self.act(self.GC_3(x))
+            
     class HPF(nn.Module):
         """High Pass Filter"""
         def __init__(self, input_channels, out_channels):
@@ -522,10 +559,9 @@ def get_CNNv2(args):
                 PreProcessBlock(5, input_channels, hidden_channels),
                 PreProcessBlock(7, input_channels, hidden_channels)
             ])
-            self.hit_block = nn.Sequential(
-                PreProcessBlock(3, input_channels, hidden_channels),
-                GraphConv(hidden_channels, 1),
-                nn.Sigmoid())
+            
+            self.hit_block = ROI_finder(3,input_channels,hidden_channels)
+
             self.LPF_1 = LPF(hidden_channels*3+1, hidden_channels*3+1)
             self.LPF_2 = LPF(hidden_channels*3+1, hidden_channels*3+1)
             self.LPF_3 = LPF(hidden_channels*3+1, hidden_channels*3+1)
