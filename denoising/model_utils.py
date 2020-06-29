@@ -1,9 +1,12 @@
 import os
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+
+from sklearn.metrics import confusion_matrix
 
 
 def local_mask(crop_size):
@@ -226,3 +229,60 @@ def plot_wires(out_dir, imgs, name, sample, wire):
     plt.savefig(fname)
     plt.close()
     print("Saved image at %s"%fname)
+
+def print_cm(a, f):
+    """
+    Print confusion matrix a for binary classification
+    to file named f
+    Parameters:
+        a: numpy array, shape (2,2)
+        fname: str
+    """
+    tot = a.sum()
+    print("Over a total of %d pixels:\n"%tot, file=f)
+    print("------------------------------------------------", file=f)
+    print("|{:>20}|{:>12}|{:>12}|".format("","Hit", "No hit"), file=f)
+    print("------------------------------------------------", file=f)
+    print("|{:>20}|{:>12.4e}|{:>12.4e}|".format("Predicted hit",
+                                                a[1,1]/tot,a[0,1]/tot),
+          file=f)
+    print("------------------------------------------------", file=f)
+    print("|{:>20}|{:>12.4e}|{:>12.4e}|".format("Predicted no hit",
+                                                a[1,0]/tot,a[0,0]/tot),
+          file=f)
+    print("------------------------------------------------", file=f)
+    print("{:>21}|{:>12}|{:>12}|".format("", "Sensitivity","Specificity"),
+          file=f)
+    print("                     ---------------------------", file=f)
+    print("{:>21}|{:>12.4e}|{:>12.4e}|".format("",
+                                               a[1,1]/(a[1,1]+a[1,0]),
+                                               a[0,0]/(a[0,1]+a[0,0])), file=f)
+    print("                     ---------------------------\n\n", file=f)
+
+
+def plot_ROI_stats(args,epoch,clear,dn,t):
+    """
+    Plot stats of the ROI:
+    Confusion matrix and histogram of the classifier's scores
+    Parameters:
+        dn: NN output, torch.Tensor of shape (1,C,w,h)
+        clear: targets, torch.Tensor of shape (1,C,w,h) 
+        t: threshold, float in [0,1]      
+    """
+    y_pred = clear.detach().cpu().numpy().flatten()
+    y_true = dn.detach().cpu().numpy().flatten()
+    cm = confusion_matrix(y_true, y_pred>t)
+    fname = os.path.join(args.dir_testing, 'cm.txt')
+    with open(fname, 'a+') as f:
+        print_cm(cm, f)
+        f.close()
+
+    fname = os.path.join(args.dir_testing, f'scores_epoch{epoch}.png')
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    mask = y_true.astype(bool)
+    ax.hist(y_pred[mask],100, histtype='step', label='hit')
+    ax.hist(y_pred[~mask],100, histtype='step', label='no hit')
+    ax.legend()
+    plt.savefig(fname, bbox='tight',dpi=300)
+    plt.close()

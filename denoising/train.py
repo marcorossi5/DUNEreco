@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from model_utils import split_img
 from model_utils import recombine_img
 from model_utils import plot_crops
+from model_utils import plot_ROI_stats
 
 from losses import loss_ssim
 
@@ -84,13 +85,19 @@ def test_epoch(args, epoch, test_data, model):
         dn = recombine_img(dn, crops_shape, pad)
         dn_hits = dn[:,1:2]
         dn = dn[:,:1] * (norm[1]-norm[0]) + norm[0]
-        loss.append((model.loss_fn(clear,dn)
+        if args.model == 'ROI':
+            loss.append(model.xent(hits,dn_hits).cpu().item())
+        else:
+            loss.append((model.loss_fn(clear,dn)
                     +model.xent(hits,dn_hits)).cpu().item())
         ssim.append(1-loss_ssim()(clear,dn).cpu().item())
         mse.append(torch.nn.MSELoss()(clear,dn).cpu().item())
         psnr.append(compute_psnr(clear,dn))
         res.append(dn.cpu().detach())
     res = torch.cat(res)
+
+    if args.model == 'ROI':
+        plot_ROI_stats(args,epoch,clear,dn_hits,args.t)
 
     n = len(loss)
     return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),

@@ -278,6 +278,7 @@ def get_GCNNv2(args):
     class ROI_finder(nn.Module):
         def __init__(self, k, kernel_size, input_channels, hidden_channels):
             super().__init__()
+            self.k = k
 
             self.P = PreProcessBlock(k,kernel_size,
                                      input_channels, hidden_channels)
@@ -617,5 +618,97 @@ def get_CNNv2(args):
             return torch.cat([out, hits],1)
 
     cnnv2 = CNNv2(input_channels, hidden_channels, patch_size, loss_fn)
+
+    return cnnv2
+
+def get_ROI(args):
+    k = args.k
+    input_channels = args.in_channels
+    hidden_channels = args.hidden_channels
+    patch_size = args.crop_size
+    loss_fn = args.loss_fn
+
+    class GraphConv(nn.Module):
+        def __init__(self, input_channels, out_channels):
+            super().__init__()
+            
+            self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
+            self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
+
+        def forward(self, x):
+            return torch.mean(torch.stack([self.conv1(x),
+                                           self.conv2(x)]), dim=0)
+
+    class PreProcessBlock(nn.Module):
+        def __init__(self, kernel_size, input_channels, out_channels):
+            super().__init__()
+            self.activ = nn.LeakyReLU(0.05)
+            self.convs = nn.Sequential(
+                nn.Conv2d(input_channels, out_channels, kernel_size,
+                                  padding=(kernel_size//2, kernel_size//2)),
+                self.activ,
+
+                nn.Conv2d(out_channels, out_channels, kernel_size,
+                                  padding=(kernel_size//2, kernel_size//2)),
+                self.activ,
+
+                nn.Conv2d(out_channels, out_channels, kernel_size,
+                                  padding=(kernel_size//2, kernel_size//2)),
+                self.activ,
+                )
+            self.bn = nn.BatchNorm2d(out_channels)
+
+            # out_channels -> out_channels
+            self.GC = GraphConv(out_channels, out_channels)
+
+        def forward(self, x):
+            x = self.convs(x)
+
+            x = self.activ(self.GC(x))
+            return x
+
+    class ROI_finder(nn.Module):
+        def __init__(self, kernel_size,input_channels, hidden_channels):
+            super().__init__()
+
+            self.P = PreProcessBlock(kernel_size,
+                                     input_channels, hidden_channels)
+            
+            self.GC_1 = GraphConv(hidden_channels, hidden_channels)
+            self.GC_2 = GraphConv(hidden_channels, hidden_channels)
+            self.GC_3 = GraphConv(hidden_channels, 1)
+
+            self.act = nn.Sigmoid()
+
+            self.activ = nn.LeakyReLU(0.05)
+            
+        def forward(self, x):
+
+            x = self.P(x)
+            
+            x = self.activ(self.GC_1(x))
+            x = self.activ(self.GC_2(x))
+            return self.act(self.GC_3(x))
+
+    class ROI(nn.Module):
+        def __init__(self, input_channels, hidden_channels, patch_size, loss_fn):
+            super().__init__()
+            
+            self.hit_block = ROI_finder(3,input_channels,hidden_channels)
+
+            self.xent = nn.BCELoss()
+
+        def fit_image(self, x):
+            return self.hit_block(x)
+
+        def forward(self, noised_image=None, clear_image=None):
+            hits = self.fit_image(noised_image)
+            out = torch.zeros_like(noised_image).data
+            if self.training:
+                loss_hits = self.xent(hits, clear_image[:,1:2])
+                return loss_hits, out, hits.data
+            return torch.cat([out, hits],1)
+
+    cnnv2 = ROI(input_channels, hidden_channels, patch_size, loss_fn)
 
     return cnnv2

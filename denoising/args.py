@@ -38,6 +38,8 @@ class Args:
         self.epoch_test_start = 0
         self.epoch_test = 5
 
+        self.t = 0.5
+
         self.load = False
         self.load_epoch = 25
 
