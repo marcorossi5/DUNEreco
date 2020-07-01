@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 
 from sklearn.metrics import confusion_matrix
 
@@ -260,7 +261,7 @@ def print_cm(a, f):
     print("                     ---------------------------\n\n", file=f)
 
 
-def plot_ROI_stats(args,epoch,clear,dn,t):
+def plot_ROI_stats(args,epoch,clear,dn,t,ana=False):
     """
     Plot stats of the ROI:
     Confusion matrix and histogram of the classifier's scores
@@ -269,6 +270,7 @@ def plot_ROI_stats(args,epoch,clear,dn,t):
         clear: targets, torch.Tensor of shape (1,C,w,h) 
         t: threshold, float in [0,1]      
     """
+    mpl.rcParams.update(mpl.rcParamsDefault)
     y_true = clear.detach().cpu().numpy().flatten().astype(int)
     y_pred = dn.detach().cpu().numpy().flatten()
     cm = confusion_matrix(y_true, y_pred>t)
@@ -282,10 +284,43 @@ def plot_ROI_stats(args,epoch,clear,dn,t):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     mask = y_true.astype(bool)
-    ax.hist(y_pred[mask],100, histtype='step', label='hit')
-    ax.hist(y_pred[~mask],100, histtype='step', label='no hit')
+    ax.hist(y_pred[mask],100,range=(0,1), histtype='step', label='hit')
+    ax.hist(y_pred[~mask],100,range=(0,1), histtype='step', label='no hit')
     ax.legend()
-    ax_set_yscale('log')
+    ax.set_yscale('log')
     plt.savefig(fname, bbox='tight',dpi=300)
     plt.close()
     print(f'Saved plot at {fname}')
+
+    if ana:
+        tpr = []
+        fpr = []
+
+        for i in np.linspace(0,1,10)[::-1]:
+            cm = confusion_matrix(y_true, y_pred>i)
+            tpr.append(cm[1,1]/(cm[1,1]+cm[1,0]))
+            fpr.append(cm[0,0]/(cm[0,1]+cm[0,0]))
+
+        tpr = np.array(tpr)
+        fpr = np.array(fpr)
+
+        AUC = ((fpr[1:] - fpr[:-1])*tpr[1:]).sum()
+        print(fpr)
+        print(tpr)
+
+        fname = os.path.join(args.dir_testing, f'ROC.png')
+        fig = plt.figure()
+        fig.suptitle('ROC curve')
+        ax = fig.add_subplot(111)
+        mask = y_true.astype(bool)
+        ax.title.set_text(f'AUC = {AUC}')
+        ax.set_ylabel('Sensitivity')
+        ax.set_xlabel('Specificity')
+        ax.step(fpr,tpr)
+        ax.legend()
+        #ax_set_yscale('log')
+        #ax_set_xscale('log')
+        plt.savefig(fname, bbox='tight',dpi=300)
+        plt.close()
+        print(f'Saved plot at {fname}')
+        mpl.rcParams.update({'font.size': 22})

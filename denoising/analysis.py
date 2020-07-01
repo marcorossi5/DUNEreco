@@ -57,7 +57,7 @@ def inference(args, model, channel):
     args.plot_acts = False
     test_data = torch.utils.data.DataLoader(data,
                                         num_workers=args.num_workers)
-    x, res = test_epoch(args, None, test_data, model)
+    x, res = test_epoch(args, None, test_data, model, ana=True)
 
     clear = data.clear
     noisy = data.noisy * (data.norm[1]-data.norm[0]) + data.norm[0]

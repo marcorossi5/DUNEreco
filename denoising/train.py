@@ -55,7 +55,7 @@ def train_epoch(args, epoch, train_data, model, optimizer):
 
     return np.array([loss.mean().item()])
 
-def test_epoch(args, epoch, test_data, model):
+def test_epoch(args, epoch, test_data, model,ana=False):
     """
 
     Outputs:
@@ -96,7 +96,7 @@ def test_epoch(args, epoch, test_data, model):
     res = torch.cat(res)
 
     if args.model == 'ROI':
-        plot_ROI_stats(args,epoch,hits,dn_hits,args.t)
+        plot_ROI_stats(args,epoch,hits,dn_hits,args.t,ana)
 
     n = len(loss)
     return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),

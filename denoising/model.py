@@ -627,21 +627,23 @@ def get_ROI(args):
     hidden_channels = args.hidden_channels
     patch_size = args.crop_size
     loss_fn = args.loss_fn
+    l_mask = local_mask(patch_size)
 
     class GraphConv(nn.Module):
         def __init__(self, input_channels, out_channels):
             super().__init__()
             
             self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
-            self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
+            self.NLA = NonLocalAggregation(input_channels, out_channels)
 
-        def forward(self, x):
+        def forward(self, x,graph):
             return torch.mean(torch.stack([self.conv1(x),
-                                           self.conv2(x)]), dim=0)
+                                           self.NLA(x,graph)]), dim=0)
 
     class PreProcessBlock(nn.Module):
-        def __init__(self, kernel_size, input_channels, out_channels):
+        def __init__(self,k, kernel_size, input_channels, out_channels):
             super().__init__()
+            self.k = k
             self.activ = nn.LeakyReLU(0.05)
             self.convs = nn.Sequential(
                 nn.Conv2d(input_channels, out_channels, kernel_size,
@@ -663,19 +665,26 @@ def get_ROI(args):
 
         def forward(self, x):
             x = self.convs(x)
-
-            x = self.activ(self.GC(x))
+            graph = get_graph(x, self.k, l_mask)
+            x = self.activ(self.GC(x,graph))
             return x
 
     class ROI_finder(nn.Module):
-        def __init__(self, kernel_size,input_channels, hidden_channels):
+        def __init__(self, k,kernel_size,input_channels, hidden_channels):
             super().__init__()
-
-            self.P = PreProcessBlock(kernel_size,
+            self.k = k
+            self.P = PreProcessBlock(k,kernel_size,
                                      input_channels, hidden_channels)
             
             self.GC_1 = GraphConv(hidden_channels, hidden_channels)
             self.GC_2 = GraphConv(hidden_channels, hidden_channels)
+            self.GC_4 = GraphConv(hidden_channels, hidden_channels)
+            self.GC_5 = GraphConv(hidden_channels, hidden_channels)
+            self.GC_6 = GraphConv(hidden_channels, hidden_channels)
+            self.GC_7 = GraphConv(hidden_channels, hidden_channels)
+            self.GC_8 = GraphConv(hidden_channels, hidden_channels)
+            self.GC_9 = GraphConv(hidden_channels, hidden_channels)
+
             self.GC_3 = GraphConv(hidden_channels, 1)
 
             self.act = nn.Sigmoid()
@@ -685,16 +694,26 @@ def get_ROI(args):
         def forward(self, x):
 
             x = self.P(x)
-            
-            x = self.activ(self.GC_1(x))
-            x = self.activ(self.GC_2(x))
-            return self.act(self.GC_3(x))
+            graph = get_graph(x,self.k,l_mask)
+            x = self.activ(self.GC_1(x,graph))
+            x = self.activ(self.GC_2(x,graph))
+            x = self.activ(self.GC_4(x,graph))
+  
+            graph = get_graph(x,self.k,l_mask)
+            x = self.activ(self.GC_5(x,graph))
+            x = self.activ(self.GC_6(x,graph))
+            x = self.activ(self.GC_7(x,graph))
+
+            graph = get_graph(x,self.k,l_mask)
+            x = self.activ(self.GC_8(x,graph))
+            x = self.activ(self.GC_9(x,graph))
+            return self.act(self.GC_3(x,graph))
 
     class ROI(nn.Module):
-        def __init__(self, input_channels, hidden_channels, patch_size, loss_fn):
+        def __init__(self,k, input_channels, hidden_channels, patch_size, loss_fn):
             super().__init__()
             self.patch_size = patch_size            
-            self.hit_block = ROI_finder(3,input_channels,hidden_channels)
+            self.hit_block = ROI_finder(k,3,input_channels,hidden_channels)
 
             self.xent = nn.BCELoss()
 
@@ -709,6 +728,6 @@ def get_ROI(args):
                 return loss_hits,loss_hits, out, hits.data
             return torch.cat([out, hits],1)
 
-    roi = ROI(input_channels, hidden_channels, patch_size, loss_fn)
+    roi = ROI(k,input_channels, hidden_channels, patch_size, loss_fn)
 
     return roi
