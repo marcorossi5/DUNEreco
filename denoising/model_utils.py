@@ -325,8 +325,8 @@ def plot_ROI_stats(args,epoch,clear,dn,t,ana=False):
         ax.title.set_text(f'AUC = {AUC}')
         ax.set_ylabel('TPR')
         ax.set_xlabel('FPR')
-        ax.set_xlim(fpr.min())
-        ax.set_ylim(tpr.min())
+        ax.set_xlim(m_x)
+        ax.set_ylim(m_y)
         ax.step(fpr,tpr)
         ax.plot([0, 1], [0,1], 'k--', linewidth=0.3)
 
