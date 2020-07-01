@@ -65,7 +65,6 @@ def ROI_train(args, train_data, test_data):
 
 def main(args):
     """This is the main function"""
-    '''
     torch.cuda.set_enabled_lms(True)
     print_summary_file(args)
     #load datasets
@@ -87,22 +86,9 @@ def main(args):
     args.epoch_test = epoch_test
     args.load = True
     args.load_epoch = args.warmup_epochs
-    '''
+
     model = eval('get_' + args.model)(args)
     model = MyDataParallel(model, device_ids=args.dev_ids)
-
-
-    print(model.a0)
-    print(model.a1)
-    print(model.a2)
-    print(model.a3)
-    print(model.b0)
-    print(model.b1)
-    print(model.b2)
-    print(model.b3)
-    
-
-    exit()
     model = model.to(args.device)
 
     #train
