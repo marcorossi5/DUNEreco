@@ -174,6 +174,46 @@ def make_plots(args):
     plt.close()
     print('Saved image at: %s'%fname)
 
+    fname = os.path.join(args.dir_metrics, 'parameters.npy')
+    params = np.load(fname)
+
+    fname = os.path.join(args.dir_metrics, 'parameters.png')
+    fig = plt.figure(figsize=(40,20))
+    ax = fig.add_subplot(2,4,1)
+    ax.title.set_text('a0')
+    ax.plot(params[0])
+
+    ax = fig.add_subplot(2,4,2)
+    ax.title.set_text('a1')
+    ax.plot(params[1])
+
+    ax = fig.add_subplot(2,4,3)
+    ax.title.set_text('a2')
+    ax.plot(params[2])
+
+    ax = fig.add_subplot(2,4,4)
+    ax.title.set_text('a3')
+    ax.plot(params[3])
+
+    ax = fig.add_subplot(2,4,5)
+    ax.title.set_text('b0')
+    ax.plot(params[4])
+
+    ax = fig.add_subplot(2,4,6)
+    ax.title.set_text('b1')
+    ax.plot(params[5])
+
+    ax = fig.add_subplot(2,4,7)
+    ax.title.set_text('b2')
+    ax.plot(params[6])
+
+    ax = fig.add_subplot(2,4,8)
+    ax.title.set_text('b3')
+    ax.plot(params[7])
+
+    plt.savefig(fname, dpi=300)
+    plt.close()
+
 def main(args):
     mpl.rcParams.update({'font.size': 22})
     

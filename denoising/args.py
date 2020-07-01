@@ -12,6 +12,7 @@ class Args:
         #argparser
         self.dataset_dir = dir_name
         self.epochs = epochs
+        self.warmup_epochs = 10
         self.model = model
         self.device = device
         self.loss_fn = loss_fn
@@ -28,6 +29,7 @@ class Args:
         self.hidden_channels = 32
         
         self.lr = lr
+        self.lr_warmup = 1e-3
         self.amsgrad = amsgrad
 
         #logs
@@ -41,7 +43,7 @@ class Args:
         self.t = 0.5
 
         self.load = False
-        self.load_epoch = 25
+        self.load_epoch = 0
 
         self.save = True
         #self.epoch_save = 5

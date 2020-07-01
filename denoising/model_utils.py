@@ -39,7 +39,7 @@ def local_mask(crop_size):
 
 class NonLocalAggregation(nn.Module):
     def __init__(self, input_channels, out_channels):
-        super().__init__()
+        super(NonLocalAggregation,self).__init__()
         self.diff_fc = nn.Linear(input_channels, out_channels)
         self.w_self = nn.Linear(input_channels, out_channels)
         self.bias = nn.Parameter(torch.randn(out_channels), requires_grad=True)
@@ -172,7 +172,7 @@ class MyDataParallel(nn.DataParallel):
     """Allow calling model's attributes"""
     def __getattr__(self, name):
         try:
-            return super().__getattr__(name)
+            return super(MyDataParallel,self).__getattr__(name)
         except AttributeError:
             return getattr(self.module, name)
 
@@ -231,15 +231,17 @@ def plot_wires(out_dir, imgs, name, sample, wire):
     plt.close()
     print("Saved image at %s"%fname)
 
-def print_cm(a, f):
+def print_cm(a, f, epoch):
     """
     Print confusion matrix a for binary classification
     to file named f
     Parameters:
         a: numpy array, shape (2,2)
         fname: str
+        epoch: int
     """
     tot = a.sum()
+    print(f'Epoch: {epoch}', file=f)
     print("Over a total of %d pixels:\n"%tot, file=f)
     print("------------------------------------------------", file=f)
     print("|{:>20}|{:>12}|{:>12}|".format("","Hit", "No hit"), file=f)
@@ -276,7 +278,7 @@ def plot_ROI_stats(args,epoch,clear,dn,t,ana=False):
     cm = confusion_matrix(y_true, y_pred>t)
     fname = os.path.join(args.dir_testing, 'cm.txt')
     with open(fname, 'a+') as f:
-        print_cm(cm, f)
+        print_cm(cm, f, epoch)
         f.close()
     print(f'Updated confusion matrix file at {fname}')
 
@@ -296,13 +298,20 @@ def plot_ROI_stats(args,epoch,clear,dn,t,ana=False):
         tpr = []
         fpr = []
 
-        for i in np.linspace(0,1,10)[::-1]:
+        #don't compute t==0 or t==1 which are trivial
+        for i in np.linspace(0,1,10)[-2:0:-1]:
             cm = confusion_matrix(y_true, y_pred>i)
-            tpr.append(cm[1,1]/(cm[1,1]+cm[1,0]))
-            fpr.append(cm[0,0]/(cm[0,1]+cm[0,0]))
+            fpr.append(cm[0,1]/(cm[0,1]+cm[0,0]))
+            tpr.append(cm[1,1]/(cm[1,1]+cm[1,0]))            
 
-        tpr = np.array(tpr)
         fpr = np.array(fpr)
+        tpr = np.array(tpr)
+
+        m_x = fpr.min()
+        m_y = tpr.min()
+
+        fpr = np.concatenate([[0.],fpr,[1.]],0)
+        tpr = np.concatenate([[0.],tpr,[1.]],0)
 
         AUC = ((fpr[1:] - fpr[:-1])*tpr[1:]).sum()
         print(fpr)
@@ -314,13 +323,37 @@ def plot_ROI_stats(args,epoch,clear,dn,t,ana=False):
         ax = fig.add_subplot(111)
         mask = y_true.astype(bool)
         ax.title.set_text(f'AUC = {AUC}')
-        ax.set_ylabel('Sensitivity')
-        ax.set_xlabel('Specificity')
+        ax.set_ylabel('TPR')
+        ax.set_xlabel('FPR')
+        ax.set_xlim(fpr.min())
+        ax.set_ylim(tpr.min())
         ax.step(fpr,tpr)
-        ax.legend()
-        #ax_set_yscale('log')
-        #ax_set_xscale('log')
+        ax.plot([0, 1], [0,1], 'k--', linewidth=0.3)
+
+        #ax.set_yscale('log')
+        ax.set_xscale('log')
         plt.savefig(fname, bbox='tight',dpi=300)
         plt.close()
         print(f'Saved plot at {fname}')
         mpl.rcParams.update({'font.size': 22})
+
+def weight_scan(module):
+    """
+    Compute wheights' histogram and norm
+    Parameters:
+        module: torch.nn.Module
+    Return:
+        norm: float
+        edges: np.array, bins' center points
+        hist: np.array
+    """
+    p = []
+    for i in list(module.parameters()):
+        p.append(list(i.detach().cpu().numpy().flatten()))
+    
+    p = np.concatenate(p,0)
+    norm = np.sqrt((p*p).sum())
+
+    hist, edges = np.histogram(p,100)
+    
+    return norm, (edges[:-1]+edges[1:])/2, hist

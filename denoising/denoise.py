@@ -15,6 +15,7 @@ from args import Args
 
 from model_utils import MyDataParallel
 from model_utils import print_summary_file
+from model_utils import weight_scan
 
 import train
 
@@ -37,8 +38,34 @@ PARSER.add_argument("--lr", default=0.009032117010326078, type=float,
 PARSER.add_argument("--out_name", default=None, type=str,
                     help="Output directory")
 
+def freeze_weights(model, ROI):
+    """
+    Freezes weights of ROI either finder or GCNN denoiser
+    Parameters:
+        model: torch.nn.Module, first childred should be ROI
+        ROI: either 1 (freezes ROI) or 0 (freezes denoiser)
+    """
+    for i, child in enumerate(model.children()):
+        if ((i == 0)%2 + ROI + 1)%2:
+            for param in child.parameters():
+                param.requires_grad = False
+        for param in child.parameters():
+            print(param.shape, param.requires_grad)
+    model = MyDataParallel(model, device_ids=args.dev_ids)
+    model = model.to(args.device)
+    return model
+
+def ROI_train(args, train_data, test_data):
+    model = eval('get_' + args.model)(args)
+    model = freeze_weights(model, 0)
+    model = MyDataParallel(model, device_ids=args.dev_ids)
+    model = model.to(args.device)
+
+    train.train(args, train_data, test_data, model, warmup=True)
+
 def main(args):
     """This is the main function"""
+    '''
     torch.cuda.set_enabled_lms(True)
     print_summary_file(args)
     #load datasets
@@ -48,14 +75,38 @@ def main(args):
                                             num_workers=args.num_workers)
     test_data = torch.utils.data.DataLoader(PlaneLoader(args,'val','collection'),
                                             num_workers=args.num_workers)
-
     #build model
+    epochs = args.epochs
+    epoch_test = args.epoch_test
+    args.epochs = args.warmup_epochs
+    args.epoch_test = 999999999
+
+    ROI_train(args, train_data, test_data)    
+
+    args.epochs = epochs
+    args.epoch_test = epoch_test
+    args.load = True
+    args.load_epoch = args.warmup_epochs
+    '''
     model = eval('get_' + args.model)(args)
     model = MyDataParallel(model, device_ids=args.dev_ids)
+
+
+    print(model.a0)
+    print(model.a1)
+    print(model.a2)
+    print(model.a3)
+    print(model.b0)
+    print(model.b1)
+    print(model.b2)
+    print(model.b3)
+    
+
+    exit()
     model = model.to(args.device)
 
     #train
-    return train.train(args, train_data, test_data, model)
+    return train.train(args, train_data, test_data, model, warmup=False)
     
 
 if __name__ == '__main__':
