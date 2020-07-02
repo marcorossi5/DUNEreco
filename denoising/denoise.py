@@ -49,10 +49,6 @@ def freeze_weights(model, ROI):
         if ((i == 0)%2 + ROI + 1)%2:
             for param in child.parameters():
                 param.requires_grad = False
-        for param in child.parameters():
-            print(param.shape, param.requires_grad)
-    model = MyDataParallel(model, device_ids=args.dev_ids)
-    model = model.to(args.device)
     return model
 
 def ROI_train(args, train_data, test_data):

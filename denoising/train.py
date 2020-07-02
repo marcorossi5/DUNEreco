@@ -19,6 +19,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import compute_psnr
 
 def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
+    print('[+] Training')
     model.train()
     for i, (clear, noised) in enumerate(train_data):
         clear = clear.to(args.device)
@@ -58,7 +59,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
     fig = plt.figure(figsize=(30,30))
     
     ax = fig.add_subplot(3,3,1)
-    norm, edges, hist = weight_scan(model.ROI_finder)
+    norm, edges, hist = weight_scan(model.hit_block)
     ax.title.set_text('ROI: %.5f'%norm)
     ax.step(edges,hist)
     ax.set_yscale('log')
@@ -69,7 +70,6 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
         ax.title.set_text('P Block %d: %.5f'%(i,norm))
         ax.step(edges,hist)
         ax.set_yscale('log')
-        norms.append(norm)
     
     ax = fig.add_subplot(3,3,5)
     norm, edges, hist = weight_scan(model.LPF_1)
@@ -101,7 +101,8 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
     ax.step(edges,hist)
     ax.set_yscale('log')
 
-    plt.savefig(fname, dpi=500)
+    plt.savefig(fname, dpi=300)
+    print(f'Saved plots at {fname}')
 
     params = []
 
@@ -122,6 +123,7 @@ def test_epoch(args, epoch, test_data, model,ana=False):
         np.array containing n metrics, shape (2*n)
         torch.tensor containing denoised data, shape (batch,C,W,H)
     """
+    print('[+] Testing')
     model.eval()
     mse = []
     psnr = []
@@ -182,12 +184,12 @@ def train(args, train_data, test_data, model, warmup):
         loss_sum = list(np.load(fname).T)
     
         #test_epochs
-        fname = os.path.join(args.dir_metrics, 'test_epochs.npy')
-        test_epochs = list(np.load(fname))
+        #fname = os.path.join(args.dir_metrics, 'test_epochs.npy')
+        #test_epochs = list(np.load(fname))
 
         #test metrics
-        fname = os.path.join(args.dir_metrics, 'test_metrics.npy')
-        test_metrics = list(np.load(fname).T)
+        #fname = os.path.join(args.dir_metrics, 'test_metrics.npy')
+        #test_metrics = list(np.load(fname).T)
 
         #parameters
         fname = os.path.join(args.dir_metrics, 'parameters.npy')
@@ -196,13 +198,13 @@ def train(args, train_data, test_data, model, warmup):
     else:
         epoch = 1
         loss_sum = []
-        test_metrics = []
-        test_epochs = []
+        params = []
+    test_metrics = []
+    test_epochs = []
     best_loss = 1e10
     best_loss_std = 0
     best_model_name = os.path.join(args.dir_saved_models,
                              f'{args.model}_-1.dat')
-    params = []
         
     # initialize optimizer
     if warmup:
@@ -218,7 +220,7 @@ def train(args, train_data, test_data, model, warmup):
         # train
         loss, param = train_epoch(args, epoch, train_data, model,
                           optimizer,warmup=warmup)
-        param.append(params)
+        params.append(param)
         loss_sum.append(loss)
 
         time_end = tm()-time_start
@@ -278,16 +280,17 @@ def train(args, train_data, test_data, model, warmup):
     fname = os.path.join(args.dir_metrics, 'loss_sum')
     np.save(fname, loss_sum)
     
-    #test_epochs
-    fname = os.path.join(args.dir_metrics, 'test_epochs')
-    np.save(fname, test_epochs)
+    if not warmup:
+        #test_epochs
+        fname = os.path.join(args.dir_metrics, 'test_epochs')
+        np.save(fname, test_epochs)
 
-    #test metrics
-    test_metrics = np.stack(test_metrics,1)
-    fname = os.path.join(args.dir_metrics, 'test_metrics')
-    np.save(fname, test_metrics)
+        #test metrics
+        test_metrics = np.stack(test_metrics,1)
+        fname = os.path.join(args.dir_metrics, 'test_metrics')
+        np.save(fname, test_metrics)
 
-    params = np.stack(test_metrics,1)
+    params = np.stack(params,1)
     fname = os.path.join(args.dir_metrics, 'parameters')
     np.save(fname, params)
 

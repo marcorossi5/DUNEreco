@@ -53,6 +53,7 @@ def inference(args, model, channel):
         np array of metrics
     """
     #load dataset
+    print('[+] Inference')
     data = PlaneLoader(args, 'test', 'collection')
     args.plot_acts = False
     test_data = torch.utils.data.DataLoader(data,
@@ -95,6 +96,7 @@ def inference(args, model, channel):
 
     plt.savefig(fname)
     plt.close()
+    print(f'Saved residuals at {fname}')
 
     sample = torch.randint(0, clear.shape[0],(25,))
     wire = torch.randint(0, clear.shape[-2],(25,))
@@ -213,6 +215,7 @@ def make_plots(args):
 
     plt.savefig(fname, dpi=300)
     plt.close()
+    print(f'Saved parameters at {fname}')
 
 def main(args):
     mpl.rcParams.update({'font.size': 22})
