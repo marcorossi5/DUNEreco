@@ -63,7 +63,12 @@ def warmup_trains(args, train_data, test_data, mode):
     model = MyDataParallel(model, device_ids=args.dev_ids)
     model = model.to(args.device)
 
-    train.train(args, train_data, test_data, model, warmup='roi')
+    if mode == 1:
+        warmup = 'roi'
+    if mode == 0 :
+        warmup = 'dn'
+
+    train.train(args, train_data, test_data, model, warmup=warmup)
 
 def main(args):
     """This is the main function"""

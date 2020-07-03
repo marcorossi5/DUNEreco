@@ -441,12 +441,19 @@ def get_GCNNv2(args):
             return self.act(self.GC_3(y, graph) + x), hits
 
         def forward(self, noised_image=None, clear_image=None, warmup=False):
+            """
+            Parameters:
+                warmup: select the correct loss function
+                        'roi': warmup loss function for roi selection only
+                        'dn': warmup loss function for dn only
+                        False: complete loss function with both contributions
+            """
             out, hits = self.fit_image(noised_image)
             if self.training:                
                 if warmup == 'roi':
                     loss_hits = self.xent(hits, clear_image[:,1:2])
                     return loss_hits, loss_hits, out.data, hits.data
-                elif warmup == 'denoiser':
+                if warmup == 'dn':
                     loss = self.loss_fn(clear_image[:,:1], out)
                     return loss, loss, out.data, hits.data
                 loss_hits = self.xent(hits, clear_image[:,1:2])
