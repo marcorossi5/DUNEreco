@@ -352,7 +352,7 @@ def weight_scan(module):
         p.append(list(i.detach().cpu().numpy().flatten()))
     
     p = np.concatenate(p,0)
-    norm = np.sqrt((p*p).sum())
+    norm = np.sqrt((p*p).sum())/len(p)
 
     hist, edges = np.histogram(p,100)
     

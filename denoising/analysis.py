@@ -94,7 +94,7 @@ def inference(args, model, channel):
     ax.set_yscale('log')
     ax.title.set_text(r'Histogram of all $|I_{DN} - I_{Clear}|$')
 
-    plt.savefig(fname)
+    plt.savefig(fname, bbox='tight')
     plt.close()
     print(f'Saved residuals at {fname}')
 
@@ -213,7 +213,7 @@ def make_plots(args):
     ax.title.set_text('b3')
     ax.plot(params[7])
 
-    plt.savefig(fname, dpi=300)
+    plt.savefig(fname, bbox='tight')
     plt.close()
     print(f'Saved parameters at {fname}')
 
