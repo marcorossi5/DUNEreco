@@ -42,7 +42,7 @@ class NonLocalAggregation(nn.Module):
         super(NonLocalAggregation,self).__init__()
         self.diff_fc = nn.Linear(input_channels, out_channels)
         self.w_self = nn.Linear(input_channels, out_channels)
-        self.bias = nn.Parameter(torch.randn(out_channels), requires_grad=True)
+        #self.bias = nn.Parameter(torch.randn(out_channels), requires_grad=True)
         
     def forward(self, x, graph):
         """
@@ -58,7 +58,7 @@ class NonLocalAggregation(nn.Module):
         agg_weights = self.diff_fc(graph) # look closer
         agg_self = self.w_self(x)
                 
-        x_new = torch.mean(agg_weights, dim=-2) + agg_self + self.bias
+        x_new = torch.mean(agg_weights, dim=-2) + agg_self# + self.bias
 
         return x_new.view(b, h, w, x_new.shape[-1]).permute(0, 3, 1, 2)
 

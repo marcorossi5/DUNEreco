@@ -347,7 +347,7 @@ def get_GCNNv2(args):
             super(LPF,self).__init__()
             self.k = k
             self.conv = nn.Sequential(
-                nn.Conv2d(input_channels, input_channels, 3, padding=1),
+                nn.Conv2d(input_channels, input_channels, 5, padding=2),
                 nn.BatchNorm2d(input_channels),
                 nn.LeakyReLU(0.05))
             
@@ -379,12 +379,12 @@ def get_GCNNv2(args):
             self.patch_size = patch_size
             self.k = k
 
-            self.hit_block = ROI_finder(k, 3, input_channels,hidden_channels) 
+            self.hit_block = ROI_finder(k, 7, input_channels,hidden_channels) 
 
             self.preprocessing_blocks = nn.ModuleList([
-                PreProcessBlock(k, 3, input_channels, hidden_channels),
                 PreProcessBlock(k, 5, input_channels, hidden_channels),
                 PreProcessBlock(k, 7, input_channels, hidden_channels),
+                PreProcessBlock(k, 9, input_channels, hidden_channels),
             ])
 
             self.LPF_1 = LPF(k, hidden_channels*3+1, hidden_channels*3+1)
@@ -404,6 +404,19 @@ def get_GCNNv2(args):
             #self.act = nn.Sigmoid()
             self.act = nn.Identity()
 
+            self.a0 = 0
+            self.a1 = 0
+            self.a2 = 0
+            self.a3 = 0
+            self.a4 = 0
+            self.b0 = 1
+            self.b1 = 1
+            self.b1 = 1
+            self.b2 = 1
+            self.b3 = 1
+            self.b4 = 1
+
+            '''
             self.a0 = nn.Parameter(torch.randn(1), requires_grad=True)
             self.a1 = nn.Parameter(torch.randn(1), requires_grad=True)
             self.a2 = nn.Parameter(torch.randn(1), requires_grad=True)
@@ -414,6 +427,7 @@ def get_GCNNv2(args):
             self.b2 = nn.Parameter(torch.randn(1), requires_grad=True)
             self.b3 = nn.Parameter(torch.randn(1), requires_grad=True)
             self.b4 = nn.Parameter(torch.randn(1), requires_grad=True)
+            '''
             self.xent = nn.BCELoss()
 
         def fit_image(self, x):
