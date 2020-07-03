@@ -207,7 +207,7 @@ def train(args, train_data, test_data, model, warmup):
                              f'{args.model}_-1.dat')
         
     # initialize optimizer
-    if warmup:
+    if warmup=='roi':
         optimizer = optim.Adam(list(model.parameters()), lr=args.lr_warmup,
                            amsgrad=args.amsgrad)
     else:
@@ -270,7 +270,7 @@ def train(args, train_data, test_data, model, warmup):
 
         epoch += 1
     
-    if warmup:
+    if warmup is not False:
         fname = os.path.join(args.dir_saved_models,
                              f'{args.model}_{epoch-1}.dat')
         torch.save(model.state_dict(), fname)

@@ -55,7 +55,7 @@ def warmup_trains(args, train_data, test_data, mode):
     """
     Wrapper for warmup trains
     Parameters:
-        mode: either 1 (trains denoiser) or 0 (trains ROI)
+        mode: either 1 (freezes ROI) or 0 (freezes denoiser)
         fname: saved model to load
     """
     model = eval('get_' + args.model)(args)
@@ -63,9 +63,9 @@ def warmup_trains(args, train_data, test_data, mode):
     model = MyDataParallel(model, device_ids=args.dev_ids)
     model = model.to(args.device)
 
-    if mode == 1:
-        warmup = 'roi'
     if mode == 0 :
+        warmup = 'roi'
+    if mode == 1:
         warmup = 'dn'
 
     train.train(args, train_data, test_data, model, warmup=warmup)
