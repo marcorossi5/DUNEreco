@@ -404,17 +404,17 @@ def get_GCNNv2(args):
             #self.act = nn.Sigmoid()
             self.act = nn.Identity()
 
-            self.a0 = 0
-            self.a1 = 0
-            self.a2 = 0
-            self.a3 = 0
-            self.a4 = 0
-            self.b0 = 1
-            self.b1 = 1
-            self.b1 = 1
-            self.b2 = 1
-            self.b3 = 1
-            self.b4 = 1
+            self.a0 = torch.Tensor([0])
+            self.a1 = torch.Tensor([0])
+            self.a2 = torch.Tensor([0])
+            self.a3 = torch.Tensor([0])
+            self.a4 = torch.Tensor([0])
+            self.b0 = torch.Tensor([1])
+            self.b1 = torch.Tensor([1])
+            self.b1 = torch.Tensor([1])
+            self.b2 = torch.Tensor([1])
+            self.b3 = torch.Tensor([1])
+            self.b4 = torch.Tensor([1])
 
             '''
             self.a0 = nn.Parameter(torch.randn(1), requires_grad=True)
