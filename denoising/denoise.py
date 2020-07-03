@@ -51,13 +51,19 @@ def freeze_weights(model, ROI):
                 param.requires_grad = False
     return model
 
-def ROI_train(args, train_data, test_data):
+def warmup_trains(args, train_data, test_data, mode):
+    """
+    Wrapper for warmup trains
+    Parameters:
+        mode: either 1 (trains denoiser) or 0 (trains ROI)
+        fname: saved model to load
+    """
     model = eval('get_' + args.model)(args)
-    model = freeze_weights(model, 0)
+    model = freeze_weights(model, mode)
     model = MyDataParallel(model, device_ids=args.dev_ids)
     model = model.to(args.device)
 
-    train.train(args, train_data, test_data, model, warmup=True)
+    train.train(args, train_data, test_data, model, warmup='roi')
 
 def main(args):
     """This is the main function"""
@@ -73,23 +79,27 @@ def main(args):
     #build model
     epochs = args.epochs
     epoch_test = args.epoch_test
-    args.epochs = args.warmup_epochs
+    args.epochs = args.warmup_roi_epochs
     args.epoch_test = 999999999
 
-    ROI_train(args, train_data, test_data)    
+    warmup_trains(args, train_data, test_data, 0)
+    
+    args.epochs = args.warmup_dn_epochs
+    args.load = True
+    args.load_epoch = args.warmup_roi_epochs
+
+    warmup_trains(args, train_data, test_data, 1)
 
     args.epochs = epochs
     args.epoch_test = epoch_test
-    args.load = True
-    args.load_epoch = args.warmup_epochs
+    args.load_epoch = args.warmup_dn_epochs
 
     model = eval('get_' + args.model)(args)
     model = MyDataParallel(model, device_ids=args.dev_ids)
     model = model.to(args.device)
 
     #train
-    return train.train(args, train_data, test_data, model, warmup=False)
-    
+    return train.train(args, train_data, test_data, model, warmup=False)    
 
 if __name__ == '__main__':
     ARGS = vars(PARSER.parse_args())

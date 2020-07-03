@@ -442,10 +442,14 @@ def get_GCNNv2(args):
 
         def forward(self, noised_image=None, clear_image=None, warmup=False):
             out, hits = self.fit_image(noised_image)
-            if self.training:
-                loss_hits = self.xent(hits, clear_image[:,1:2])
-                if warmup:
+            if self.training:                
+                if warmup == 'roi':
+                    loss_hits = self.xent(hits, clear_image[:,1:2])
                     return loss_hits, loss_hits, out.data, hits.data
+                elif warmup == 'denoiser':
+                    loss = self.loss_fn(clear_image[:,:1], out)
+                    return loss, loss, out.data, hits.data
+                loss_hits = self.xent(hits, clear_image[:,1:2])
                 loss = self.loss_fn(clear_image[:,:1], out)
                 return loss + loss_hits, loss_hits, out.data, hits.data
                 

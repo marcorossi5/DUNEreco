@@ -12,7 +12,8 @@ class Args:
         #argparser
         self.dataset_dir = dir_name
         self.epochs = epochs
-        self.warmup_epochs = 10
+        self.warmup_roi_epochs = 10
+        self.warmup_dn_epochs = 20
         self.model = model
         self.device = device
         self.loss_fn = loss_fn
