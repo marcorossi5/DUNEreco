@@ -101,7 +101,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
     ax.step(edges,hist)
     ax.set_yscale('log')
 
-    plt.savefig(fname, dpi=300)
+    plt.savefig(fname)
     print(f'Saved plots at {fname}')
 
     params = []
