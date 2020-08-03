@@ -19,7 +19,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import compute_psnr
 
 def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
-    print('[+] Training')
+    print('\n[+] Training')
     model.train()
     for i, (clear, noised) in enumerate(train_data):
         clear = clear.to(args.device)
@@ -102,6 +102,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
     ax.set_yscale('log')
 
     plt.savefig(fname)
+    plt.close()
     print(f'Saved plots at {fname}')
 
     params = []
@@ -225,7 +226,7 @@ def train(args, train_data, test_data, model, warmup):
 
         time_end = tm()-time_start
         if epoch % args.epoch_log == 0 and (not args.scan):
-            print("\nEpoch: %d, Loss: %.5f, time: %.5f"%(epoch,
+            print("Epoch: %d, Loss: %.5f, time: %.5f"%(epoch,
                                                       loss_sum[-1][0],
                                                       time_end))
         # test

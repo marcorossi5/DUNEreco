@@ -228,7 +228,7 @@ def main(args):
     #loading model
     fname = os.path.join(args.dir_final_test, 'best_model.txt')
     with open(fname, 'r') as f:
-        lname = f.read()
+        lname = f.read().strip('\n')
         f.close()
     model.load_state_dict(torch.load(lname))
 
