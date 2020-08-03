@@ -116,6 +116,20 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
     params.append(model.b2.detach().cpu().data)
     params.append(model.b3.detach().cpu().data)
 
+    '''
+    grads = []
+    par = []
+    for p in model.parameters():
+        if p.grad is not None:
+            grads.append(p.grad.view(-1))
+            par.append(p.data.view(-1))
+    grads = torch.cat(grads).abs().mean()
+    par = torch.cat(par).abs().mean()
+    print("Parameters average: ", par.item())
+    print("Grads average: ", grads.item())
+    '''
+
+
     return np.array([loss.mean().item()]), np.array(params)
 
 def test_epoch(args, epoch, test_data, model,ana=False):

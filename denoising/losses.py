@@ -29,7 +29,7 @@ class loss_ssim_l2(loss):
                              data_range=self.data_range,
                              size_average=self.size_average)
         loss2 = nn.MSELoss()(*args)
-        return self.a*loss1 + (1-self.a)*loss2
+        return self.a*loss1 + 1e3 * (1-self.a)*loss2
 
 class loss_ssim_l1(loss):
     def __init__(self, a=0.84, data_range=1., size_average=True):

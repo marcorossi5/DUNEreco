@@ -451,7 +451,7 @@ def get_GCNNv2(args):
             y = self.relu(self.bn_2(self.GC_2(y, graph)))
 
             graph = get_graph(y, self.k, l_mask)
-            return self.act(self.GC_3(y, graph) + x), hits
+            return self.act(self.GC_3(y, graph) * x), hits
 
         def forward(self, noised_image=None, clear_image=None, warmup=False):
             """
