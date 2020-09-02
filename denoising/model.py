@@ -403,13 +403,14 @@ def get_CNNv2(args):
             super(CNNv2,self).__init__()
             self.loss_fn = loss_fn
             self.patch_size = patch_size
+
+            self.hit_block = ROI_finder(3,input_channels,hidden_channels)
+
             self.preprocessing_blocks = nn.ModuleList([
                 PreProcessBlock(3, input_channels, hidden_channels),
                 PreProcessBlock(5, input_channels, hidden_channels),
                 PreProcessBlock(7, input_channels, hidden_channels)
             ])
-            
-            self.hit_block = ROI_finder(3,input_channels,hidden_channels)
 
             self.LPF_1 = LPF(hidden_channels*3+1, hidden_channels*3+1)
             self.LPF_2 = LPF(hidden_channels*3+1, hidden_channels*3+1)
