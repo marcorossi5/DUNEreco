@@ -4,7 +4,8 @@ from datetime import datetime as dtm
 class Args:
     def __init__(self, dir_name, epochs, model,\
                  device, loss_fn, lr=0.009032117010326078, amsgrad=True,\
-                 out_name=None, scan=False, batch_size=256):
+                 out_name=None, scan=False, batch_size=256,\
+                 load_path=None, warmup='dn'):
         self.crop_size = (32,32)
         self.crop_p = 0.99
         self.dev_ids = None
@@ -15,6 +16,7 @@ class Args:
         self.warmup_roi_epochs = 10
         self.warmup_dn_epochs = 20
         self.model = model
+        self.warmup = warmup
         self.device = device
         self.loss_fn = loss_fn
         self.scan = scan
@@ -29,8 +31,8 @@ class Args:
         self.in_channels = 1
         self.hidden_channels = 32
         
-        self.lr = lr
-        self.lr_warmup = 1e-3
+        self.lr_dn = lr
+        self.lr_roi = 1e-3
         self.amsgrad = amsgrad
 
         #logs
@@ -43,8 +45,9 @@ class Args:
 
         self.t = 0.5
 
-        self.load = False
+        self.load = False if (self.load_path is None) else True
         self.load_epoch = 0
+        self.load_path = load_path
 
         self.save = True
         #self.epoch_save = 5
@@ -55,7 +58,7 @@ class Args:
             self.dir_output = "./denoising/output/%s"%t
         else:
             self.dir_output = "./denoising/output/%s"%out_name
-        #self.dir_timings = self.dir_output + "/timings"
+        self.dir_timings = self.dir_output + "/timings"
         self.dir_testing = self.dir_output + "/testing"
         self.dir_final_test = self.dir_output + "/final_test"
         self.dir_metrics = self.dir_output + "/metrics"
@@ -71,3 +74,5 @@ class Args:
             os.mkdir(self.dir_metrics)
         if not os.path.isdir(self.dir_saved_models):
             os.mkdir(self.dir_saved_models)
+        if not os.path.isdir(self.dir_timings):
+            os.mkdir(self.dir_timings)

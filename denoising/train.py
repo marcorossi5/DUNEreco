@@ -25,114 +25,48 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
         clear = clear.to(args.device)
         noised = noised.to(args.device)
         optimizer.zero_grad()
-        loss, loss_hits, out, hits = model(noised, clear, warmup=warmup)
+        loss, out= model(noised, clear, warmup=warmup)
         loss.mean().backward()
         optimizer.step()
 
         out = out.cpu().detach()
         clear = clear.cpu().detach()
-        hits= hits.cpu().detach()
 
         #plot the last crops chunk
     if args.plot_acts:
         sample = torch.randint(0,
                         out.shape[0],
                        (25,))
-        plot_crops(args.dir_testing,
-                out,
-               "act_epoch%d_DN"%epoch,
-               sample)
-        plot_crops(args.dir_testing,
-                hits,
-               "act_epoch%d_DNhits"%epoch,
-               sample)
-        plot_crops(args.dir_testing,
-                clear[:,:1],
-               "act_epoch%d_clear"%epoch,
-               sample)
-        plot_crops(args.dir_testing,
-                clear[:,1:2],
-               "act_epoch%d_hits"%epoch,
-               sample)
-
-    fname = os.path.join(args.dir_metrics,f'weights_{epoch}.png')
-    fig = plt.figure(figsize=(30,30))
-    
-    ax = fig.add_subplot(3,3,1)
-    norm, edges, hist = weight_scan(model.hit_block)
-    ax.title.set_text('ROI: %.5f'%norm)
-    ax.step(edges,hist)
-    ax.set_yscale('log')
-
-    for i,child in enumerate(model.preprocessing_blocks.children()):
-        ax = fig.add_subplot(3,3,2+i)
-        norm, edges, hist = weight_scan(child)
-        ax.title.set_text('P Block %d: %.5f'%(i,norm))
-        ax.step(edges,hist)
-        ax.set_yscale('log')
-    
-    ax = fig.add_subplot(3,3,5)
-    norm, edges, hist = weight_scan(model.LPF_1)
-    ax.title.set_text('LPF_1: %.5f'%norm)
-    ax.step(edges,hist)
-    ax.set_yscale('log')
-
-    ax = fig.add_subplot(3,3,6)
-    norm, edges, hist = weight_scan(model.LPF_2)
-    ax.title.set_text('LPF_2: %.5f'%norm)
-    ax.step(edges,hist)
-    ax.set_yscale('log')
-
-    ax = fig.add_subplot(3,3,7)
-    norm, edges, hist = weight_scan(model.LPF_3)
-    ax.title.set_text('LPF_3: %.5f'%norm)
-    ax.step(edges,hist)
-    ax.set_yscale('log')
-
-    ax = fig.add_subplot(3,3,8)
-    norm, edges, hist = weight_scan(model.LPF_4)
-    ax.title.set_text('LPF_4: %.5f'%norm)
-    ax.step(edges,hist)
-    ax.set_yscale('log')
-
-    ax = fig.add_subplot(3,3,9)
-    norm, edges, hist = weight_scan(model.HPF)
-    ax.title.set_text('HPF: %.5f'%norm)
-    ax.step(edges,hist)
-    ax.set_yscale('log')
-
-    plt.savefig(fname)
-    plt.close()
-    print(f'Saved plots at {fname}')
-
-    params = []
-
-    params.append(model.a0.detach().cpu().data)
-    params.append(model.a1.detach().cpu().data)
-    params.append(model.a2.detach().cpu().data)
-    params.append(model.a3.detach().cpu().data)
-    params.append(model.b0.detach().cpu().data)
-    params.append(model.b1.detach().cpu().data)
-    params.append(model.b2.detach().cpu().data)
-    params.append(model.b3.detach().cpu().data)
-
-    #'''
+        if warmup == 'dn':
+            plot_crops(args.dir_testing,
+                      out,
+                      "act_epoch%d_DN"%epoch,
+                      sample)
+            plot_crops(args.dir_testing,
+                    clear[:,:1],
+                    "act_epoch%d_clear"%epoch,
+                    sample)
+        if warmup == 'roi':
+            plot_crops(args.dir_testing,
+                       out,
+                       "act_epoch%d_DNhits"%epoch,
+                       sample)
+        
+            plot_crops(args.dir_testing,
+                       clear[:,1:2],
+                       "act_epoch%d_hits"%epoch,
+                       sample)
     grads = []
-    par = []
     for p in model.parameters():
         if p.grad is not None:
             grads.append(p.grad.view(-1))
-            par.append(p.data.view(-1))
     grads = torch.cat(grads).abs().mean()
-    par = torch.cat(par).abs().mean()
-    print("Parameters average: ", par.item())
     print("Grads average: ", grads.item())
-    #'''
 
+    return np.array([loss.mean().item()])
 
-    return np.array([loss.mean().item()]), np.array(params)
-
-def test_epoch(args, epoch, test_data, model,ana=False):
+def test_epoch(args, epoch, test_data, model,
+               ana=False, warmup=False):
     """
     Outputs:
         np.array containing n metrics, shape (2*n)
@@ -140,15 +74,22 @@ def test_epoch(args, epoch, test_data, model,ana=False):
     """
     print('[+] Testing')
     model.eval()
-    mse = []
-    psnr = []
     loss = []
-    res = []
-    ssim = []
+    res = [] #inference results
+
+    if warmup == 'roi':
+        res_t = [] #results target
+
+    if warmup == 'dn':
+        mse = []
+        psnr = []
+        ssim = []
 
     for clear, noisy, norm in test_data:
-        hits = clear[:,1:2].to(args.device)
-        clear = clear[:,:1].to(args.device)        
+        if warmup=='roi':
+            target = clear[:,1:2].to(args.device)
+        if wamup=='dn':
+            target = clear[:,:1].to(args.device)        
         noisy = noisy.to(args.device)
         norm = norm[0].to(args.device)
         crops, crops_shape, pad = split_img(noisy,model.patch_size)
@@ -157,88 +98,92 @@ def test_epoch(args, epoch, test_data, model,ana=False):
         for chunk in loader:
             answer = model(chunk.to(args.device)).data
             dn.append(answer)
-        dn = torch.cat(dn)
-        dn = recombine_img(dn, crops_shape, pad)
-        dn_hits = dn[:,1:2]
-        dn = dn[:,:1] * (norm[1]-norm[0]) + norm[0]
-        if args.model == 'ROI':
-            loss.append(model.xent(hits,dn_hits).cpu().item())
-        else:
-            loss.append((model.loss_fn(clear,dn)
-                    +model.xent(hits,dn_hits)).cpu().item())
-        ssim.append(1-loss_ssim()(clear,dn).cpu().item())
-        mse.append(torch.nn.MSELoss()(clear,dn).cpu().item())
-        psnr.append(compute_psnr(clear,dn))
+        dn = torch.cat(dn).unsqueeze(1)
+        dn = recombine_img(dn, crops_shape, pad).squeeze(1)
+        if wamup == 'roi':
+            loss.append(model.xent(target,dn).cpu().item())
+        if warmup == 'dn':
+            dn = dn * (norm[1]-norm[0]) + norm[0]
+            loss.append((model.loss_fn(target,dn)).cpu().item())
+            ssim.append(1-loss_ssim()(target,dn).cpu().item())
+            mse.append(torch.nn.MSELoss()(target,dn).cpu().item())
+            psnr.append(compute_psnr(target,dn))
+            res_t.append(target.cpu().detach())
         res.append(dn.cpu().detach())
     res = torch.cat(res)
-
-    plot_ROI_stats(args,epoch,hits,dn_hits,args.t,ana)
-
+        
     n = len(loss)
-    return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
+
+    if warmup == 'roi':
+        res_t = torch.cat(res_t)
+        plot_ROI_stats(args,epoch,res_t,res,args.t,ana)
+        return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), res
+
+    if warmup == 'dn':
+        return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
                 np.mean(ssim), np.std(ssim)/np.sqrt(n),
                 np.mean(psnr), np.std(psnr)/np.sqrt(n),
                 np.mean(mse), np.std(mse)/np.sqrt(n)]), res
+
 
 ########### main train function
 def train(args, train_data, test_data, model, warmup):
     # check if load existing model
     if args.load:
-        fname = os.path.join(args.dir_saved_models,
-            args.model + '_%d'%args.load_epoch + '.dat')
-        model.load_state_dict(torch.load(fname))
+        if args.load_path is None:
+            #resume a previous training from an epoch
+            fname = os.path.join(args.dir_timings, '%s_timings.npy'%warmup)
+            time_all = list(np.load(fname))
 
-        #args.lr = 5e-4
-        epoch = args.load_epoch + 1
-
-        #fname = os.path.join(args.dir_timings, 'all_timings.npy')
-        #time_all = list(np.load(fname))
-
-        #loss_sum
-        fname = os.path.join(args.dir_metrics, 'loss_sum.npy')
-        loss_sum = list(np.load(fname).T)
+            #loss_sum
+            fname = os.path.join(args.dir_metrics, 'loss_sum.npy')
+            loss_sum = list(np.load(fname).T)
     
-        #test_epochs
-        #fname = os.path.join(args.dir_metrics, 'test_epochs.npy')
-        #test_epochs = list(np.load(fname))
+            #test_epochs
+            fname = os.path.join(args.dir_metrics, 'test_epochs.npy')
+            test_epochs = list(np.load(fname))
 
-        #test metrics
-        #fname = os.path.join(args.dir_metrics, 'test_metrics.npy')
-        #test_metrics = list(np.load(fname).T)
+            #test metrics
+            fname = os.path.join(args.dir_metrics, 'test_metrics.npy')
+            test_metrics = list(np.load(fname).T)
 
-        #parameters
-        fname = os.path.join(args.dir_metrics, 'parameters.npy')
-        params = list(np.load(fname).T)
+            fname = os.path.join(args.dir_saved_models,
+                args.model + '_%d'%args.load_epoch + '.dat')
+            epoch = args.load_epoch + 1
+       
+        else:
+            #load a trained roi to train new dn
+            fname = args.load_path
+        model.load_state_dict(torch.load(fname))
         print('model loaded!, lr: {}'.format(args.lr))
-    else:
+    else (not args.load) or (args.load_path is not None):
         epoch = 1
         loss_sum = []
-        params = []
-    test_metrics = []
-    test_epochs = []
+        test_metrics = []
+        test_epochs = []
+        time_all = []
+
     best_loss = 1e10
     best_loss_std = 0
     best_model_name = os.path.join(args.dir_saved_models,
                              f'{args.model}_-1.dat')
         
     # initialize optimizer
-    if warmup=='roi':
-        optimizer = optim.Adam(list(model.parameters()), lr=args.lr_warmup,
-                           amsgrad=args.amsgrad)
-    else:
-        optimizer = optim.Adam(list(model.parameters()), lr=args.lr,
+    lr = args.lr_roi if (warmup=='roi') else args.lr_dn
+    optimizer = optim.Adam(list(model.parameters()), lr=lr,
                            amsgrad=args.amsgrad)
     
     # start main loop
     while epoch <= args.epochs:
         time_start = tm()
         # train
-        loss, param = train_epoch(args, epoch, train_data, model,
+        loss = train_epoch(args, epoch, train_data, model,
                           optimizer,warmup=warmup)
-        params.append(param)
         loss_sum.append(loss)
 
         time_end = tm()-time_start
+        time_all.append(time_end)
+
         if epoch % args.epoch_log == 0 and (not args.scan):
             print("Epoch: %d, Loss: %.5f, time: %.5f"%(epoch,
                                                       loss_sum[-1][0],
@@ -248,16 +193,18 @@ def train(args, train_data, test_data, model, warmup):
             print('test start ...')
             test_epochs.append(epoch)
             start = tm()
-            x, _ = test_epoch(args, epoch, test_data, model)
+            x, _ = test_epoch(args, epoch, test_data, model, warmup=warmup)
             test_metrics.append(x)
             if not args.scan:
-                print('Test loss: %.5f +- %.5f,\
-                       ssim: %.5f +- %.5f,\
-                       psnr: %.5f +- %.5f,\
-                       mse: %.5e +- %.5e'%(x[0], x[1], x[2], x[3],
+                if warmup == 'roi':
+                    print('Test loss: %.5f +- %.5f'%(x[0], x[1]))
+                if warmup == 'dn':
+                    print('Test loss: %.5f +- %.5f,\
+                           ssim: %.5f +- %.5f,\
+                           psnr: %.5f +- %.5f,\
+                           mse: %.5e +- %.5e'%(x[0], x[1], x[2], x[3],
                                            x[4], x[5], x[6], x[7]))
-                print('Test time: %.4f\n'%(tm()-start))
-            
+                print('Test time: %.4f\n'%(tm()-start))            
 
             #save the model if it is the best one
             if test_metrics[-1][0] + test_metrics[-1][1] < best_loss:
@@ -268,10 +215,10 @@ def train(args, train_data, test_data, model, warmup):
                 #or just the best one
                 if args.save:
                     fname = os.path.join(args.dir_saved_models,
-                             f'{args.model}_{epoch}.dat')
+                             f'{args.model}_{warmup}_{epoch}.dat')
                 else:
                     fname = os.path.join(args.dir_saved_models,
-                             f'{args.model}.dat')
+                             f'{args.model}_{warmup}.dat')
                 torch.save(model.state_dict(), fname)
                 if not args.scan:
                     print('saved model at: %s'%fname)
@@ -284,29 +231,23 @@ def train(args, train_data, test_data, model, warmup):
                     print('updated best model at: ',bname)
 
         epoch += 1
-    
-    if warmup is not False:
-        fname = os.path.join(args.dir_saved_models,
-                             f'{args.model}_{epoch-1}.dat')
-        torch.save(model.state_dict(), fname)
 
     #loss_sum
     loss_sum = np.stack(loss_sum,1)
     fname = os.path.join(args.dir_metrics, 'loss_sum')
     np.save(fname, loss_sum)
     
-    if not warmup:
-        #test_epochs
-        fname = os.path.join(args.dir_metrics, 'test_epochs')
-        np.save(fname, test_epochs)
+    #test_epochs
+    fname = os.path.join(args.dir_metrics, 'test_epochs')
+    np.save(fname, test_epochs)
 
-        #test metrics
-        test_metrics = np.stack(test_metrics,1)
-        fname = os.path.join(args.dir_metrics, 'test_metrics')
-        np.save(fname, test_metrics)
+    #test metrics
+    test_metrics = np.stack(test_metrics,1)
+    fname = os.path.join(args.dir_metrics, 'test_metrics')
+    np.save(fname, test_metrics)
 
-    params = np.stack(params,1)
-    fname = os.path.join(args.dir_metrics, 'parameters')
-    np.save(fname, params)
+    #time all
+    fname = os.path.join(args.dir_timings, 'timings')
+    np.save(fname, time_all)
 
     return best_loss, best_loss_std, best_model_name

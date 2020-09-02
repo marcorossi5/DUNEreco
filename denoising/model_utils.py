@@ -268,8 +268,8 @@ def plot_ROI_stats(args,epoch,clear,dn,t,ana=False):
     Plot stats of the ROI:
     Confusion matrix and histogram of the classifier's scores
     Parameters:
-        dn: NN output, torch.Tensor of shape (1,C,w,h)
-        clear: targets, torch.Tensor of shape (1,C,w,h) 
+        dn: NN output, torch.Tensor of shape (N,C,w,h)
+        clear: targets, torch.Tensor of shape (N,C,w,h) 
         t: threshold, float in [0,1]      
     """
     mpl.rcParams.update(mpl.rcParamsDefault)

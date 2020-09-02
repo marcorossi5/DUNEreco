@@ -31,13 +31,18 @@ PARSER.add_argument("--epochs", "-n", default=50, type=int,
 PARSER.add_argument("--model", "-m", default="GCCNNv2", type=str,
                     help="CNN, CNNv2, GCNN, GCNNv2")
 PARSER.add_argument("--device", "-d", default="0", type=str,
-                    help="-1 (automatic)/ -2 (cpu) / gpu number")
+                    help="-1 (automatic) / -2 (cpu) / gpu number")
 PARSER.add_argument("--loss_fn", "-l", default="ssim_l2", type=str,
                     help="mse, ssim, ssim_l1, ssim_l2")
 PARSER.add_argument("--lr", default=0.009032117010326078, type=float,
                     help="training epochs")
 PARSER.add_argument("--out_name", default=None, type=str,
                     help="Output directory")
+PARSER.add_argument("--load_path", default=None, type=str,
+                    help="torch .dat file to load the model")
+PARSER.add_argument("--warmup", default=dn, type=str,
+                    help="roi / dn")
+
 
 def freeze_weights(model, ROI):
     """
@@ -57,24 +62,6 @@ def freeze_weights(model, ROI):
     print('Trainable parameters: %d'% params)
     return model
 
-def warmup_trains(args, train_data, test_data, mode):
-    """
-    Wrapper for warmup trains
-    Parameters:
-        mode: either 1 (freezes ROI) or 0 (freezes denoiser)
-        fname: saved model to load
-    """
-    model = eval('get_' + args.model)(args)
-    model = freeze_weights(model, mode)
-    model = MyDataParallel(model, device_ids=args.dev_ids)
-    model = model.to(args.device)
-
-    if mode == 0 :
-        warmup = 'roi'
-    if mode == 1:
-        warmup = 'dn'
-
-    train.train(args, train_data, test_data, model, warmup=warmup)
 
 def main(args):
     """This is the main function"""
@@ -87,39 +74,20 @@ def main(args):
                                             num_workers=args.num_workers)
     test_data = torch.utils.data.DataLoader(PlaneLoader(args,'val','collection'),
                                             num_workers=args.num_workers)
-    #build model
-    epochs = args.epochs
-    epoch_test = args.epoch_test
-    args.epochs = args.warmup_roi_epochs
-    args.epoch_test = 999999999
 
-    warmup_trains(args, train_data, test_data, 0)
-    
-    args.epochs = args.warmup_dn_epochs
-    args.load = True
-    args.load_epoch = args.warmup_roi_epochs
-
-    warmup_trains(args, train_data, test_data, 1)
-
-    for i in range(10):
-        args.epochs = args.warmup_dn_epochs + 2*i +1
-        args.load_epoch = args.warmup_dn_epochs + 2*i
-        warmup_trains(args, train_data, test_data, 0)
-
-        args.epochs = args.warmup_dn_epochs + 2*i + 2 
-        args.load_epoch = args.warmup_dn_epochs + 2*i + 1
-        warmup_trains(args, train_data, test_data, 1)
-
-    args.epochs = epochs
-    args.epoch_test = epoch_test
-    args.load_epoch = args.warmup_dn_epochs + 20
+    if warmup == 'roi':
+        mode = 0
+    if warmup == 'dn':
+        mode = 1
 
     model = eval('get_' + args.model)(args)
+    model = freeze_weights(model, mode)
     model = MyDataParallel(model, device_ids=args.dev_ids)
     model = model.to(args.device)
 
     #train
-    return train.train(args, train_data, test_data, model, warmup=False)    
+    return train.train(args, train_data, test_data,
+                model, warmup=args.warmup)
 
 if __name__ == '__main__':
     ARGS = vars(PARSER.parse_args())

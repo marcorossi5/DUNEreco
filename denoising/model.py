@@ -202,25 +202,16 @@ def get_GCNNv2(args):
             self.b3 = nn.Parameter(torch.Tensor([1]), requires_grad=False)
             self.b4 = nn.Parameter(torch.Tensor([1]), requires_grad=False)
 
-            '''
-            self.a0 = nn.Parameter(torch.randn(1), requires_grad=True)
-            self.a1 = nn.Parameter(torch.randn(1), requires_grad=True)
-            self.a2 = nn.Parameter(torch.randn(1), requires_grad=True)
-            self.a3 = nn.Parameter(torch.randn(1), requires_grad=True)
-            self.a4 = nn.Parameter(torch.randn(1), requires_grad=True)
-            self.b0 = nn.Parameter(torch.randn(1), requires_grad=True)
-            self.b1 = nn.Parameter(torch.randn(1), requires_grad=True)
-            self.b2 = nn.Parameter(torch.randn(1), requires_grad=True)
-            self.b3 = nn.Parameter(torch.randn(1), requires_grad=True)
-            self.b4 = nn.Parameter(torch.randn(1), requires_grad=True)
-            '''
             self.xent = nn.BCELoss()
 
-        def fit_image(self, x):
+        def fit_image(self, x, warmup):
             y = torch.cat([block(x) for block in
                                         self.preprocessing_blocks], dim=1)
 
             hits = self.hit_block(x)
+            if warmup == 'roi':
+                return hits
+
             y = torch.cat([y,hits],1)
             y_hpf = self.HPF(y)
 
@@ -238,7 +229,7 @@ def get_GCNNv2(args):
             y = self.relu(self.bn_2(self.GC_2(y, graph)))
 
             graph = get_graph(y, self.k, l_mask)
-            return self.act(self.GC_3(y, graph) * x), hits
+            return self.act(self.GC_3(y, graph) * x)
 
         def forward(self, noised_image=None, clear_image=None, warmup=False):
             """
@@ -246,21 +237,17 @@ def get_GCNNv2(args):
                 warmup: select the correct loss function
                         'roi': warmup loss function for roi selection only
                         'dn': warmup loss function for dn only
-                        False: complete loss function with both contributions
             """
-            out, hits = self.fit_image(noised_image)
-            if self.training:                
+            out = self.fit_image(noised_image, warmup)
+            if self.training:
                 if warmup == 'roi':
-                    loss_hits = self.xent(hits, clear_image[:,1:2])
-                    return loss_hits, loss_hits, out.data, hits.data
+                    loss = self.xent(out, clear_image[:,1:2])
                 if warmup == 'dn':
                     loss = self.loss_fn(clear_image[:,:1], out)
-                    return loss, loss, out.data, hits.data
-                loss_hits = self.xent(hits, clear_image[:,1:2])
-                loss = self.loss_fn(clear_image[:,:1], out)
-                return loss + 3e-3 * loss_hits, loss_hits, out.data, hits.data
-                
-            return torch.cat([out, hits],1)
+                return loss, out.data
+            return out.data
+
+
     gcnnv2 = GCNNv2(k, input_channels, hidden_channels, patch_size, loss_fn)
 
     return gcnnv2
@@ -442,10 +429,12 @@ def get_CNNv2(args):
 
             self.xent = nn.BCELoss()
 
-        def fit_image(self, x):
+        def fit_image(self, x, warmup):
             y = torch.cat([block(x) for block in
                                         self.preprocessing_blocks], dim=1)
             hits = self.hit_block(x)
+            if warmup == 'roi':
+                return hits
             y = torch.cat([y,hits],1)
             y_hpf = self.HPF(y)
 
@@ -456,22 +445,20 @@ def get_CNNv2(args):
 
             y = self.relu(self.bn_1(self.GC_1(y)))
             y = self.relu(self.bn_2(self.GC_2(y)))
-            return self.act(self.GC_3(y) * x), hits
+            return self.act(self.GC_3(y) * x)
 
         def forward(self, noised_image=None, clear_image=None, warmup=False):
-            out, hits = self.fit_image(noised_image)
-            if self.training:                
+                        out = self.fit_image(noised_image, warmup)
+            if self.training:
                 if warmup == 'roi':
-                    loss_hits = self.xent(hits, clear_image[:,1:2])
-                    return loss_hits, loss_hits, out.data, hits.data
+                    loss = self.xent(out, clear_image[:,1:2])
                 if warmup == 'dn':
                     loss = self.loss_fn(clear_image[:,:1], out)
-                    return loss, loss, out.data, hits.data
-                loss_hits = self.xent(hits, clear_image[:,1:2])
-                loss = self.loss_fn(clear_image[:,:1], out)
-                return loss + 3e-2 * loss_hits, loss_hits, out.data, hits.data
-                
-            return torch.cat([out, hits],1)
+                return loss, out.data
+            return out.data
+
+            
+
 
     cnnv2 = CNNv2(input_channels, hidden_channels, patch_size, loss_fn)
 
