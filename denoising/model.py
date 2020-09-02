@@ -378,7 +378,7 @@ def get_CNNv2(args):
         def __init__(self, input_channels, out_channels):
             super(LPF,self).__init__()
             self.conv = nn.Sequential(
-                nn.Conv2d(input_channels, input_channels, 3, padding=1),
+                nn.Conv2d(input_channels, input_channels, 5, padding=2),
                 nn.BatchNorm2d(input_channels),
                 nn.LeakyReLU(0.05))
             
@@ -458,7 +458,7 @@ def get_CNNv2(args):
             y = self.relu(self.bn_2(self.GC_2(y)))
             return self.act(self.GC_3(y) * x), hits
 
-        def forward(self, noised_image=None, clear_image=None):
+        def forward(self, noised_image=None, clear_image=None, warmup=False):
             out, hits = self.fit_image(noised_image)
             if self.training:                
                 if warmup == 'roi':
