@@ -15,12 +15,11 @@ tdc_max = 6000
 channels = 2560*6
 
 def process_depo(dir_name):
-    #f_wire = glob.glob(os.path.join(dir_name, 'wire/*'))
+    f_wire = glob.glob(os.path.join(dir_name, 'wire/*'))
     f_simch = glob.glob(os.path.join(dir_name, 'simch/*'))
-    #for f_w,f_s in zip(f_wire, f_simch):
-    for f_s in f_simch:
-        #wire = np.load(f_w)
+    for f_w,f_s in zip(f_wire, f_simch):
         simch = np.load(f_s)
+        wire = np.load(f_w)
 
         #ensure energy deposits are inside tdc window
         simch = simch[simch[:,2]<tdc_max]
@@ -41,7 +40,16 @@ def process_depo(dir_name):
         print('Save file at: %s'%fname) 
         fname = fname.replace('charge', 'energy')
         np.save(fname, en_depo)
+        print('Save file at: %s'%fname)
+
+        roi_depo = np.zeros_like(ch_depo)
+        roi_depo[wire[:,1]] = wire[:,2:]
+        fname = f_w.split('/')
+        fname[-1] = fname[-1].replace('wire', 'roi')
+        fname = '/'.join(fname)
+        np.save(fname, roi_depo)
         print('Save file at: %s'%fname) 
+
 
 
 
