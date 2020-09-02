@@ -51,8 +51,6 @@ def process_depo(dir_name):
         print('Save file at: %s'%fname) 
 
 
-
-
 def main(dir_name):
     #process_depo(dir_name)
 
@@ -61,7 +59,7 @@ def main(dir_name):
     f_ch = glob.glob(os.path.join(dir_name, 'simch/charge*'))[0]
 
     raw = np.load(f_raw)[:,2:]
-    ch = np.load(f_ch)[:,2:]
+    ch = np.load(f_ch)
 
     import matplotlib.pyplot as mpl
     mpl.rcParams["xtick.labelsize"] = 6
@@ -87,8 +85,17 @@ def main(dir_name):
     ax.plot(raw[2500], lw=0.2)
     ax.set_title('Raw Wire 2500, Raw')
 
-    plt.savefig('../collection_t.png', dpi=300, bbox_inches='tight')
+    plt.savefig('preprocess/simch_charge.png', dpi=300, bbox_inches='tight')
     plt.close()
+
+    f_roi = glob.glob(os.path.join(dir_name, 'wire/roi*'))[0]
+    roi = np.load(f_roi)
+
+    fig = plt.figure()
+    plt.plot(roi[2500], lw=0.2)
+    plt.savefig('preprocess/wire_roi.png', dpi=300, bbox_inches='tight')
+    plt.close()
+
 
 
 if __name__ == '__main__':
