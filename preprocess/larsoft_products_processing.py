@@ -15,9 +15,10 @@ tdc_max = 6000
 channels = 2560*6
 
 def process_depo(dir_name):
-    #f_wire = glob.glob(os.path.join(dirname, 'wire/*'))
-    f_simch = glob.glob(os.path.join(dirname, 'simch/*'))
-    for f_w,f_s in zip(f_wire, f_simch):
+    #f_wire = glob.glob(os.path.join(dir_name, 'wire/*'))
+    f_simch = glob.glob(os.path.join(dir_name, 'simch/*'))
+    #for f_w,f_s in zip(f_wire, f_simch):
+    for f_s in f_simch:
         #wire = np.load(f_w)
         simch = np.load(f_s)
 
@@ -30,43 +31,51 @@ def process_depo(dir_name):
         en_depo = np.zeros_like(ch_depo)
 
         for i in simch:
-            ch_depo[i[1], i[2]] += i[4]
-            en_depo[i[1], i[2]] += i[5]
+            ch_depo[int(i[1]), int(i[2])] += i[4]
+            en_depo[int(i[1]), int(i[2])] += i[5]
 
         fname = f_s.split('/')
-        fname[-1] = fname[-1].replace('wire', 'charge')
+        fname[-1] = fname[-1].replace('simch', 'charge')
         fname = '/'.join(fname)
         np.save(fname, ch_depo)
+        print('Save file at: %s'%fname) 
         fname = fname.replace('charge', 'energy')
         np.save(fname, en_depo)
+        print('Save file at: %s'%fname) 
+
+
 
 def main(dir_name):
-    process_depo(dirname)
+    #process_depo(dir_name)
 
     #check if things were done right
-    f_raw = glob.glob(os.path.join(dirname, 'raw/raw*'))[0]
-    f_ch = glob.glob(os.path.join(dirname, 'simch/charge*'))[0]
+    f_raw = glob.glob(os.path.join(dir_name, 'raw/raw*'))[0]
+    f_ch = glob.glob(os.path.join(dir_name, 'simch/charge*'))[0]
 
     raw = np.load(f_raw)[:,2:]
     ch = np.load(f_ch)[:,2:]
 
-    plt.figure()
-    gs = fig.add_gridspec(nrows=2, ncols=3)
-    ax = plt.add_subplot(gs[0,:-1])
-    ax.imshow(ch[1600:2560])
-    ax.colorbar()
+    import matplotlib.pyplot as mpl
+    mpl.rcParams["xtick.labelsize"] = 6
+    mpl.rcParams["ytick.labelsize"] = 6
+
+    fig = plt.figure()
+    gs = fig.add_gridspec(nrows=2, ncols=4, wspace=1.5, hspace=1.5)
+    ax = fig.add_subplot(gs[0,:2])
+    z = ax.imshow(ch[1600:2560])
+    plt.colorbar(z, ax=ax)
     ax.set_title('Charge Deposition')
 
-    ax = plt.subplot(gs[1:,-1])
-    ax.imshow(raw[1600:2560])
-    ax.colorbar()
+    ax = fig.add_subplot(gs[1,:2])
+    z = ax.imshow(raw[1600:2560])
+    plt.colorbar(z, ax=ax)
     ax.set_title('Raw Digits')
 
-    ax = plt.subplot(gs[0,-1])
+    ax = fig.add_subplot(gs[0,2:])
     ax.plot(ch[2500], lw=0.2)
     ax.set_title('Wire 2500, Energy')
 
-    ax = plt.subplot(gs[1,-1])
+    ax = fig.add_subplot(gs[1,2:])
     ax.plot(raw[2500], lw=0.2)
     ax.set_title('Raw Wire 2500, Raw')
 
@@ -77,5 +86,5 @@ def main(dir_name):
 if __name__ == '__main__':
     ARGS = vars(PARSER.parse_args())
     START = tm.time()
-    main(ARGS)
+    main(**ARGS)
     print('Program done in %f'%(tm.time()-START))
