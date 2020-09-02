@@ -102,11 +102,11 @@ def main(args):
     warmup_trains(args, train_data, test_data, 1)
 
     for i in range(10):
-        args.epochs = args.warmup_dn_epochs + 2*i
-        args.load_epoch = args.warmup_roi_epochs + 2*i
+        args.epochs = args.warmup_dn_epochs + 2*i +1
+        args.load_epoch = args.warmup_dn_epochs + 2*i
         warmup_trains(args, train_data, test_data, 0)
 
-        args.epochs = args.warmup_dn_epochs + 2*i + 1 
+        args.epochs = args.warmup_dn_epochs + 2*i + 2 
         args.load_epoch = args.warmup_roi_epochs + 2*i + 1
         warmup_trains(args, train_data, test_data, 1)
 
