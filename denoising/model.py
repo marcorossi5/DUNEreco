@@ -471,7 +471,7 @@ def get_GCNNv2(args):
                     return loss, loss, out.data, hits.data
                 loss_hits = self.xent(hits, clear_image[:,1:2])
                 loss = self.loss_fn(clear_image[:,:1], out)
-                return loss + loss_hits, loss_hits, out.data, hits.data
+                return loss + 3e-3 * loss_hits, loss_hits, out.data, hits.data
                 
             return torch.cat([out, hits],1)
     gcnnv2 = GCNNv2(k, input_channels, hidden_channels, patch_size, loss_fn)

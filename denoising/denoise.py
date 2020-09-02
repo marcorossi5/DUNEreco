@@ -6,6 +6,7 @@ import argparse
 import time as tm
 
 import torch
+import numpy as np
 
 from dataloader import CropLoader
 from dataloader import PlaneLoader
@@ -49,6 +50,11 @@ def freeze_weights(model, ROI):
         if ((i == 0)%2 + ROI + 1)%2:
             for param in child.parameters():
                 param.requires_grad = False
+
+    model_parameters = filter(lambda p: p.requires_grad, model.parameters())
+    params = sum([np.prod(p.size()) for p in model_parameters])
+
+    print('Trainable parameters: %d'% params)
     return model
 
 def warmup_trains(args, train_data, test_data, mode):

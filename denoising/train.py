@@ -116,7 +116,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
     params.append(model.b2.detach().cpu().data)
     params.append(model.b3.detach().cpu().data)
 
-    '''
+    #'''
     grads = []
     par = []
     for p in model.parameters():
@@ -127,7 +127,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
     par = torch.cat(par).abs().mean()
     print("Parameters average: ", par.item())
     print("Grads average: ", grads.item())
-    '''
+    #'''
 
 
     return np.array([loss.mean().item()]), np.array(params)
