@@ -65,17 +65,19 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
 
     return np.array([loss.mean().item()])
 
-def test_epoch(args, epoch, loader, model,
+def test_epoch(args, epoch, test_data, model,
                ana=False, warmup=False, labels=None):
     """
     Parameters:
         labels: np.array, all the targets in memory,
                 shape (N,C,w,h)
     Outputs:
-        np.array containing n metrics, shape (2*n)
-        torch.tensor containing denoised data, shape (batch,C,W,H)
+        np.array: n metrics, shape (2*n)
+        torch.Tensor: denoised data, shape (batch,C,W,H)
+        float: dry inference time
     """
     print('[+] Testing')
+    start = tm()
     model.eval()
     loss = []
     res = [] #inference results
@@ -110,19 +112,21 @@ def test_epoch(args, epoch, loader, model,
             psnr.append(compute_psnr(target,dn))
         res.append(dn.cpu().detach())
     res = torch.cat(res)
-        
+    end = tm()
+    dry_inf = end-start
     n = len(loss)
 
     if warmup == 'roi':
         test_data
         plot_ROI_stats(args,epoch,labels,res,args.t,ana)
-        return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), res
+        print('Confusion matrix time:', tm()-end)
+        return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), res, dry_inf
 
     if warmup == 'dn':
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
                 np.mean(ssim), np.std(ssim)/np.sqrt(n),
                 np.mean(psnr), np.std(psnr)/np.sqrt(n),
-                np.mean(mse), np.std(mse)/np.sqrt(n)]), res
+                np.mean(mse), np.std(mse)/np.sqrt(n)]), res, dry_inf
 
 
 ########### main train function
@@ -192,7 +196,7 @@ def train(args, train_data, test_data, model, warmup, labels):
             print('test start ...')
             test_epochs.append(epoch)
             start = tm()
-            x, _ = test_epoch(args, epoch, test_data, model,
+            x, _, _ = test_epoch(args, epoch, test_data, model,
                               warmup=warmup, labels=labels)
             test_metrics.append(x)
             if not args.scan:
