@@ -65,9 +65,12 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
 
     return np.array([loss.mean().item()])
 
-def test_epoch(args, epoch, test_data, model,
-               ana=False, warmup=False):
+def test_epoch(args, epoch, loader, model,
+               ana=False, warmup=False, labels=None):
     """
+    Parameters:
+        labels: np.array, all the targets in memory,
+                shape (N,C,w,h)
     Outputs:
         np.array containing n metrics, shape (2*n)
         torch.tensor containing denoised data, shape (batch,C,W,H)
@@ -77,18 +80,15 @@ def test_epoch(args, epoch, test_data, model,
     loss = []
     res = [] #inference results
 
-    if warmup == 'roi':
-        res_t = [] #results target
-
     if warmup == 'dn':
         mse = []
         psnr = []
         ssim = []
 
     for clear, noisy, norm in test_data:
-        if warmup=='roi':
+        if warmup == 'roi':
             target = clear[:,1:2].to(args.device)
-        if warmup=='dn':
+        if warmup == 'dn':
             target = clear[:,:1].to(args.device)        
         noisy = noisy.to(args.device)
         norm = norm[0].to(args.device)
@@ -102,7 +102,6 @@ def test_epoch(args, epoch, test_data, model,
         dn = recombine_img(dn, crops_shape, pad)
         if warmup == 'roi':
             loss.append(model.xent(target,dn).cpu().item())
-            res_t.append(target.cpu().detach())
         if warmup == 'dn':
             dn = dn * (norm[1]-norm[0]) + norm[0]
             loss.append((model.loss_fn(target,dn)).cpu().item())
@@ -115,8 +114,8 @@ def test_epoch(args, epoch, test_data, model,
     n = len(loss)
 
     if warmup == 'roi':
-        res_t = torch.cat(res_t)
-        plot_ROI_stats(args,epoch,res_t,res,args.t,ana)
+        test_data
+        plot_ROI_stats(args,epoch,labels,res,args.t,ana)
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), res
 
     if warmup == 'dn':
@@ -127,7 +126,7 @@ def test_epoch(args, epoch, test_data, model,
 
 
 ########### main train function
-def train(args, train_data, test_data, model, warmup):
+def train(args, train_data, test_data, model, warmup, labels):
     # check if load existing model
     if args.load:
         if args.load_path is None:
@@ -193,7 +192,8 @@ def train(args, train_data, test_data, model, warmup):
             print('test start ...')
             test_epochs.append(epoch)
             start = tm()
-            x, _ = test_epoch(args, epoch, test_data, model, warmup=warmup)
+            x, _ = test_epoch(args, epoch, test_data, model,
+                              warmup=warmup, labels=labels)
             test_metrics.append(x)
             if not args.scan:
                 if warmup == 'roi':

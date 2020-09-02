@@ -73,13 +73,18 @@ def main(args):
                                             shuffle=True,
                                             batch_size=args.batch_size,
                                             num_workers=args.num_workers)
-    test_data = torch.utils.data.DataLoader(PlaneLoader(args,'val','collection'),
-                                            num_workers=args.num_workers)
-
+    test_data = PlaneLoader(args,'val','collection')
+    
+    
     if args.warmup == 'roi':
         mode = 0
+        labels = test_data.clear[:,1:2]
     if args.warmup == 'dn':
         mode = 1
+        labels = test_data.clear[:,:1]
+
+    test_data = torch.utils.data.DataLoader(test_data,
+                                            num_workers=args.num_workers)
 
     model = eval('get_' + args.model)(args)
     model = freeze_weights(model, mode)
@@ -88,7 +93,7 @@ def main(args):
 
     #train
     return train.train(args, train_data, test_data,
-                model, warmup=args.warmup)
+                model, warmup=args.warmup, labels=labels)
 
 if __name__ == '__main__':
     ARGS = vars(PARSER.parse_args())
