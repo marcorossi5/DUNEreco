@@ -448,7 +448,7 @@ def get_CNNv2(args):
             return self.act(self.GC_3(y) * x)
 
         def forward(self, noised_image=None, clear_image=None, warmup=False):
-                        out = self.fit_image(noised_image, warmup)
+            out = self.fit_image(noised_image, warmup)
             if self.training:
                 if warmup == 'roi':
                     loss = self.xent(out, clear_image[:,1:2])

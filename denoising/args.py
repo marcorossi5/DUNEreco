@@ -41,11 +41,11 @@ class Args:
 
         self.epoch_log = 1
         self.epoch_test_start = 0
-        self.epoch_test = 5
+        self.epoch_test = 1
 
         self.t = 0.5
 
-        self.load = False if (self.load_path is None) else True
+        self.load = False if (load_path is None) else True
         self.load_epoch = 0
         self.load_path = load_path
 

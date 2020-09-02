@@ -88,7 +88,7 @@ def test_epoch(args, epoch, test_data, model,
     for clear, noisy, norm in test_data:
         if warmup=='roi':
             target = clear[:,1:2].to(args.device)
-        if wamup=='dn':
+        if warmup=='dn':
             target = clear[:,:1].to(args.device)        
         noisy = noisy.to(args.device)
         norm = norm[0].to(args.device)
@@ -99,16 +99,16 @@ def test_epoch(args, epoch, test_data, model,
             answer = model(chunk.to(args.device)).data
             dn.append(answer)
         dn = torch.cat(dn).unsqueeze(1)
-        dn = recombine_img(dn, crops_shape, pad).squeeze(1)
-        if wamup == 'roi':
+        dn = recombine_img(dn, crops_shape, pad)
+        if warmup == 'roi':
             loss.append(model.xent(target,dn).cpu().item())
+            res_t.append(target.cpu().detach())
         if warmup == 'dn':
             dn = dn * (norm[1]-norm[0]) + norm[0]
             loss.append((model.loss_fn(target,dn)).cpu().item())
             ssim.append(1-loss_ssim()(target,dn).cpu().item())
             mse.append(torch.nn.MSELoss()(target,dn).cpu().item())
             psnr.append(compute_psnr(target,dn))
-            res_t.append(target.cpu().detach())
         res.append(dn.cpu().detach())
     res = torch.cat(res)
         
@@ -156,7 +156,7 @@ def train(args, train_data, test_data, model, warmup):
             fname = args.load_path
         model.load_state_dict(torch.load(fname))
         print('model loaded!, lr: {}'.format(args.lr))
-    else (not args.load) or (args.load_path is not None):
+    elif (not args.load) or (args.load_path is not None):
         epoch = 1
         loss_sum = []
         test_metrics = []

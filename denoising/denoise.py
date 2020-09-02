@@ -40,7 +40,7 @@ PARSER.add_argument("--out_name", default=None, type=str,
                     help="Output directory")
 PARSER.add_argument("--load_path", default=None, type=str,
                     help="torch .dat file to load the model")
-PARSER.add_argument("--warmup", default=dn, type=str,
+PARSER.add_argument("--warmup", default='dn', type=str,
                     help="roi / dn")
 
 
@@ -59,7 +59,8 @@ def freeze_weights(model, ROI):
     model_parameters = filter(lambda p: p.requires_grad, model.parameters())
     params = sum([np.prod(p.size()) for p in model_parameters])
 
-    print('Trainable parameters: %d'% params)
+    net = 'roi' if ROI==0 else 'dn'
+    print('Trainable parameters in %s: %d'% (net, params))
     return model
 
 
@@ -75,9 +76,9 @@ def main(args):
     test_data = torch.utils.data.DataLoader(PlaneLoader(args,'val','collection'),
                                             num_workers=args.num_workers)
 
-    if warmup == 'roi':
+    if args.warmup == 'roi':
         mode = 0
-    if warmup == 'dn':
+    if args.warmup == 'dn':
         mode = 1
 
     model = eval('get_' + args.model)(args)
