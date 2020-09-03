@@ -162,10 +162,14 @@ def test_epoch(args, epoch, test_data, model,
 ########### main train function
 def train(args, train_data, test_data, model, warmup, labels):
     # check if load existing model
+    model = freeze_weights(model, warmup)
+    model = MyDataParallel(model, device_ids=args.dev_ids)
+    model = model.to(args.device)
+
     if args.load:
         if args.load_path is None:
             #resume a previous training from an epoch
-            fname = os.path.join(args.dir_timings, '%s_timings.npy'%warmup)
+            fname = os.path.join(args.dir_timings, 'timings.npy')
             time_all = list(np.load(fname))
 
             #loss_sum
@@ -181,7 +185,7 @@ def train(args, train_data, test_data, model, warmup, labels):
             test_metrics = list(np.load(fname).T)
 
             fname = os.path.join(args.dir_saved_models,
-                args.model + '_%d'%args.load_epoch + '.dat')
+                args.model + f'_{warmup}_{args.load_epoch}.dat')
             epoch = args.load_epoch + 1
        
         else:
@@ -193,8 +197,8 @@ def train(args, train_data, test_data, model, warmup, labels):
             test_epochs = []
             time_all = []
 
+        print(f'Loading model at {fname}')
         model.load_state_dict(torch.load(fname))
-        print('model loaded!')
     else:
         epoch = 1
         loss_sum = []
@@ -202,9 +206,6 @@ def train(args, train_data, test_data, model, warmup, labels):
         test_epochs = []
         time_all = []
 
-    model = freeze_weights(model, mode)
-    model = MyDataParallel(model, device_ids=args.dev_ids)
-    model = model.to(args.device)
 
     best_loss = 1e10
     best_loss_std = 0

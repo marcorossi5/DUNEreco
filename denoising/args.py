@@ -46,7 +46,7 @@ class Args:
         self.t = 0.5
 
         self.load = False if (load_path is None) else True
-        self.load_epoch = 0
+        self.load_epoch = 100
         self.load_path = load_path
 
         self.save = True

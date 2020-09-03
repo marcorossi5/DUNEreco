@@ -202,7 +202,7 @@ def plot_crops(out_dir, imgs, name, sample):
     fig, axs = plt.subplots(5,6,figsize=(25,25))
     for i in range(5):
         for j in range(5):
-            ax = fig.add_subplot(5,5,i*5+j+1)
+            ax = axs[i,j]
             z = ax.imshow(samples[i*5+j])
     fig.colorbar(z, ax=axs[:,-1])
     for ax in axs[:,-1]:
