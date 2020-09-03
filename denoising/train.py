@@ -63,7 +63,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
     grads = torch.cat(grads).abs().mean()
     print("Grads average: ", grads.item())
 
-    return np.array([loss.mean().item()])
+    return loss.mean().item()
 
 def test_epoch(args, epoch, test_data, model,
                ana=False, warmup=False, labels=None):
@@ -117,7 +117,6 @@ def test_epoch(args, epoch, test_data, model,
     n = len(loss)
 
     if warmup == 'roi':
-        test_data
         plot_ROI_stats(args,epoch,labels,res,args.t,ana)
         print('Confusion matrix time:', tm()-end)
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), res, dry_inf
@@ -217,13 +216,7 @@ def train(args, train_data, test_data, model, warmup, labels):
 
                 #switch to keep all the history of saved models 
                 #or just the best one
-                if args.save:
-                    fname = os.path.join(args.dir_saved_models,
-                             f'{args.model}_{warmup}_{epoch}.dat')
-                else:
-                    fname = os.path.join(args.dir_saved_models,
-                             f'{args.model}_{warmup}.dat')
-                torch.save(model.state_dict(), fname)
+                
                 if not args.scan:
                     print('saved model at: %s'%fname)
                 best_model_name = fname
@@ -233,6 +226,10 @@ def train(args, train_data, test_data, model, warmup, labels):
                     f.close()
                 if not args.scan:
                     print('updated best model at: ',bname)
+            if args.save:
+                fname = os.path.join(args.dir_saved_models,
+                         f'{args.model}_{warmup}_{epoch}.dat')
+            torch.save(model.state_dict(), fname)
 
         epoch += 1
 
