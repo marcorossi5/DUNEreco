@@ -63,7 +63,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
     grads = torch.cat(grads).abs().mean()
     print("Grads average: ", grads.item())
 
-    return loss.mean().item()
+    return np.array([loss.mean().item()])
 
 def test_epoch(args, epoch, test_data, model,
                ana=False, warmup=False, labels=None):
@@ -217,8 +217,6 @@ def train(args, train_data, test_data, model, warmup, labels):
                 #switch to keep all the history of saved models 
                 #or just the best one
                 
-                if not args.scan:
-                    print('saved model at: %s'%fname)
                 best_model_name = fname
                 bname = os.path.join(args.dir_final_test, 'best_model.txt')
                 with open(bname, 'w') as f:
@@ -229,6 +227,9 @@ def train(args, train_data, test_data, model, warmup, labels):
             if args.save:
                 fname = os.path.join(args.dir_saved_models,
                          f'{args.model}_{warmup}_{epoch}.dat')
+                if not args.scan:
+                    print('saved model at: %s'%fname)
+
             torch.save(model.state_dict(), fname)
 
         epoch += 1
