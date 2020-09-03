@@ -14,7 +14,6 @@ from dataloader import PlaneLoader
 from model import  *
 from args import Args
 
-from model_utils import MyDataParallel
 from model_utils import print_summary_file
 from model_utils import weight_scan
 
@@ -44,26 +43,6 @@ PARSER.add_argument("--warmup", default='dn', type=str,
                     help="roi / dn")
 
 
-def freeze_weights(model, ROI):
-    """
-    Freezes weights of ROI either finder or GCNN denoiser
-    Parameters:
-        model: torch.nn.Module, first childred should be ROI
-        ROI: either 1 (freezes ROI) or 0 (freezes denoiser)
-    """
-    for i, child in enumerate(model.children()):
-        if ((i == 0)%2 + ROI + 1)%2:
-            for param in child.parameters():
-                param.requires_grad = False
-
-    model_parameters = filter(lambda p: p.requires_grad, model.parameters())
-    params = sum([np.prod(p.size()) for p in model_parameters])
-
-    net = 'roi' if ROI==0 else 'dn'
-    print('Trainable parameters in %s: %d'% (net, params))
-    return model
-
-
 def main(args):
     """This is the main function"""
     torch.cuda.set_enabled_lms(True)
@@ -77,19 +56,14 @@ def main(args):
     
     
     if args.warmup == 'roi':
-        mode = 0
         labels = test_data.clear[:,1:2]
     if args.warmup == 'dn':
-        mode = 1
         labels = test_data.clear[:,:1]
 
     test_data = torch.utils.data.DataLoader(test_data,
                                             num_workers=args.num_workers)
 
     model = eval('get_' + args.model)(args)
-    model = freeze_weights(model, mode)
-    model = MyDataParallel(model, device_ids=args.dev_ids)
-    model = model.to(args.device)
 
     #train
     return train.train(args, train_data, test_data,

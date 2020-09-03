@@ -5,6 +5,8 @@ from torch import optim
 import numpy as np
 import matplotlib.pyplot as plt
 
+from model_utils import freeze_weights
+from model_utils import MyDataParallel
 from model_utils import split_img
 from model_utils import recombine_img
 from model_utils import plot_crops
@@ -199,6 +201,10 @@ def train(args, train_data, test_data, model, warmup, labels):
         test_metrics = []
         test_epochs = []
         time_all = []
+
+    model = freeze_weights(model, mode)
+    model = MyDataParallel(model, device_ids=args.dev_ids)
+    model = model.to(args.device)
 
     best_loss = 1e10
     best_loss_std = 0

@@ -199,11 +199,14 @@ def plot_crops(out_dir, imgs, name, sample):
     samples = imgs[sample]
     
     fname = os.path.join(out_dir, "_".join([name,"crops.png"]))
-    fig = plt.figure(figsize=(25,25))
+    fig, axs = plt.subplots(5,6,figsize=(25,25))
     for i in range(5):
         for j in range(5):
             ax = fig.add_subplot(5,5,i*5+j+1)
-            ax.imshow(samples[i*5+j])
+            z = ax.imshow(samples[i*5+j])
+    fig.colorbar(z, ax=axs[:,-1])
+    for ax in axs[:,-1]:
+        ax.axis('off')
     plt.savefig(fname)
     plt.close()
     print("Saved image at %s"%fname)
@@ -357,3 +360,26 @@ def weight_scan(module):
     hist, edges = np.histogram(p,100)
     
     return norm, (edges[:-1]+edges[1:])/2, hist
+
+def freeze_weights(model, warmup):
+    """
+    Freezes weights of ROI either finder or GCNN denoiser
+    Parameters:
+        model: torch.nn.Module, first childred should be ROI
+        warmup: str, mode of the training ('roi'/'dn')
+    """
+    if warmup == 'roi':
+        ROI = 0
+    if warmup == 'dn':
+        ROI = 1
+    for i, child in enumerate(model.children()):
+        if ((i == 0)%2 + ROI + 1)%2:
+            for param in child.parameters():
+                param.requires_grad = False
+
+    model_parameters = filter(lambda p: p.requires_grad, model.parameters())
+    params = sum([np.prod(p.size()) for p in model_parameters])
+
+    net = 'roi' if ROI==0 else 'dn'
+    print('Trainable parameters in %s: %d'% (net, params))
+    return model
