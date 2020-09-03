@@ -143,7 +143,8 @@ def test_epoch(args, epoch, test_data, model,
     fname = os.path.join(args.dir_testing, f'test_{warmup}_{epoch}')
 
     if warmup == 'roi':
-        plot_test_panel(labels[0,0], (res[0,0] > args.t).long(),fname)
+        #plot_test_panel(labels[0,0], (res[0,0] > args.t).long(),fname)
+        plot_test_panel(labels[0,0], res[0,0],fname)
         #plot_ROI_stats(args,epoch,labels,res,args.t,ana)
         print('Confusion matrix time:', tm()-end)
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), res, dry_inf
@@ -184,9 +185,15 @@ def train(args, train_data, test_data, model, warmup, labels):
         else:
             #load a trained roi to train new dn
             fname = args.load_path
+            epoch = 1
+            loss_sum = []
+            test_metrics = []
+            test_epochs = []
+            time_all = []
+
         model.load_state_dict(torch.load(fname))
-        print('model loaded!, lr: {}'.format(args.lr))
-    elif (not args.load) or (args.load_path is not None):
+        print('model loaded!')
+    else:
         epoch = 1
         loss_sum = []
         test_metrics = []
