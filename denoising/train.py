@@ -65,6 +65,30 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
 
     return np.array([loss.mean().item()])
 
+def plot_test_panel(labels, res, fname):
+    """
+    Plot the inference results
+    Params:
+        labels: torch.Tensor, shape (w,h)
+        res: torch.Tensor, shape (w,h)
+        fname: str
+    """
+    fig = plt.figure()
+    gs = fig.add_gridspec(nrows=2, ncols=1, wspace=1.5)
+
+    ax = fig.add_subplot(gs[0])
+    z = ax.imshow(labels)
+    plt.colorbar(z, ax=ax)
+    ax.set_title('Labels')
+
+    ax = fig.add_subplot(gs[1])
+    z = ax.imshow(res)
+    plt.colorbar(z, ax=ax)
+    ax.set_title('Predicted')
+
+    plt.savefig(fname, dpi=300, bbox_inches='tight')
+    plt.close()
+
 def test_epoch(args, epoch, test_data, model,
                ana=False, warmup=False, labels=None):
     """
@@ -116,12 +140,16 @@ def test_epoch(args, epoch, test_data, model,
     dry_inf = end-start
     n = len(loss)
 
+    fname = os.path.join(args.dir_testing, f'test_{warmup}_{epoch}')
+
     if warmup == 'roi':
-        plot_ROI_stats(args,epoch,labels,res,args.t,ana)
+        plot_test_panel(labels[0,0], (res[0,0] > args.t).long(),fname)
+        #plot_ROI_stats(args,epoch,labels,res,args.t,ana)
         print('Confusion matrix time:', tm()-end)
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), res, dry_inf
 
     if warmup == 'dn':
+        plot_test_panel(labels[0,0], res[0,0], fname)
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
                 np.mean(ssim), np.std(ssim)/np.sqrt(n),
                 np.mean(psnr), np.std(psnr)/np.sqrt(n),
@@ -216,7 +244,8 @@ def train(args, train_data, test_data, model, warmup, labels):
 
                 #switch to keep all the history of saved models 
                 #or just the best one
-                
+                fname = os.path.join(args.dir_saved_models,
+                         f'{args.model}_{warmup}_{epoch}.dat')
                 best_model_name = fname
                 bname = os.path.join(args.dir_final_test, 'best_model.txt')
                 with open(bname, 'w') as f:
