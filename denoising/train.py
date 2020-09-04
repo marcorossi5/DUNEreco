@@ -22,7 +22,7 @@ from utils.utils import compute_psnr
 
 def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
     print('\n[+] Training')
-    start = tm
+    start = tm()
     model.train()
     for i, (clear, noised) in enumerate(train_data):
         clear = clear.to(args.device)
