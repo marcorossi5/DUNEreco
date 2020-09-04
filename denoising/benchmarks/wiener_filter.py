@@ -1,4 +1,7 @@
+""" This model computes the Wiener filter for planes in the test set"""
+import sys
 import os
+import argparse
 import numpy as np
 import time as tm
 from numpy.fft import fft2, ifft2
@@ -7,7 +10,9 @@ import matplotlib.pyplot as plt
 import torch
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from denoising.losses import loss_mse, loss_ssim
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+from losses import loss_mse, loss_ssim
+
 from utils.utils import compute_psnr
 
 PARSER = argparse.ArgumentParser()
@@ -60,20 +65,23 @@ def plot():
 def main(device, kernel_size):
     # Load target images
     file_name = os.path.join("../datasets/denoising/val", 'planes', 'collection_clear.npy') 
-    img = np.load(file_name)[0,0]
+    img = np.load(file_name)
 
     # Load noisy images
     file_name = os.path.join("../datasets/denoising/val", 'planes', 'collection_noisy.npy') 
     
     # subtract the pedestal already
     # pedestal = 500
-    noisy_img = np.load(file_name)[0,0] - 500
+    noisy_img = np.load(file_name) - 500
 
     # Apply Wiener Filter
+    out_img = []
     kernel = gaussian_kernel(kernel_size)
-    filtered_img = wiener_filter(noisy_img, kernel, K = 10)
+    for i in noisy_img[:,0]:
+        out_img.append(wiener_filter(i, kernel, K = 10))
 
     img = torch.Tensor(img).to(device)
+    out_img = np.stack(out_img)[:,None]
     out_img = torch.Tensor(out_img).to(device)
 
     ssim = []
@@ -97,14 +105,15 @@ def main(device, kernel_size):
     res = np.array([[ssim_mean, ssim_std],
                     [mse_mean, mse_std],
                     [psnr_mean, psnr_std]])
-    fname = f'denoising/benchmarks/results/wiener_{kernel_size}_metrics'
+    fname = f'./denoising/benchmarks/results/wiener_{kernel_size}_metrics'
     np.save(fname, res)
 
 
 if __name__ == '__main__':
     ARGS = vars(PARSER.parse_args())
     gpu = torch.cuda.is_available()
-    dev = f'cuda:{ARGS['device']}' if gpu else 'cpu'
+    dev = ARGS['device']
+    dev = f'cuda:{dev}' if gpu else 'cpu'
     ARGS['device'] = torch.device(dev)
     START = tm.time()
     main(**ARGS)

@@ -1,12 +1,14 @@
 import os
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.feature import canny
 from sklearn.metrics import confusion_matrix
+import time as tm
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from denoising.model_utils import
-
+PARSER = argparse.ArgumentParser()
+PARSER.add_argument("--threshold", "-t", default=0.5,
+                    type=float, help='Threshold to compute predictions')
 
 def classification_metrics(y_true, y_pred, t):
     """
@@ -20,6 +22,12 @@ def classification_metrics(y_true, y_pred, t):
     """
     y_true = y_true.flatten().astype(int)
     y_pred = y_pred.flatten()
+    
+    cm = confusion_matrix(y_true, (y_pred>t).astype(int))
+
+    acc = (cm[1,1] + cm[0,0]) / cm.sum()
+    sns = cm[1,1] / (cm[1,1] + cm[1,0])
+    spc = cm[0,0] / (cm[0,1] + cm[0,0])
 
     tpr = []
     fpr = []
@@ -34,10 +42,6 @@ def classification_metrics(y_true, y_pred, t):
 
     fpr = np.concatenate([[0.],fpr,[1.]],0)
     tpr = np.concatenate([[0.],tpr,[1.]],0)
-
-    acc = (cm[1,1] + cm[0,0]) / cm.sum()
-    sns = cm[1,1] / (cm[1,1] + cm[1,0])
-    spc = cm[0,0] / (cm[0,1] + cm[0,0])
 
     auc = ((fpr[1:] - fpr[:-1])*tpr[1:]).sum()
 
@@ -63,11 +67,16 @@ def plot():
     plt.savefig('wiener_filter.png', dpi=300, bbox_inches='tight')
     plt.close()
 
-def main():
+def main(threshold):
     # Load target images
     file_name = os.path.join("../datasets/denoising/test",
                              'planes', 'collection_clear.npy') 
     img = np.load(file_name)
+    img[img!=0] = 1
+
+    sig = np.count_nonzero(img)
+    tot = img.size
+    print('Percentage of pixels with signal:', sig/tot)
 
     # Load noisy images
     file_name = os.path.join("../datasets/denoising/test",
@@ -77,13 +86,7 @@ def main():
     noisy_img = np.load(file_name) - 500
 
     # Apply Canny Filter
-
     filtered_img = []
-    for i in noisy_img:
-        im = canny(i[0]).astype(float)
-        filtered_img.append(im)
-    filtered_img = np.stack(filtered_img)[:, None]
-
     acc = []
     sns = []
     spc = []
@@ -91,14 +94,20 @@ def main():
     #fpr = []
     auc = []
 
-    for i,j in zip(img, filtered_img):
-        x = classification_metrics(i[0], j[0])
+    for i,j in zip(img, noisy_img):
+        # to be used by canny, first normalize in [0,1]
+        norm = (j[0]-j[0].min())/(j[0].max()-j[0].min())
+        im = canny(norm).astype(float)
+        filtered_img.append(im)
+        x = classification_metrics(i[0], im, threshold)
         acc.append(x[0])
         sns.append(x[1])
         spc.append(x[2])
         #tpr.append(x[3])
         #fpr.append(x[4])
         auc.append(x[5])
+
+    filtered_img = np.stack(filtered_img)[:, None]
 
     acc_mean = np.mean(acc)
     acc_std =  np.std(acc) / np.sqrt(len(acc))
@@ -128,6 +137,8 @@ def main():
 
 
 if __name__ == '__main__':
+    ARGS = vars(PARSER.parse_args())
+
     START = tm.time()
-    main()
+    main(**ARGS)
     print('Program done in %f'%(tm.time()-START))
