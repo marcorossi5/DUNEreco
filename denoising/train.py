@@ -129,13 +129,13 @@ def test_epoch(args, epoch, test_data, model,
         dn = torch.cat(dn).unsqueeze(1)
         dn = recombine_img(dn, crops_shape, pad)
         if warmup == 'roi':
-            loss.append(model.xent(dn, target).cpu().item())
+            loss.append(model.xent(target, dn).cpu().item())
         if warmup == 'dn':
             dn = dn * (norm[1]-norm[0]) + norm[0]
-            loss.append((model.loss_fn(dn, target)).cpu().item())
-            ssim.append(1-loss_ssim()(dn, target).cpu().item())
-            mse.append(torch.nn.MSELoss()(dn, target).cpu().item())
-            psnr.append(compute_psnr(dn, target))
+            loss.append((model.loss_fn(target, dn)).cpu().item())
+            ssim.append(1-loss_ssim()(target, dn).cpu().item())
+            mse.append(torch.nn.MSELoss()(target, dn).cpu().item())
+            psnr.append(compute_psnr(target, dn))
         res.append(dn.cpu().detach())
     res = torch.cat(res)
     end = tm()

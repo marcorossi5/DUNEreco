@@ -17,7 +17,7 @@ def get_freer_gpus(n):
     ind = np.argsort(memory_available)
     return np.argmax(memory_available)[-n:]
 
-def compute_psnr(noised, image):
+def compute_psnr(image, noised):
     """
     Alert: only from images with max value = 1
     """

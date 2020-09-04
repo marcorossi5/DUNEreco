@@ -241,7 +241,7 @@ def get_GCNNv2(args):
             out = self.fit_image(noised_image, warmup)
             if self.training:
                 if warmup == 'roi':
-                    loss = self.xent(out, clear_image[:,1:2])
+                    loss = self.xent(clear_image[:,1:2],out)
                 if warmup == 'dn':
                     loss = self.loss_fn(out, clear_image[:,:1])
                 return loss, out.data
