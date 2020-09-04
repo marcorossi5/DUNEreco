@@ -22,17 +22,19 @@ from utils.utils import compute_psnr
 
 def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
     print('\n[+] Training')
+    start = tm
     model.train()
     for i, (clear, noised) in enumerate(train_data):
         clear = clear.to(args.device)
         noised = noised.to(args.device)
         optimizer.zero_grad()
-        loss, out= model(noised, clear, warmup=warmup)
+        loss, out = model(noised, clear, warmup=warmup)
         loss.mean().backward()
         optimizer.step()
+    dry_train = tm() - start
 
-        out = out.cpu().detach()
-        clear = clear.cpu().detach()
+    out = out.cpu().detach()
+    clear = clear.cpu().detach()
 
         #plot the last crops chunk
     if args.plot_acts:
@@ -65,7 +67,7 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
     grads = torch.cat(grads).abs().mean()
     print("Grads average: ", grads.item())
 
-    return np.array([loss.mean().item()])
+    return np.array([loss.mean().item()]), dry_train
 
 def plot_test_panel(labels, res, fname):
     """
@@ -103,7 +105,6 @@ def test_epoch(args, epoch, test_data, model,
         float: dry inference time
     """
     print('[+] Testing')
-    start = tm()
     model.eval()
     loss = []
     res = [] #inference results
@@ -113,6 +114,7 @@ def test_epoch(args, epoch, test_data, model,
         psnr = []
         ssim = []
 
+    start = tm()
     for clear, noisy, norm in test_data:
         if warmup == 'roi':
             target = clear[:,1:2].to(args.device)
@@ -169,8 +171,13 @@ def train(args, train_data, test_data, model, warmup, labels):
     if args.load:
         if args.load_path is None:
             #resume a previous training from an epoch
-            fname = os.path.join(args.dir_timings, 'timings.npy')
-            time_all = list(np.load(fname))
+            #time train
+            fname = os.path.join(args.dir_timings, 'timings_train.npy')
+            time_train = list(np.load(fname))
+
+            #time test
+            fname = os.path.join(args.dir_timings, 'timings_test.npy')
+            time_test = list(np.load(fname))
 
             #loss_sum
             fname = os.path.join(args.dir_metrics, 'loss_sum.npy')
@@ -185,17 +192,18 @@ def train(args, train_data, test_data, model, warmup, labels):
             test_metrics = list(np.load(fname).T)
 
             fname = os.path.join(args.dir_saved_models,
-                args.model + f'_{warmup}_{args.load_epoch}.dat')
+                                 f'{args.model}_{warmup}_{args.load_epoch}.dat')
             epoch = args.load_epoch + 1
        
         else:
-            #load a trained roi to train new dn
+            #load a trained model
             fname = args.load_path
             epoch = 1
             loss_sum = []
             test_metrics = []
             test_epochs = []
-            time_all = []
+            time_train = []
+            time_test = []
 
         print(f'Loading model at {fname}')
         model.load_state_dict(torch.load(fname))
@@ -204,8 +212,8 @@ def train(args, train_data, test_data, model, warmup, labels):
         loss_sum = []
         test_metrics = []
         test_epochs = []
-        time_all = []
-
+        time_train = []
+        time_test = []
 
     best_loss = 1e10
     best_loss_std = 0
@@ -219,27 +227,28 @@ def train(args, train_data, test_data, model, warmup, labels):
     
     # start main loop
     while epoch <= args.epochs:
-        time_start = tm()
         # train
-        loss = train_epoch(args, epoch, train_data, model,
+        start = tm()
+        loss, t = train_epoch(args, epoch, train_data, model,
                           optimizer,warmup=warmup)
+        end = tm() - start
         loss_sum.append(loss)
-
-        time_end = tm()-time_start
-        time_all.append(time_end)
+        time_train.append(t)
 
         if epoch % args.epoch_log == 0 and (not args.scan):
-            print("Epoch: %d, Loss: %.5f, time: %.5f"%(epoch,
+            print("Epoch: %d, Loss: %.5f, epoch time: %.5f"%(epoch,
                                                       loss_sum[-1][0],
-                                                      time_end))
+                                                      end))
         # test
         if epoch % args.epoch_test == 0 and epoch>=args.epoch_test_start:
             print('test start ...')
             test_epochs.append(epoch)
             start = tm()
-            x, _, _ = test_epoch(args, epoch, test_data, model,
+            x, _, t = test_epoch(args, epoch, test_data, model,
                               warmup=warmup, labels=labels)
+            end = tm() - start
             test_metrics.append(x)
+            time_test.append(t)
             if not args.scan:
                 if warmup == 'roi':
                     print('Test loss: %.5f +- %.5f'%(x[0], x[1]))
@@ -249,7 +258,7 @@ def train(args, train_data, test_data, model, warmup, labels):
                            psnr: %.5f +- %.5f,\
                            mse: %.5e +- %.5e'%(x[0], x[1], x[2], x[3],
                                            x[4], x[5], x[6], x[7]))
-                print('Test time: %.4f\n'%(tm()-start))            
+                print('Test epoch time: %.4f\n'% end)            
 
             #save the model if it is the best one
             if test_metrics[-1][0] + test_metrics[-1][1] < best_loss:
@@ -291,8 +300,12 @@ def train(args, train_data, test_data, model, warmup, labels):
     fname = os.path.join(args.dir_metrics, 'test_metrics')
     np.save(fname, test_metrics)
 
-    #time all
-    fname = os.path.join(args.dir_timings, 'timings')
-    np.save(fname, time_all)
+    #time train
+    fname = os.path.join(args.dir_timings, 'timings_train')
+    np.save(fname, time_train)
+
+    #time test
+    fname = os.path.join(args.dir_timings, 'timings_test')
+    np.save(fname, time_test)
 
     return best_loss, best_loss_std, best_model_name
