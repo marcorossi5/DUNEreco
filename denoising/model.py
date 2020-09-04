@@ -243,7 +243,7 @@ def get_GCNNv2(args):
                 if warmup == 'roi':
                     loss = self.xent(out, clear_image[:,1:2])
                 if warmup == 'dn':
-                    loss = self.loss_fn(clear_image[:,:1], out)
+                    loss = self.loss_fn(out, clear_image[:,:1])
                 return loss, out.data
             return out.data
 

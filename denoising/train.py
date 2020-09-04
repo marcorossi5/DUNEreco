@@ -129,13 +129,13 @@ def test_epoch(args, epoch, test_data, model,
         dn = torch.cat(dn).unsqueeze(1)
         dn = recombine_img(dn, crops_shape, pad)
         if warmup == 'roi':
-            loss.append(model.xent(target,dn).cpu().item())
+            loss.append(model.xent(dn, target).cpu().item())
         if warmup == 'dn':
             dn = dn * (norm[1]-norm[0]) + norm[0]
-            loss.append((model.loss_fn(target,dn)).cpu().item())
-            ssim.append(1-loss_ssim()(target,dn).cpu().item())
-            mse.append(torch.nn.MSELoss()(target,dn).cpu().item())
-            psnr.append(compute_psnr(target,dn))
+            loss.append((model.loss_fn(dn, target)).cpu().item())
+            ssim.append(1-loss_ssim()(dn, target).cpu().item())
+            mse.append(torch.nn.MSELoss()(dn, target).cpu().item())
+            psnr.append(compute_psnr(dn, target))
         res.append(dn.cpu().detach())
     res = torch.cat(res)
     end = tm()
@@ -146,7 +146,7 @@ def test_epoch(args, epoch, test_data, model,
 
     if warmup == 'roi':
         #plot_test_panel(labels[0,0], (res[0,0] > args.t).long(),fname)
-        plot_test_panel(labels[0,0], res[0,0],fname)
+        plot_test_panel(labels[0,0, 550:700, 5500:], res[0,0, 550:700, 5500:],fname)
         #plot_ROI_stats(args,epoch,labels,res,args.t,ana)
         print('Confusion matrix time:', tm()-end)
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), res, dry_inf

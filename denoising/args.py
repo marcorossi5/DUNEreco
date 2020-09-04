@@ -22,7 +22,7 @@ class Args:
         self.scan = scan
 
         self.batch_size = batch_size
-        self.test_batch_size = batch_size
+        self.test_batch_size = batch_size*8
         self.num_workers = 8
 
         #model parameters
