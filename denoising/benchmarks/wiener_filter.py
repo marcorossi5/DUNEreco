@@ -1,9 +1,20 @@
 import os
 import numpy as np
+import time as tm
 from numpy.fft import fft2, ifft2
 from scipy.signal import gaussian, convolve2d
 import matplotlib.pyplot as plt
+import torch
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from denoising.losses import loss_mse, loss_ssim
+from utils.utils import compute_psnr
+
+PARSER = argparse.ArgumentParser()
+PARSER.add_argument("--device", "-d", default="0", type=str,
+                    help="gpu number")
+PARSER.add_argument("--kernel_size", "-k", default=3, type=int,
+                    help="size of the gaussian filter")
 
 def wiener_filter(img, kernel, K):
     kernel /= np.sum(kernel)
@@ -16,27 +27,19 @@ def wiener_filter(img, kernel, K):
     return dummy
 
 def gaussian_kernel(kernel_size = 3):
+    # parameters:
+    # kernel size is the filter size
+    # sigma of the gaussian (always zero mean)
     h = gaussian(kernel_size, kernel_size / 3).reshape(kernel_size, 1)
+    # make it a 2d filter
     h = np.dot(h, h.transpose())
+    # normalize
     h /= np.sum(h)
     return h
 
-
-if __name__ == '__main__':
-    # Load image and convert it to gray scale
-    file_name = os.path.join("../datasets/denoising/val", 'planes', 'collection_clear.npy') 
-    img = np.load(file_name)[0,0]
-
-    # Blur the image
-    file_name = os.path.join("../datasets/denoising/val", 'planes', 'collection_noisy.npy') 
-    noisy_img = np.load(file_name)[0,0]
-
-    # Apply Wiener Filter
-    kernel = gaussian_kernel(3)
-    filtered_img = wiener_filter(noisy_img, kernel, K = 10)
-
+def plot():
     fig = plt.figure()
-    gs = fig.add_gridspec(nrows=2, ncols=1, wspace=3)
+    gs = fig.add_gridspec(nrows=3, ncols=1, wspace=3)
 
     ax = fig.add_subplot(gs[0])
     ax.plot(img[10], lw=0.3)
@@ -53,7 +56,57 @@ if __name__ == '__main__':
     plt.savefig('wiener_filter.png', dpi=300, bbox_inches='tight')
     plt.close()
 
-    import torch
-    loss = torch.nn.MSELoss()
-    mse = loss(torch.Tensor(filtered_img-500), torch.Tensor(img))
-    print('MSE clear-wiener filtered: ', mse)
+
+def main(device, kernel_size):
+    # Load target images
+    file_name = os.path.join("../datasets/denoising/val", 'planes', 'collection_clear.npy') 
+    img = np.load(file_name)[0,0]
+
+    # Load noisy images
+    file_name = os.path.join("../datasets/denoising/val", 'planes', 'collection_noisy.npy') 
+    
+    # subtract the pedestal already
+    # pedestal = 500
+    noisy_img = np.load(file_name)[0,0] - 500
+
+    # Apply Wiener Filter
+    kernel = gaussian_kernel(kernel_size)
+    filtered_img = wiener_filter(noisy_img, kernel, K = 10)
+
+    img = torch.Tensor(img).to(device)
+    out_img = torch.Tensor(out_img).to(device)
+
+    ssim = []
+    mse = []
+    psnr = []
+
+    for i,j in zip(img, out_img):
+        ssim.append(1-loss_ssim()(img, out_img).cpu().item())
+        mse.append(loss_mse()(img, out_img).cpu().item())
+        psnr.append(compute_psnr(img, out_img))
+
+    ssim_mean = np.mean(ssim)
+    ssim_std = np.mean(ssim) / np.sqrt(len(ssim))
+
+    mse_mean = np.mean(mse)
+    mse_std = np.mean(mse) / np.sqrt(len(ssim))
+
+    psnr_mean = np.mean(psnr)
+    psnr_std = np.mean(psnr) / np.sqrt(len(ssim))
+
+    res = np.array([[ssim_mean, ssim_std],
+                    [mse_mean, mse_std],
+                    [psnr_mean, psnr_std]])
+    fname = f'denoising/benchmarks/results/wiener_{kernel_size}_metrics'
+    np.save(fname, res)
+
+
+if __name__ == '__main__':
+    ARGS = vars(PARSER.parse_args())
+    gpu = torch.cuda.is_available()
+    dev = f'cuda:{ARGS['device']}' if gpu else 'cpu'
+    ARGS['device'] = torch.device(dev)
+    START = tm.time()
+    main(**ARGS)
+    print('Program done in %f'%(tm.time()-START))
+    
