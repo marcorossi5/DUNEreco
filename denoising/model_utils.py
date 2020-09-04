@@ -199,14 +199,12 @@ def plot_crops(out_dir, imgs, name, sample):
     samples = imgs[sample]
     
     fname = os.path.join(out_dir, "_".join([name,"crops.png"]))
-    fig, axs = plt.subplots(5,6,figsize=(25,25))
+    fig, axs = plt.subplots(5,5,figsize=(25,25))
     for i in range(5):
         for j in range(5):
             ax = axs[i,j]
             z = ax.imshow(samples[i*5+j])
-    fig.colorbar(z, ax=axs[:,-1])
-    for ax in axs[:,-1]:
-        ax.axis('off')
+            fig.colorbar(z, ax=ax)
     plt.savefig(fname)
     plt.close()
     print("Saved image at %s"%fname)

@@ -124,7 +124,7 @@ def test_epoch(args, epoch, test_data, model,
         loader = torch.split(crops,args.test_batch_size)
         dn = []
         for chunk in loader:
-            answer = model(chunk.to(args.device)).data
+            answer = model(chunk.to(args.device), warmup=warmup).data
             dn.append(answer)
         dn = torch.cat(dn).unsqueeze(1)
         dn = recombine_img(dn, crops_shape, pad)
@@ -145,7 +145,7 @@ def test_epoch(args, epoch, test_data, model,
     fname = os.path.join(args.dir_testing, f'test_{warmup}_{epoch}')
 
     if warmup == 'roi':
-        #plot_test_panel(labels[0,0], (res[0,0] > args.t).long(),fname)
+        plot_test_panel(labels[0,0], (res[0,0] > args.t).long(),fname+'_threshold')
         plot_test_panel(labels[0,0, 550:700, 5500:], res[0,0, 550:700, 5500:],fname)
         #plot_ROI_stats(args,epoch,labels,res,args.t,ana)
         print('Confusion matrix time:', tm()-end)
