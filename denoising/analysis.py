@@ -1,8 +1,10 @@
+"""This module computes inference either for roi and dn, saves results and metrics"""
 import os
 import sys
 import argparse
 import numpy as np
 import torch
+from torch.utils.data import DataLoader
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import time as tm
@@ -26,22 +28,25 @@ from utils.utils import compute_psnr
 from utils.utils import get_freer_gpu
 from utils.utils import moving_average
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--dir_name", "-p", default="../datasets/denoising",
+PARSER = argparse.ArgumentParser()
+PARSER.add_argument("--dir_name", "-p", default="../datasets/denoising",
                     type=str, help='Directory path to datasets')
-parser.add_argument("--model", "-m", default="CNN", type=str,
+PARSER.add_argument("--model", "-m", default="CNN", type=str,
                     help="either CNN or GCNN")
-parser.add_argument("--device", "-d", default="0", type=str,
+PARSER.add_argument("--device", "-d", default="0", type=str,
                     help="-1 (automatic)/ -2 (cpu) / gpu number")
-parser.add_argument("--loss_fn", "-l", default="ssim", type=str,
+PARSER.add_argument("--loss_fn", "-l", default="ssim_l2", type=str,
                     help="mse, ssim, ssim_l1, ssim_l2")
-parser.add_argument("--out_name", default=None, type=str,
+PARSER.add_argument("--out_name", default=None, type=str,
                     help="Output directory")
+PARSER.add_argument("--warmup", default='dn', type=str,
+                    help="roi / dn")
 
 
 def inference(args, model, channel):
     """
-    This function tests the model against one kind of planes and plots
+    This function tests the model against
+    one kind of planes and plots
     planes, histograms, and wire signals
 
     Parameters:
@@ -54,15 +59,25 @@ def inference(args, model, channel):
     """
     #load dataset
     print('[+] Inference')
-    data = PlaneLoader(args, 'test', 'collection')
-    args.plot_acts = False
-    test_data = torch.utils.data.DataLoader(data,
-                                        num_workers=args.num_workers)
-    x, res = test_epoch(args, None, test_data, model, ana=True)
+    test_data = DataLoader(PlaneLoader(args, 'test', 'collection')
+                                       num_workers=args.num_workers)
 
-    clear = data.clear
-    noisy = data.noisy * (data.norm[1]-data.norm[0]) + data.norm[0]
+    metrics, res, t = test_epoch(args, None, test_data, model,
+                                 ana=True, warmup=args.warmup)
 
+    #save results for further testing
+    fname = os.path.join(args.dir_final_test, f'{args.warmup}_test_metrics')
+    np.save(fname, metrics)
+
+    fname = os.path.join(args.dir_final_test, f'{args.warmup}_test_res')
+    np.save(fname, res)
+
+    fname = os.path.join(args.dir_final_test, f'{args.warmup}_test_timings')
+    np.save(fname, t)
+
+    return metrics
+
+    '''
     diff = np.abs(res-clear)
 
     fname = os.path.join(args.dir_final_test, f'{channel}_residuals.png')
@@ -118,7 +133,10 @@ def inference(args, model, channel):
                wire)
 
     return x
+    '''
 
+
+'''
 def make_plots(args):
     fname = os.path.join(args.dir_metrics, 'loss_sum.npy')
     loss_sum = np.load(fname)
@@ -134,6 +152,7 @@ def make_plots(args):
 
     fname = os.path.join(args.dir_metrics, 'test_metrics.npy')
     test_metrics = np.load(fname)
+
 
     fname = os.path.join(args.dir_metrics, 'metrics.png')
     fig = plt.figure(figsize=(20,30))
@@ -216,6 +235,7 @@ def make_plots(args):
     plt.savefig(fname, bbox='tight')
     plt.close()
     print(f'Saved parameters at {fname}')
+'''
 
 def main(args):
     mpl.rcParams.update({'font.size': 22})
@@ -226,14 +246,17 @@ def main(args):
     model.eval()
 
     #loading model
-    fname = os.path.join(args.dir_final_test, 'best_model.txt')
-    with open(fname, 'r') as f:
-        lname = f.read().strip('\n')
-        f.close()
-    model.load_state_dict(torch.load(lname))
+    if args.load_path is not None:
+        fname = args.load_path
+    else:
+        bname = os.path.join(args.dir_final_test, 'best_model.txt')
+        with open(bname, 'r') as f:
+            bname = f.read().strip('\n')
+            f.close()
+    model.load_state_dict(torch.load(fname))
 
+    #make_plots(args)
     start = tm.time()
-    make_plots(args)
     metrics = inference(args, model,'collection')
 
     print('Final test time: %.4f\n'%(tm.time()-start))
@@ -246,7 +269,7 @@ def main(args):
     return metrics[0], metrics[1]
     
 if __name__ == '__main__':
-    args = vars(parser.parse_args())
+    args = vars(PARSER.parse_args())
     dev = 0
 
     if torch.cuda.is_available():
@@ -260,11 +283,10 @@ if __name__ == '__main__':
     else:
         dev = torch.device('cpu')
     args['device'] = dev
-    args['epochs'] = None
-    args['lr'] = None
     args['loss_fn'] = "_".join(["loss", args['loss_fn']])
     print('Working on device: {}\n'.format(args['device']))
     args = Args(**args)
+    assert args.warmup in ['roi', 'dn']
     start = tm.time()
     main(args)
     print('Program done in %f'%(tm.time()-start))

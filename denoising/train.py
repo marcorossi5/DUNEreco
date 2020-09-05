@@ -99,6 +99,10 @@ def test_epoch(args, epoch, test_data, model,
     Parameters:
         labels: np.array, all the targets in memory,
                 shape (N,C,w,h)
+        test_data: torch.utils.data.DataLoader, based on PlaneLoader
+        ana: bool, if inference test (True) or validation test (False)
+        warmup: str, either roi or dn
+        labels: torch.Tensor, target tensor
     Outputs:
         np.array: n metrics, shape (2*n)
         torch.Tensor: denoised data, shape (batch,C,W,H)
@@ -147,14 +151,16 @@ def test_epoch(args, epoch, test_data, model,
     fname = os.path.join(args.dir_testing, f'test_{warmup}_{epoch}')
 
     if warmup == 'roi':
-        plot_test_panel(labels[0,0], (res[0,0] > args.t).long(),fname+'_threshold')
-        plot_test_panel(labels[0,0, 550:700, 5500:], res[0,0, 550:700, 5500:],fname)
+        if not ana:
+            plot_test_panel(labels[0,0], (res[0,0] > args.t).long(),fname+'_threshold')
+            plot_test_panel(labels[0,0, 550:700, 5500:], res[0,0, 550:700, 5500:],fname)
         #plot_ROI_stats(args,epoch,labels,res,args.t,ana)
-        print('Confusion matrix time:', tm()-end)
+            print('Confusion matrix time:', tm()-end)
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), res, dry_inf
 
     if warmup == 'dn':
-        plot_test_panel(labels[0,0], res[0,0], fname)
+        if not ana:
+            plot_test_panel(labels[0,0], res[0,0], fname)
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
                 np.mean(ssim), np.std(ssim)/np.sqrt(n),
                 np.mean(psnr), np.std(psnr)/np.sqrt(n),

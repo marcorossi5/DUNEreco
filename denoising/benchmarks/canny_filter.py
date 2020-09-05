@@ -1,3 +1,4 @@
+""" This module computes the Canny filter for planes in the test set"""
 import os
 import argparse
 import numpy as np

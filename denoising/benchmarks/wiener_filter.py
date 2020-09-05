@@ -1,4 +1,4 @@
-""" This model computes the Wiener filter for planes in the test set"""
+""" This module computes the Wiener filter for planes in the test set"""
 import sys
 import os
 import argparse
