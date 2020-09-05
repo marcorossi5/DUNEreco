@@ -41,6 +41,8 @@ PARSER.add_argument("--out_name", default=None, type=str,
                     help="Output directory")
 PARSER.add_argument("--warmup", default='dn', type=str,
                     help="roi / dn")
+PARSER.add_argument("--load_path", default=None, type=str,
+                    help="torch .dat file to load the model")
 
 
 def inference(args, model, channel):
@@ -48,7 +50,6 @@ def inference(args, model, channel):
     This function tests the model against
     one kind of planes and plots
     planes, histograms, and wire signals
-
     Parameters:
         args: Args object
         model: nn.Module object
@@ -59,7 +60,7 @@ def inference(args, model, channel):
     """
     #load dataset
     print('[+] Inference')
-    test_data = DataLoader(PlaneLoader(args, 'test', 'collection')
+    test_data = DataLoader(PlaneLoader(args, 'test', 'collection'),
                                        num_workers=args.num_workers)
 
     metrics, res, t = test_epoch(args, None, test_data, model,
@@ -68,12 +69,16 @@ def inference(args, model, channel):
     #save results for further testing
     fname = os.path.join(args.dir_final_test, f'{args.warmup}_test_metrics')
     np.save(fname, metrics)
+    print('Inference metrics saved at:', fname)
 
     fname = os.path.join(args.dir_final_test, f'{args.warmup}_test_res')
     np.save(fname, res)
+    print('Inference results saved at:', fname)
 
     fname = os.path.join(args.dir_final_test, f'{args.warmup}_test_timings')
     np.save(fname, t)
+    print('Inference timings saved at:', fname)
+
 
     return metrics
 
@@ -261,10 +266,13 @@ def main(args):
 
     print('Final test time: %.4f\n'%(tm.time()-start))
 
-    print('Final test loss: %.5f +/- %.5f'%(metrics[0], metrics[1]))
-    print('Final test ssim: %.5f +/- %.5f'%(metrics[2], metrics[3]))
-    print('Final test psnr: %.5f +/- %.5f'%(metrics[4], metrics[5]))
-    print('Final test mse: %.5f +/- %.5f'%(metrics[6], metrics[7]))
+    if args.warmup == 'roi':
+            print('Final test loss: %.5f +/- %.5f'%(metrics[0], metrics[1]))
+	
+    else:
+        print('Final test ssim: %.5f +/- %.5f'%(metrics[2], metrics[3]))
+        print('Final test psnr: %.5f +/- %.5f'%(metrics[4], metrics[5]))
+        print('Final test mse: %.5f +/- %.5f'%(metrics[6], metrics[7]))
 
     return metrics[0], metrics[1]
     
@@ -283,6 +291,7 @@ if __name__ == '__main__':
     else:
         dev = torch.device('cpu')
     args['device'] = dev
+    args['epochs'] = None
     args['loss_fn'] = "_".join(["loss", args['loss_fn']])
     print('Working on device: {}\n'.format(args['device']))
     args = Args(**args)

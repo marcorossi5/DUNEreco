@@ -5,7 +5,7 @@ class Args:
     def __init__(self, dir_name, epochs, model,\
                  device, loss_fn, lr=0.009032117010326078, amsgrad=True,\
                  out_name=None, scan=False, batch_size=256,\
-                 load_path=None, warmup='dn'):
+                 load_path=None, warmup=None):
         self.crop_size = (32,32)
         self.crop_p = 0.99
         self.dev_ids = None
@@ -13,8 +13,6 @@ class Args:
         #argparser
         self.dataset_dir = dir_name
         self.epochs = epochs
-        self.warmup_roi_epochs = 10
-        self.warmup_dn_epochs = 20
         self.model = model
         self.warmup = warmup
         self.device = device
@@ -22,7 +20,8 @@ class Args:
         self.scan = scan
 
         self.batch_size = batch_size
-        self.test_batch_size = batch_size*4 if 'GCNN' in model else batch_size*8
+        self.val_batch_size = batch_size*4 if 'GCNN' in model else batch_size*8
+        self.test_batch_size = batch_size*2 if 'GCNN' in model else batch_size*4
         self.num_workers = 8
 
         #model parameters

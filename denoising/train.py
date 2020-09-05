@@ -117,7 +117,7 @@ def test_epoch(args, epoch, test_data, model,
         mse = []
         psnr = []
         ssim = []
-
+    batch_size = args.test_batch_size if ana else args.val_batch_size
     start = tm()
     for clear, noisy, norm in test_data:
         if warmup == 'roi':
@@ -127,7 +127,7 @@ def test_epoch(args, epoch, test_data, model,
         noisy = noisy.to(args.device)
         norm = norm[0].to(args.device)
         crops, crops_shape, pad = split_img(noisy,model.patch_size)
-        loader = torch.split(crops,args.test_batch_size)
+        loader = torch.split(crops,batch_size)
         dn = []
         for chunk in loader:
             answer = model(chunk.to(args.device), warmup=warmup).data
