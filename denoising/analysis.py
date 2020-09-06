@@ -21,8 +21,6 @@ from train import test_epoch
 
 import ssim
 
-
-
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import compute_psnr
 from utils.utils import get_freer_gpu

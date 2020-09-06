@@ -97,14 +97,14 @@ def main(device, kernel_size):
     ssim_std = np.mean(ssim) / np.sqrt(len(ssim))
 
     mse_mean = np.mean(mse)
-    mse_std = np.mean(mse) / np.sqrt(len(ssim))
+    mse_std = np.mean(mse) / np.sqrt(len(mse))
 
     psnr_mean = np.mean(psnr)
-    psnr_std = np.mean(psnr) / np.sqrt(len(ssim))
+    psnr_std = np.mean(psnr) / np.sqrt(len(psnr))
 
     res = np.array([[ssim_mean, ssim_std],
-                    [mse_mean, mse_std],
-                    [psnr_mean, psnr_std]])
+                    [psnr_mean, psnr_std],
+                    [mse_mean, mse_std]])
     fname = f'./denoising/benchmarks/results/wiener_{kernel_size}_metrics'
     np.save(fname, res)
 
