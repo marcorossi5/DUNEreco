@@ -1,4 +1,4 @@
-""" This module computes the Wiener filter for planes in the test set"""
+""" This module compare results on test set of DN against Wiener filters"""
 import sys
 import os
 import argparse
@@ -64,7 +64,6 @@ def metrics_plots():
 
     lang = [x[0] for x in Dsort]
 
-
     dir_name = 'denoising/benchmarks/plots/'
     fname = dir_name + 'dn_wiener_ssim.pdf'
     use  = [x[1] for x in Dsort]
@@ -75,8 +74,6 @@ def metrics_plots():
     use  = [x[3] for x in Dsort]
     err = [x[4] for x in Dsort]
     bar_plot(lang, use, err, fname, r'pSNR')
-    print(use)
-    print(err)
 
     fname = dir_name + 'dn_wiener_mse.pdf'
     use  = [x[5] for x in Dsort]

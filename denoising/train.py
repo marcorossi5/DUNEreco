@@ -10,7 +10,7 @@ from model_utils import MyDataParallel
 from model_utils import split_img
 from model_utils import recombine_img
 from model_utils import plot_crops
-from model_utils import plot_ROI_stats
+from model_utils import save_ROI_stats
 from model_utils import weight_scan
 
 from losses import loss_ssim
@@ -154,7 +154,8 @@ def test_epoch(args, epoch, test_data, model,
         if not ana:
             plot_test_panel(labels[0,0], (res[0,0] > args.t).long(),fname+'_threshold')
             plot_test_panel(labels[0,0, 550:700, 5500:], res[0,0, 550:700, 5500:],fname)
-        #plot_ROI_stats(args,epoch,labels,res,args.t,ana)
+        if ana:
+            save_ROI_stats(args,epoch,labels,res,args.t,ana)
             print('Confusion matrix time:', tm()-end)
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), res, dry_inf
 

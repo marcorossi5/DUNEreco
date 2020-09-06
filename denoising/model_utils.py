@@ -264,7 +264,7 @@ def print_cm(a, f, epoch):
     print("                     ---------------------------\n\n", file=f)
 
 
-def plot_ROI_stats(args,epoch,clear,dn,t,ana=False):
+def save_ROI_stats(args,epoch,clear,dn,t,ana=False):
     """
     Plot stats of the ROI:
     Confusion matrix and histogram of the classifier's scores
@@ -273,7 +273,7 @@ def plot_ROI_stats(args,epoch,clear,dn,t,ana=False):
         clear: targets, torch.Tensor of shape (N,C,w,h) 
         t: threshold, float in [0,1]      
     """
-    mpl.rcParams.update(mpl.rcParamsDefault)
+    #mpl.rcParams.update(mpl.rcParamsDefault)
     y_true = clear.detach().cpu().numpy().flatten().astype(int)
     y_pred = dn.detach().cpu().numpy().flatten()
     cm = confusion_matrix(y_true, y_pred>t)
@@ -282,61 +282,6 @@ def plot_ROI_stats(args,epoch,clear,dn,t,ana=False):
         print_cm(cm, f, epoch)
         f.close()
     print(f'Updated confusion matrix file at {fname}')
-
-    fname = os.path.join(args.dir_testing, f'scores_epoch{epoch}.png')
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    mask = y_true.astype(bool)
-    ax.hist(y_pred[mask],100,range=(0,1), histtype='step', label='hit')
-    ax.hist(y_pred[~mask],100,range=(0,1), histtype='step', label='no hit')
-    ax.legend()
-    ax.set_yscale('log')
-    plt.savefig(fname, bbox='tight',dpi=300)
-    plt.close()
-    print(f'Saved plot at {fname}')
-
-    if ana:
-        tpr = []
-        fpr = []
-
-        #don't compute t==0 or t==1 which are trivial
-        for i in np.linspace(0,1,10)[-2:0:-1]:
-            cm = confusion_matrix(y_true, y_pred>i)
-            fpr.append(cm[0,1]/(cm[0,1]+cm[0,0]))
-            tpr.append(cm[1,1]/(cm[1,1]+cm[1,0]))            
-
-        fpr = np.array(fpr)
-        tpr = np.array(tpr)
-
-        m_x = fpr.min()
-        m_y = tpr.min()
-
-        fpr = np.concatenate([[0.],fpr,[1.]],0)
-        tpr = np.concatenate([[0.],tpr,[1.]],0)
-
-        AUC = ((fpr[1:] - fpr[:-1])*tpr[1:]).sum()
-        print(fpr)
-        print(tpr)
-
-        fname = os.path.join(args.dir_testing, f'ROC.png')
-        fig = plt.figure()
-        fig.suptitle('ROC curve')
-        ax = fig.add_subplot(111)
-        mask = y_true.astype(bool)
-        ax.title.set_text(f'AUC = {AUC}')
-        ax.set_ylabel('TPR')
-        ax.set_xlabel('FPR')
-        ax.set_xlim(m_x)
-        ax.set_ylim(m_y)
-        ax.step(fpr,tpr)
-        ax.plot([0, 1], [0,1], 'k--', linewidth=0.3)
-
-        #ax.set_yscale('log')
-        ax.set_xscale('log')
-        plt.savefig(fname, bbox='tight',dpi=300)
-        plt.close()
-        print(f'Saved plot at {fname}')
-        mpl.rcParams.update({'font.size': 22})
 
 def weight_scan(module):
     """

@@ -56,16 +56,16 @@ def training_timings(warmup):
     fname = dir_name_gc + 'timings_test.npy'
     timings_val_gc = np.load(fname)
 
-    print('Mean training times cnn: ', timings_train.mean())
-    print('Mean training times gcnn: ', timings_train_gc.mean())
-    print('Mean validation times cnn: ', timings_val.mean())
-    print('Mean validation times gcnn: ', timings_val_gc.mean())
+    #print('Mean training times cnn: ', timings_train.mean())
+    #print('Mean training times gcnn: ', timings_train_gc.mean())
+    #print('Mean validation times cnn: ', timings_val.mean())
+    #print('Mean validation times gcnn: ', timings_val_gc.mean())
 
     return ([timings_train, timings_train_gc],
             [timings_val, timings_val_gc])
 
 def set_ticks(ax, axis, start=None, end=None,
-              num_maj=None, div=5, d=0, p=False):
+              num_maj=None, div=5, d=0):
     """
     Set both major and minor axes ticks in the logarithmical scale
     Parameters:
@@ -87,10 +87,6 @@ def set_ticks(ax, axis, start=None, end=None,
     labels = list(map(format_func, ticks))
     num_min = (num_maj -1)*div + 1 
     ticks_min = [i*rng/(num_min-1) + start for i in range(num_min)]
-    if p:
-        print(ticks)
-        print(labels)
-        print(ticks_min)
 
     if axis == 'x':
         ax.xaxis.set_major_locator(mpl.ticker.FixedLocator(ticks))
@@ -119,14 +115,6 @@ def special_ticks(ax, start, end, ticks):
 
 
 def training_plots():
-    mpl.rcParams['text.usetex'] = True
-    mpl.rcParams['savefig.format'] = 'pdf'
-    mpl.rcParams['figure.titlesize'] = 20
-    mpl.rcParams['axes.titlesize'] = 17
-    mpl.rcParams['ytick.labelsize'] = 14
-    mpl.rcParams['xtick.labelsize'] = 14
-    mpl.rcParams['legend.fontsize'] = 14
-
     loss, val_epochs, val_metrics = training_metrics('roi')
     
     epochs = [i for i in range(len(loss[0]))]
@@ -169,7 +157,7 @@ def training_plots():
                    right=True, labelright=True,
                    left=True, labelleft=False)
 
-    plt.savefig(f'denoising/benchmarks/results/training_loss_roi.pdf',
+    plt.savefig(f'denoising/benchmarks/plots/training_loss_roi.pdf',
                 bbox_inches='tight', dpi=250)
     plt.close()
 
@@ -243,16 +231,136 @@ def training_plots():
                    right=True, labelright=True,
                    left=True, labelleft=False)
 
-    plt.savefig(f'denoising/benchmarks/results/timings_roi.pdf',
+    plt.savefig(f'denoising/benchmarks/plots/timings_roi.pdf',
                 bbox_inches='tight', dpi=250)
     plt.close()
 
 
+def testing_res():
+    fname = '../datasets/denoising/test/planes/collection_clear.npy'
+    y_true = np.load(fname).flatten()
+
+    dir_name = './denoising/output/CNN_dn_final/final_test/'
+    fname = dir_name + 'roi_test_res.npy'
+    y_pred = np.load(fname).flatten()
+
+    dir_name = './denoising/output/GCNN_dn_final/final_test/'
+    fname = dir_name + 'roi_test_res.npy'
+    y_pred_gc = np.load(fname).flatten()
+
+    return [y_true, y_pred, y_pred_gc]
+
+def confusion_matrix(hit, no_hit, t):
+    """
+    Parameters:
+        hit: np.array, scores of real hits
+        no_hit: np.array, scores of real no-hits
+        t: float, threshold
+    Returns:
+        tp, fp, fn, tn
+    """
+    tp = np.count_nonzero(hit > t)
+    fn = np.size(hit) - tp
+
+    tn = np.count_nonzero(no_hit < t)
+    fp = np.size(no_hit) - tn
+    
+    return tp, fp, fn, tn
+
+def compute_roc(hit, no_hit):
+    fpr = []
+    tpr = []
+
+    #don't compute t==0 or t==1 which are trivial
+    for t in range(19,0,-1):
+        tp, fp, fn, tn = confusion_matrix(hit, no_hit, t/20)
+        fpr.append(fp/(tn + fp))
+        tpr.append(tp/(tp + fn))          
+
+    fpr = np.array(fpr)
+    tpr = np.array(tpr)
+
+    fpr = np.concatenate([[0.],fpr,[1.]],0)
+    tpr = np.concatenate([[0.],tpr,[1.]],0)
+
+    auc = ((fpr[1:] - fpr[:-1])*tpr[1:]).sum()
+
+    return fpr, tpr, auc
+
+
 def testing_plots():
-    pass
+    y = testing_res()
+    mask = y[0].astype(bool)
+    hit = y[1][mask]
+    no_hit = y[1][~mask]
+
+    hit_gc = y[2][mask]
+    no_hit_gc = y[2][~mask]
+
+    fig = plt.figure()
+    fig.suptitle('Final evaluation')   
+    ax = fig.add_subplot()
+    ax.set_xlabel('NN score')
+    ax.hist(hit,100,range=(0,1), histtype='step',
+            label='cnn hit', color='r')
+    ax.hist(no_hit,100,range=(0,1), histtype='step',
+            label='cnn no-hit', color='g')
+    ax.hist(hit_gc,100,range=(0,1), histtype='step',
+            label='gcnn hit', color='r', linestyle='--')
+    ax.hist(no_hit_gc,100,range=(0,1), histtype='step',
+            label='gcnn no-hit', color='g', linestyle='--')
+    ax.legend(frameon=False, ncol=2)
+    ax.set_yscale('log')
+    ax.tick_params(axis='x', which='both', direction='in',
+                   top=True, labeltop=False,
+                   bottom=True, labelbottom=True)
+    ax.tick_params(axis='y', which='both', direction='in',
+                   right=True, labelright=False,
+                   left=True, labelleft=True)
+    plt.savefig('denoising/benchmarks/plots/scores_roi_test.pdf',
+                bbox='tight',dpi=300)
+    plt.close()
+
+    fpr, tpr, auc = compute_roc(hit, no_hit)
+    fpr_gc, tpr_gc, auc_gc = compute_roc(hit_gc, no_hit_gc)
+
+    fig = plt.figure()
+    fig.suptitle('Final evaluation: ROC curve')
+    ax = fig.add_subplot()
+    ax.set_xlabel('False Positive ratio')
+    ax.set_ylabel('Sensitivity')
+    ax.plot(fpr, tpr, label='cnn, AUC=%.4f'%auc, color='#ff7f0e')
+    ax.plot(fpr_gc, tpr_gc, label='gcnn, AUC=%.4f'%auc_gc, color='b')
+    n = [i/20 for i in range(21)]
+    ax.plot(n,n, lw=0.8, linestyle='--', color='grey', alpha=0.4)
+    ax.legend(frameon=False)
+    ax.set_xlim([0,1])
+    ax.set_ylim([0,1])
+    ax = set_ticks(ax,'x', 0, 1, 6, div=4, d=1)
+    ax = set_ticks(ax,'y', 0, 1, 6, div=4, d=1)    
+    ax.tick_params(axis='x', which='both', direction='in',
+                   top=True, labeltop=False,
+                   bottom=True, labelbottom=True)
+    ax.tick_params(axis='y', which='both', direction='in',
+                   right=True, labelright=False,
+                   left=True, labelleft=True)
+    plt.savefig('denoising/benchmarks/plots/roc_roi_test.pdf',
+                bbox='tight',dpi=300)
+    plt.close()
+
+    print('AUC cnn', auc)
+    print('AUC gcnn', auc_gc)
 
 
 def main():
+    mpl.rcParams['text.usetex'] = True
+    mpl.rcParams['savefig.format'] = 'pdf'
+    mpl.rcParams['figure.titlesize'] = 20
+    mpl.rcParams['axes.titlesize'] = 17
+    mpl.rcParams['ytick.labelsize'] = 14
+    mpl.rcParams['xtick.labelsize'] = 14
+    mpl.rcParams['legend.fontsize'] = 14
+    
     training_plots()
 
     testing_plots()

@@ -13,15 +13,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 def training_plots():
-    mpl.rcParams['text.usetex'] = True
-    mpl.rcParams['savefig.format'] = 'pdf'
-    #mpl.rcParams['figure.figsize'] = [11,5.5]
-    mpl.rcParams['figure.titlesize'] = 20
-    mpl.rcParams['axes.titlesize'] = 17
-    mpl.rcParams['ytick.labelsize'] = 14
-    mpl.rcParams['xtick.labelsize'] = 14
-    mpl.rcParams['legend.fontsize'] = 14
-
     loss, val_epochs, val_metrics = training_metrics('dn')
     epochs = [i for i in range(len(loss[0]))]
 
@@ -63,7 +54,7 @@ def training_plots():
                    right=True, labelright=True,
                    left=True, labelleft=False)
 
-    plt.savefig(f'denoising/benchmarks/results/training_loss_dn.pdf',
+    plt.savefig(f'denoising/benchmarks/plots/training_loss_dn.pdf',
                 bbox_inches='tight', dpi=250)
     plt.close()
 
@@ -125,7 +116,7 @@ def training_plots():
     ax.tick_params(axis='y', which='both', direction='in',
                    right=True, labelright=False,
                    left=True, labelleft=True)
-    plt.savefig(f'denoising/benchmarks/results/training_metrics_dn.pdf',
+    plt.savefig(f'denoising/benchmarks/plots/training_metrics_dn.pdf',
                 bbox_inches='tight', dpi=250)
     plt.close()
 
@@ -200,16 +191,24 @@ def training_plots():
                    right=True, labelright=True,
                    left=True, labelleft=False)
 
-    plt.savefig(f'denoising/benchmarks/results/timings_dn.pdf',
+    plt.savefig(f'denoising/benchmarks/plots/timings_dn.pdf',
                 bbox_inches='tight', dpi=250)
     plt.close()
 
 
 def testing_plots():
-    pass
+    pass    
 
 
 def main():
+    mpl.rcParams['text.usetex'] = True
+    mpl.rcParams['savefig.format'] = 'pdf'
+    #mpl.rcParams['figure.figsize'] = [11,5.5]
+    mpl.rcParams['figure.titlesize'] = 20
+    mpl.rcParams['axes.titlesize'] = 17
+    mpl.rcParams['ytick.labelsize'] = 14
+    mpl.rcParams['xtick.labelsize'] = 14
+    mpl.rcParams['legend.fontsize'] = 14
     training_plots()
 
     testing_plots()
