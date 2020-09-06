@@ -23,9 +23,6 @@ def training_metrics(warmup):
 
     fname = dir_name + 'test_metrics.npy'    
     val_metrics = np.load(fname)
-    # shape (8, val_epochs)
-    # couples of mean values and uncertainties of:
-    # loss (ssim + l2), ssim, pSNR, MSE
 
     fname = dir_name_gc + 'loss_sum.npy' 
     loss_gc = np.load(fname)[0]
@@ -59,6 +56,11 @@ def training_timings(warmup):
     fname = dir_name_gc + 'timings_test.npy'
     timings_val_gc = np.load(fname)
 
+    print('Mean training times cnn: ', timings_train.mean())
+    print('Mean training times gcnn: ', timings_train_gc.mean())
+    print('Mean validation times cnn: ', timings_val.mean())
+    print('Mean validation times gcnn: ', timings_val_gc.mean())
+
     return ([timings_train, timings_train_gc],
             [timings_val, timings_val_gc])
 
@@ -78,7 +80,11 @@ def set_ticks(ax, axis, start=None, end=None,
     #to divide each in 5 parts: num_min = (num_maj - 1)*5 -1
     rng = end - start
     ticks = [i*rng/(num_maj-1) + start for i in range(num_maj)]
-    labels = list(map(lambda x: r'$%s$'%format(x, f'.{d}f'), ticks))
+    def format_func(x):
+        if x == 0:
+            return r'$0$'
+        return r'$%s$'%format(x, f'.{d}f')
+    labels = list(map(format_func, ticks))
     num_min = (num_maj -1)*div + 1 
     ticks_min = [i*rng/(num_min-1) + start for i in range(num_min)]
     if p:
@@ -99,14 +105,26 @@ def set_ticks(ax, axis, start=None, end=None,
     ax.yaxis.set_minor_formatter(mpl.ticker.NullFormatter())
     return ax
 
+def special_ticks(ax, start, end, ticks):
+    rng = end - start
+    ticks = ticks
+    labels = list(map(lambda x:r'$%.0f$'%x, ticks))
+    ticks_min = [i for i in range(start,end + 1,5)]
+
+    ax.xaxis.set_major_locator(mpl.ticker.FixedLocator(ticks))
+    ax.xaxis.set_major_formatter(mpl.ticker.FixedFormatter(labels))
+    ax.xaxis.set_minor_locator(mpl.ticker.FixedLocator(ticks_min))
+    ax.xaxis.set_minor_formatter(mpl.ticker.NullFormatter())
+    return ax
+
 
 def training_plots():
     mpl.rcParams['text.usetex'] = True
     mpl.rcParams['savefig.format'] = 'pdf'
     mpl.rcParams['figure.titlesize'] = 20
     mpl.rcParams['axes.titlesize'] = 17
-    mpl.rcParams['ytick.labelsize'] = 17
-    mpl.rcParams['xtick.labelsize'] = 17
+    mpl.rcParams['ytick.labelsize'] = 14
+    mpl.rcParams['xtick.labelsize'] = 14
     mpl.rcParams['legend.fontsize'] = 14
 
     loss, val_epochs, val_metrics = training_metrics('roi')
@@ -119,7 +137,7 @@ def training_plots():
     gs = fig.add_gridspec(nrows=1, ncols=2, wspace=0.2)
     ax = fig.add_subplot(gs[0])
     ax.set_title('Training')
-    ax.set_ylabel(r'Loss: $SSIM + MSE$')
+    ax.set_ylabel(r'Binary Cross Entropy')
     ax.plot(epochs, loss[0], label='cnn', color='#ff7f0e')
     ax.plot(epochs, loss[1], label='gcnn', color='b')
     ax.set_xlim([0,100])
@@ -132,7 +150,7 @@ def training_plots():
     ax.tick_params(axis='y', which='both', direction='in',
                    right=True, labelright=False,
                    left=True, labelleft=True)
-    ax.legend(frameon=False)
+    ax.legend(frameon=False, loc='upper right', bbox_to_anchor=(0.65,1.02))
 
     ax = fig.add_subplot(gs[1])
     ax.set_title('Validation')
@@ -161,49 +179,63 @@ def training_plots():
 
     fig = plt.figure()
     fig.suptitle('Timings')
-    gs = fig.add_gridspec(nrows=1, ncols=2, wspace=0.2)
+    gs = fig.add_gridspec(nrows=4, ncols=2, wspace=0.2, hspace=0.2)
 
-    ax = fig.add_subplot(gs[0])
+    ax = fig.add_subplot(gs[:3,0])
     ax.set_title('Training')
     ax.set_ylabel('Time [s]')
-    ax.set_xlabel('Epoch')
-    ax.plot(epochs, timings_train[0], label='cnn', color='#ff7f0e')
-    ax.plot(epochs, timings_train[1], label='gcnn', color='b')
+    ax.plot(epochs, timings_train[0]/94, label='cnn', color='#ff7f0e')
+    ax.plot(epochs, timings_train[1]/94, label='gcnn', color='b')
     ax.set_xlim([0,100])
-
     ax = set_ticks(ax,'x', 0, 100, 6)
-    ax.set_ylim([0,100])
-    ax = set_ticks(ax,'y', 0, 100, 6)
+    ax.set_ylim([0,1])
+    ax = set_ticks(ax,'y', 0, 1, 6, div=4 , d=1)
+    ax.tick_params(axis='x', which='both', direction='in',
+                   top=True, labeltop=False,
+                   bottom=True, labelbottom=False)
+    ax.tick_params(axis='y', which='both', direction='in',
+                   right=True, labelright=False,
+                   left=True, labelleft=True)
+    ax.legend(frameon=False)
+
+    ax = fig.add_subplot(gs[3,0])
+    ax.set_ylabel('Ratio')
+    ax.set_xlabel('Epoch')
+    ax.plot(epochs, timings_train[1]/timings_train[0])
+    ax.set_xlim([0,100])
+    ax = set_ticks(ax,'x', 0, 100, 6)
+    ax.set_ylim([2,6])
+    ax = set_ticks(ax,'y', 2, 6, 3, div=4)
     ax.tick_params(axis='x', which='both', direction='in',
                    top=True, labeltop=False,
                    bottom=True, labelbottom=True)
     ax.tick_params(axis='y', which='both', direction='in',
                    right=True, labelright=False,
                    left=True, labelleft=True)
-    ax.legend(frameon=False)
-
-    ax = fig.add_subplot(gs[1])
+    ax = fig.add_subplot(gs[:3, 1])
     ax.set_title('Validation')
-    ax.set_xlabel('Epoch')
-    ax.plot(val_epochs[0], timings_val[0], label='cnn',
+    ax.plot(val_epochs[0], timings_val[0]/136, label='cnn',
             color='#ff7f0e', linestyle='--')
-
-    ax.plot(val_epochs[1], timings_val[1], label='gcnn',
+    ax.plot(val_epochs[1], timings_val[1]/272, label='gcnn',
             color='b', linestyle='--')
     ax.set_xlim([5,100])
-    ax.set_ylim([0,80])
-    ax = set_ticks(ax,'y', 0, 80, 5)
+    ax = special_ticks(ax, 5, 100, [5,25,50,75,100])
+    ax.set_ylim([0,0.5])
+    ax = set_ticks(ax,'y', 0, 0.5, 6, div=4, d=1)
+    ax.tick_params(axis='x', which='both', direction='in',
+                   top=True, labeltop=False,
+                   bottom=True, labelbottom=False)
+    ax.tick_params(axis='y', which='both', direction='in',
+                   right=True, labelright=True,
+                   left=True, labelleft=False)
 
-    rng = 95
-    ticks = [5,35,65,95]
-    labels = list(map(lambda x:r'$%.0f$'%x, ticks))
-    ticks_min = [i for i in range(5,101,5)]
-
-    ax.xaxis.set_major_locator(mpl.ticker.FixedLocator(ticks))
-    ax.xaxis.set_major_formatter(mpl.ticker.FixedFormatter(labels))
-    ax.xaxis.set_minor_locator(mpl.ticker.FixedLocator(ticks_min))
-    ax.xaxis.set_minor_formatter(mpl.ticker.NullFormatter())
-
+    ax = fig.add_subplot(gs[3, 1])
+    ax.set_xlabel('Epoch')
+    ax.plot(val_epochs[0], timings_val[1]/timings_val[0]/2, linestyle='--')
+    ax.set_xlim([5,100])
+    ax = special_ticks(ax, 5, 100, [5,25,50,75,100])
+    ax.set_ylim([6.5,7.5])
+    ax = set_ticks(ax,'y', 6.5, 7.5, 3, div=4, d=1)
     ax.tick_params(axis='x', which='both', direction='in',
                    top=True, labeltop=False,
                    bottom=True, labelbottom=True)

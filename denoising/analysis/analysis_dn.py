@@ -6,7 +6,8 @@ import numpy as np
 import time as tm
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from analysis_roi import set_ticks, training_metrics, training_timings
+from analysis_roi import set_ticks, training_metrics,\
+                         training_timings, special_ticks
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -17,8 +18,8 @@ def training_plots():
     #mpl.rcParams['figure.figsize'] = [11,5.5]
     mpl.rcParams['figure.titlesize'] = 20
     mpl.rcParams['axes.titlesize'] = 17
-    mpl.rcParams['ytick.labelsize'] = 17
-    mpl.rcParams['xtick.labelsize'] = 17
+    mpl.rcParams['ytick.labelsize'] = 14
+    mpl.rcParams['xtick.labelsize'] = 14
     mpl.rcParams['legend.fontsize'] = 14
 
     loss, val_epochs, val_metrics = training_metrics('dn')
@@ -30,7 +31,7 @@ def training_plots():
     gs = fig.add_gridspec(nrows=1, ncols=2, wspace=0.2)
     ax = fig.add_subplot(gs[0])
     ax.set_title('Training')
-    ax.set_ylabel(r'Loss: $SSIM + MSE$')
+    ax.set_ylabel(r'$(1-$ SSIM$)$ + MSE')
     ax.plot(epochs, loss[0], label='cnn', color='#ff7f0e')
     ax.plot(epochs, loss[1], label='gcnn', color='b')
     ax.set_xlim([0,50])
@@ -134,48 +135,64 @@ def training_plots():
 
     fig = plt.figure()
     fig.suptitle('Timings')
-    gs = fig.add_gridspec(nrows=1, ncols=2, wspace=0.2)
+    gs = fig.add_gridspec(nrows=4, ncols=2, wspace=0.2, hspace=0.2)
 
-    ax = fig.add_subplot(gs[0])
+    ax = fig.add_subplot(gs[:3,0])
     ax.set_title('Training')
-    ax.set_ylabel('Time [s]')
-    ax.set_xlabel('Epoch')
-    ax.plot(epochs, timings_train[0], label='cnn', color='#ff7f0e')
-    ax.plot(epochs, timings_train[1], label='gcnn', color='b')
+    ax.set_ylabel('Time  per batch [s]')
+    ax.plot(epochs, timings_train[0]/94, label='cnn', color='#ff7f0e')
+    ax.plot(epochs, timings_train[1]/94, label='gcnn', color='b')
     ax.set_xlim([0,50])
     ax = set_ticks(ax,'x', 0, 50, 6)
-    ax.set_ylim([0,350])
-    ax = set_ticks(ax,'y', 0, 350, 8)
+    ax.set_ylim([0,4])
+    ax = set_ticks(ax,'y', 0, 4, 5)
+    ax.tick_params(axis='x', which='both', direction='in',
+                   top=True, labeltop=False,
+                   bottom=True, labelbottom=False)
+    ax.tick_params(axis='y', which='both', direction='in',
+                   right=True, labelright=False,
+                   left=True, labelleft=True)
+    ax.legend(frameon=False)
+
+    ax = fig.add_subplot(gs[3,0])
+    ax.set_ylabel('Ratio')
+    ax.set_xlabel('Epoch')
+    ax.plot(epochs, timings_train[1]/timings_train[0])
+    ax.set_xlim([0,50])
+    ax = set_ticks(ax,'x', 0, 50, 6)
+    ax.set_ylim([3.5,5.5])
+    ax = set_ticks(ax,'y', 3.5, 5.5, 3, d=1)
     ax.tick_params(axis='x', which='both', direction='in',
                    top=True, labeltop=False,
                    bottom=True, labelbottom=True)
     ax.tick_params(axis='y', which='both', direction='in',
                    right=True, labelright=False,
                    left=True, labelleft=True)
-    ax.legend(frameon=False)
 
-    ax = fig.add_subplot(gs[1])
+    ax = fig.add_subplot(gs[:3,1])
     ax.set_title('Validation')
-    ax.set_xlabel('Epoch')
-    ax.plot(val_epochs[0], timings_val[0], label='cnn',
+    ax.plot(val_epochs[0], timings_val[0]/136, label='cnn',
             color='#ff7f0e', linestyle='--')
-
-    ax.plot(val_epochs[1], timings_val[1], label='gcnn',
+    ax.plot(val_epochs[1], timings_val[1]/136, label='gcnn',
             color='b', linestyle='--')
     ax.set_xlim([5,50])
-    ax.set_ylim([0,250])
-    ax = set_ticks(ax,'y', 0, 250, 6)
-    
-    rng = 45
-    ticks = [5,25,45]
-    labels = list(map(lambda x:r'$%.0f$'%x, ticks))
-    ticks_min = [i for i in range(5,51,5)]
+    ax = special_ticks(ax, 5, 50, [5,25,50])
+    ax.set_ylim([0,2])
+    ax = set_ticks(ax,'y', 0, 2, 5, div=4, d=1)
+    ax.tick_params(axis='x', which='both', direction='in',
+                   top=True, labeltop=False,
+                   bottom=True, labelbottom=False)
+    ax.tick_params(axis='y', which='both', direction='in',
+                   right=True, labelright=True,
+                   left=True, labelleft=False)
 
-    ax.xaxis.set_major_locator(mpl.ticker.FixedLocator(ticks))
-    ax.xaxis.set_major_formatter(mpl.ticker.FixedFormatter(labels))
-    ax.xaxis.set_minor_locator(mpl.ticker.FixedLocator(ticks_min))
-    ax.xaxis.set_minor_formatter(mpl.ticker.NullFormatter())
-
+    ax = fig.add_subplot(gs[3,1])
+    ax.set_xlabel('Epoch')
+    ax.plot(val_epochs[0], timings_val[1]/timings_val[0], linestyle='--')
+    ax.set_xlim([5,50])
+    ax = special_ticks(ax, 5, 50, [5,10,20,30,40,50])
+    ax.set_ylim([4,6])
+    ax = set_ticks(ax,'y', 4, 6, 3)
     ax.tick_params(axis='x', which='both', direction='in',
                    top=True, labeltop=False,
                    bottom=True, labelbottom=True)
