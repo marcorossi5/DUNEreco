@@ -53,8 +53,8 @@ def main():
         no_hit = im[~i[0]]
 
         tp, fp, fn, tn = confusion_matrix(hit, no_hit)
-        acc.append( (tp+tn)/(tp+fp+fp+fn) )
-        sns.append( tp )
+        acc.append( (tp+tn)/(tp+fp+fn+tn) )
+        sns.append( tp/(fn+tp) )
         spc.append( tn/(fp+tn) )
 
         filtered_img.append(im)
