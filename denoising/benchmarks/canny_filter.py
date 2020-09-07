@@ -4,8 +4,14 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.feature import canny
-from sklearn.metrics import confusion_matrix
+#from sklearn.metrics import confusion_matrix
 import time as tm
+
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+#sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from analysis.analysis_roi import confusion_matrix
 
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument("--threshold", "-t", default=0.5,
@@ -46,7 +52,7 @@ def classification_metrics(y_true, y_pred, t):
 
     auc = ((fpr[1:] - fpr[:-1])*tpr[1:]).sum()
 
-    return acc, sns, spc, tpr, fpr, auc
+    return acc, sns, spc
 
 
 def plot():
@@ -74,6 +80,7 @@ def main(threshold):
                              'planes', 'collection_clear.npy') 
     img = np.load(file_name)
     img[img!=0] = 1
+    img = img.astype(bool)
 
     sig = np.count_nonzero(img)
     tot = img.size
@@ -91,22 +98,21 @@ def main(threshold):
     acc = []
     sns = []
     spc = []
-    #tpr = []
-    #fpr = []
-    auc = []
 
     for i,j in zip(img, noisy_img):
         # to be used by canny, first normalize in [0,1]
         norm = (j[0]-j[0].min())/(j[0].max()-j[0].min())
-        im = canny(norm).astype(float)
+        im = canny(norm).astype(int)
+
+        hit = im[i[0]]
+        no_hit = im[~i[0]]
+
+        tp, fp, fn, tn = confusion_matrix(hit, no_hit)
+        acc.append( (tp+tn)/(tp+fp+fp+fn) )
+        sns.append( tp )
+        spc.append( 1-fpr )
+
         filtered_img.append(im)
-        x = classification_metrics(i[0], im, threshold)
-        acc.append(x[0])
-        sns.append(x[1])
-        spc.append(x[2])
-        #tpr.append(x[3])
-        #fpr.append(x[4])
-        auc.append(x[5])
 
     filtered_img = np.stack(filtered_img)[:, None]
 
@@ -116,17 +122,12 @@ def main(threshold):
     sns_mean = np.mean(sns)
     sns_std =  np.std(sns) / np.sqrt(len(sns))
 
-
     spc_mean = np.mean(spc)
     spc_std =  np.std(spc) / np.sqrt(len(spc))
 
-    auc_mean = np.mean(auc)
-    auc_std =  np.std(auc) / np.sqrt(len(auc))
-
     res = np.array([[acc_mean, acc_std],
                     [sns_mean, sns_std],
-                    [spc_mean, spc_std],
-                    [auc_mean, auc_std]])
+                    [spc_mean, spc_std]])
     dir_name = 'denoising/benchmarks/results/'
     fname = dir_name + 'canny_metrics'
     np.save(fname, res)

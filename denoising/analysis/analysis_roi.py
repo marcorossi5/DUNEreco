@@ -250,7 +250,7 @@ def testing_res():
 
     return [y_true, y_pred, y_pred_gc]
 
-def confusion_matrix(hit, no_hit, t):
+def confusion_matrix(hit, no_hit, t=0.5):
     """
     Parameters:
         hit: np.array, scores of real hits

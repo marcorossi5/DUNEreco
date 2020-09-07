@@ -36,34 +36,9 @@ def metrics_list():
          (r'gcnn' , *roi_test_metrics_gc),
          (r'Canny', *c_metrics.flatten())]
     # metrics: acc, sns, spc, auc
+    # TODO: remove auc because is nonsense for canny
     return D
-'''
-def set_ticks(ax, start, end, numticks, axis, nskip=2):
-    """
-    Set both major and minor axes ticks in the logarithmical scale
-    Parameters:
-        ax: matplotlib.axes.Axes object
-        start: int, leftmost tick
-        end: int, rightmost tick
-        numticks
-        axis: 1 y axis, 0 x axis
-        nskip: int, major ticks to leave without label
-    """
 
-    ticks = list(np.logspace(start,end,end-start+1))
-    labels = [r'$10^{%d}$'%start]
-    for i in [i for i in range(start+2,end+1,nskip)]:
-        labels.extend(['' for i in range(nskip-1)]+[r'$10^{%d}$'%i])
-    locmin = mpl.ticker.LogLocator(base=10.0,
-                                   subs=[i/10 for i in range(1,10)],
-                                   numticks=numticks)
-    if axis == 'x':
-        ax.xaxis.set_major_locator(mpl.ticker.FixedLocator(ticks))
-        ax.xaxis.set_major_formatter(mpl.ticker.FixedFormatter(labels))
-        ax.xaxis.set_minor_locator(locmin)
-        ax.xaxis.set_minor_formatter(mpl.ticker.NullFormatter())
-    return ax
-'''
 
 def bar_plot(lang, use, err, fname, label, log=False):
     """
@@ -117,11 +92,6 @@ def metrics_plots():
     bar_plot(lang, use, err, fname,
              r'$1-$ Specificity', True)
 
-    fname = dir_name + 'roi_canny_auc.pdf'
-    use  = [x[7] for x in Dsort]
-    err = [x[8] for x in Dsort]
-    bar_plot(lang, use, err, fname,
-             r'$1-$ Area Under Curve', True)
     '''
 
 
@@ -216,7 +186,7 @@ def main():
     mpl.rcParams['ytick.labelsize'] = 14
     mpl.rcParams['xtick.labelsize'] = 14
     mpl.rcParams['legend.fontsize'] = 14
-    #metrics_plots()
+    metrics_plots()
 
     image_plots()
 
