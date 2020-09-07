@@ -94,13 +94,13 @@ def main(device, kernel_size):
         psnr.append(compute_psnr(img, out_img))
 
     ssim_mean = np.mean(ssim)
-    ssim_std = np.mean(ssim) / np.sqrt(len(ssim))
+    ssim_std = np.std(ssim) / np.sqrt(len(ssim))
 
     mse_mean = np.mean(mse)
-    mse_std = np.mean(mse) / np.sqrt(len(mse))
+    mse_std = np.std(mse) / np.sqrt(len(mse))
 
     psnr_mean = np.mean(psnr)
-    psnr_std = np.mean(psnr) / np.sqrt(len(psnr))
+    psnr_std = np.std(psnr) / np.sqrt(len(psnr))
 
     res = np.array([[ssim_mean, ssim_std],
                     [psnr_mean, psnr_std],

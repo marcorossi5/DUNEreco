@@ -99,24 +99,37 @@ def image_arrays():
     fname = dir_name + 'collection_noisy.npy'
     noisy = np.load(fname)[0,0]
 
-    return dn, dn_gc, clear, noisy
+    dir_name = 'denoising/benchmarks/results/'
+    fname = dir_name + 'wiener_3_res.npy'
+    w_3 = np.load(fname)[0,0]
+
+    fname = dir_name + 'wiener_5_res.npy'
+    w_5 = np.load(fname)[0,0]
+
+    fname = dir_name + 'wiener_7_res.npy'
+    w_7 = np.load(fname)[0,0]
+
+    return [dn, dn_gc, w_3, w_5, w_7], clear, noisy
 
 
 def image_plots():
-    dn, dn_gc, clear, noisy = image_arrays()
+    dn, clear, noisy = image_arrays()
 
     dir_name = 'denoising/benchmarks/plots/'
-    fname = dir_name + 'planes.pdf'
+    fname = dir_name + 'dn_wires.pdf'
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(21,16.27))
     fig.suptitle('Denoising final evaluation')
     gs = fig.add_gridspec(nrows=2, ncols=1, hspace=0.05)
 
     ax = plt.subplot(gs[0])
     ax.set_ylabel('Wire with hits')
-    ax.plot(clear[500], lw=0.3, color='grey', label='target')
-    ax.plot(dn[500], lw=0.3, label='cnn', color='#ff7f0e')
-    ax.plot(dn_gc[500], lw=0.3, label='gcnn', color='b')
+    ax.plot(clear[500], lw=1, alpha=0.8, color='grey', label='target')
+    ax.plot(dn[0][500], lw=0.3, label='cnn', color='orange')
+    ax.plot(dn[1][500], lw=0.3, label='gcnn', color='b')
+    ax.plot(dn[2][500], lw=0.3, label='Wiener 3', color='forestgreen')
+    ax.plot(dn[3][500], lw=0.3, label='Wiener 5', color='lime')
+    ax.plot(dn[4][500], lw=0.3, label='Wiener 7', color='cyan')
     ax.legend(frameon=False)
     ax.set_xlim([0,6000])
     #ax = set_ticks(ax,'y', 0, .7, 5, d=1)
@@ -130,9 +143,12 @@ def image_plots():
     ax = plt.subplot(gs[1])
     ax.set_ylabel('Wire w/o hits')
     ax.set_xlabel('Time ticks')
-    ax.plot(clear[0], lw=0.3, color='grey', label='target')
-    ax.plot(dn[0], lw=0.3, label='cnn', color='#ff7f0e')
-    ax.plot(dn_gc[0], lw=0.3, label='gcnn', color='b')
+    ax.plot(clear[0], lw=1, alpha=0.8, color='grey', label='target')
+    ax.plot(dn[0][0], lw=0.3, label='cnn', color='orange')
+    ax.plot(dn[1][0], lw=0.3, label='gcnn', color='b')
+    ax.plot(dn[2][0], lw=0.3, label='Wiener 3', color='forestgreen')
+    ax.plot(dn[3][0], lw=0.3, label='Wiener 5', color='lime')
+    ax.plot(dn[4][0], lw=0.3, label='Wiener 7', color='cyan')
     ax.set_xlim([0,6000])
     ax.set_ylim([-1.5,1.5])
     ax = set_ticks(ax,'y', -1.5, 1.5, 5, div=4, d=1)
@@ -148,6 +164,13 @@ def image_plots():
 
 
 def main():
+    mpl.rcParams['text.usetex'] = True
+    mpl.rcParams['savefig.format'] = 'pdf'
+    mpl.rcParams['figure.titlesize'] = 20
+    mpl.rcParams['axes.titlesize'] = 17
+    mpl.rcParams['ytick.labelsize'] = 14
+    mpl.rcParams['xtick.labelsize'] = 14
+    mpl.rcParams['legend.fontsize'] = 14
     #metrics_plots()
 
     image_plots()

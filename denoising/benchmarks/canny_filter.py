@@ -127,14 +127,12 @@ def main(threshold):
                     [sns_mean, sns_std],
                     [spc_mean, spc_std],
                     [auc_mean, auc_std]])
-    fname = f'denoising/benchmarks/results/canny_metrics'
+    dir_name = 'denoising/benchmarks/results/'
+    fname = dir_name + 'canny_metrics'
     np.save(fname, res)
 
-    # must compute the metrics: accuracy, sensitivity, AUC
-    # pass only information relative to the single plane,
-    # aggregate and then compute mean and std
-    # even if canny is not a statistic algorithm it can perform
-    # better or worse given the plane
+    fname = dir_name + 'canny_res'
+    np.save(fname, filtered_img)
 
 
 if __name__ == '__main__':
