@@ -156,7 +156,7 @@ def image_plots():
     dir_name = 'denoising/benchmarks/plots/'
     fname = dir_name + 'roi_res_plot.pdf'
 
-    fig = plt.figure()
+    fig = plt.figure(figsize=(12,9))
     fig.suptitle('ROI final evaluation')
     gs = fig.add_gridspec(nrows=4, ncols=1, hspace=0.05)
 

@@ -118,7 +118,7 @@ def image_plots():
     dir_name = 'denoising/benchmarks/plots/'
     fname = dir_name + 'dn_wires.pdf'
 
-    fig = plt.figure(figsize=(21,16.27))
+    fig = plt.figure(figsize=(12,9))
     fig.suptitle('Denoising final evaluation')
     gs = fig.add_gridspec(nrows=2, ncols=1, hspace=0.05)
 
@@ -168,10 +168,10 @@ def main():
     mpl.rcParams['savefig.format'] = 'pdf'
     mpl.rcParams['figure.titlesize'] = 20
     mpl.rcParams['axes.titlesize'] = 17
-    mpl.rcParams['ytick.labelsize'] = 14
-    mpl.rcParams['xtick.labelsize'] = 14
+    mpl.rcParams['ytick.labelsize'] = 17
+    mpl.rcParams['xtick.labelsize'] = 17
     mpl.rcParams['legend.fontsize'] = 14
-    #metrics_plots()
+    metrics_plots()
 
     image_plots()
 
