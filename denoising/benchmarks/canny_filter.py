@@ -1,5 +1,6 @@
 """ This module computes the Canny filter for planes in the test set"""
 import os
+import sys
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,68 +14,12 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from analysis.analysis_roi import confusion_matrix
 
-PARSER = argparse.ArgumentParser()
-PARSER.add_argument("--threshold", "-t", default=0.5,
-                    type=float, help='Threshold to compute predictions')
-
-def classification_metrics(y_true, y_pred, t):
-    """
-    Computes accuracy, sensitivity and AUC for given prediction
-    Parameters:
-        y_true: np.array, target
-        y_pred: np.array, predictions
-        t: float, threshold
-    Returns:
-        accuracy, sensitivity, specificity, tpr, fpr, auc
-    """
-    y_true = y_true.flatten().astype(int)
-    y_pred = y_pred.flatten()
-    
-    cm = confusion_matrix(y_true, (y_pred>t).astype(int))
-
-    acc = (cm[1,1] + cm[0,0]) / cm.sum()
-    sns = cm[1,1] / (cm[1,1] + cm[1,0])
-    spc = cm[0,0] / (cm[0,1] + cm[0,0])
-
-    tpr = []
-    fpr = []
-
-    for i in np.linspace(0,1,10)[-2:0:-1]:
-        cm = confusion_matrix(y_true, y_pred>i)
-        fpr.append(cm[0,1] / (cm[0,1] + cm[0,0]))
-        tpr.append(cm[1,1] / (cm[1,1] + cm[1,0]))            
-
-    fpr = np.array(fpr)
-    tpr = np.array(tpr)
-
-    fpr = np.concatenate([[0.],fpr,[1.]],0)
-    tpr = np.concatenate([[0.],tpr,[1.]],0)
-
-    auc = ((fpr[1:] - fpr[:-1])*tpr[1:]).sum()
-
-    return acc, sns, spc
+#PARSER = argparse.ArgumentParser()
+#PARSER.add_argument("--threshold", "-t", default=0.5,
+#                    type=float, help='Threshold to compute predictions')
 
 
-def plot():
-    fig = plt.figure()
-    gs = fig.add_gridspec(nrows=2, ncols=1, wspace=3)
-
-    ax = fig.add_subplot(gs[0])
-    ax.plot(img[10], lw=0.3)
-    #z = ax.imshow(img)
-    #plt.colorbar(z, ax=ax)
-    ax.set_title('Labels')
-
-    ax = fig.add_subplot(gs[1])
-    ax.plot(filtered_img[10], lw=0.3)
-    #z = ax.imshow(filtered_img)
-    #plt.colorbar(z, ax=ax)
-    ax.set_title('Predicted')
-        
-    plt.savefig('wiener_filter.png', dpi=300, bbox_inches='tight')
-    plt.close()
-
-def main(threshold):
+def main():
     # Load target images
     file_name = os.path.join("../datasets/denoising/test",
                              'planes', 'collection_clear.npy') 
@@ -110,7 +55,7 @@ def main(threshold):
         tp, fp, fn, tn = confusion_matrix(hit, no_hit)
         acc.append( (tp+tn)/(tp+fp+fp+fn) )
         sns.append( tp )
-        spc.append( 1-fpr )
+        spc.append( tn/(fp+tn) )
 
         filtered_img.append(im)
 
@@ -137,8 +82,8 @@ def main(threshold):
 
 
 if __name__ == '__main__':
-    ARGS = vars(PARSER.parse_args())
+    #ARGS = vars(PARSER.parse_args())
 
     START = tm.time()
-    main(**ARGS)
+    main()
     print('Program done in %f'%(tm.time()-START))
