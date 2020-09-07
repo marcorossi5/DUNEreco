@@ -121,8 +121,8 @@ def training_plots():
 
     fig = plt.figure()
     fig.suptitle('Training Loss')
-    
     gs = fig.add_gridspec(nrows=1, ncols=2, wspace=0.2)
+
     ax = fig.add_subplot(gs[0])
     ax.set_title('Training')
     ax.set_ylabel(r'Binary Cross Entropy')
@@ -238,15 +238,15 @@ def training_plots():
 
 def testing_res():
     fname = '../datasets/denoising/test/planes/collection_clear.npy'
-    y_true = np.load(fname).flatten()
+    y_true = np.load(fname).reshape([6,-1])
 
     dir_name = './denoising/output/CNN_dn_final/final_test/'
     fname = dir_name + 'roi_test_res.npy'
-    y_pred = np.load(fname).flatten()
+    y_pred = np.load(fname).reshape([6,-1])
 
     dir_name = './denoising/output/GCNN_dn_final/final_test/'
     fname = dir_name + 'roi_test_res.npy'
-    y_pred_gc = np.load(fname).flatten()
+    y_pred_gc = np.load(fname).reshape([6,-1])
 
     return [y_true, y_pred, y_pred_gc]
 
@@ -267,47 +267,71 @@ def confusion_matrix(hit, no_hit, t):
     
     return tp, fp, fn, tn
 
-def compute_roc(hit, no_hit):
+def compute_roc(pred, mask):
     fpr = []
     tpr = []
+    auc = []
 
-    #don't compute t==0 or t==1 which are trivial
-    for t in range(19,0,-1):
-        tp, fp, fn, tn = confusion_matrix(hit, no_hit, t/20)
-        fpr.append(fp/(tn + fp))
-        tpr.append(tp/(tp + fn))          
+    for p,m in zip(pred, mask):
+        hit = p[m]
+        no_hit = p[~m]
 
-    fpr = np.array(fpr)
-    tpr = np.array(tpr)
+        #don't compute t==0 or t==1 which are trivial
+        fr = []
+        tr = []
+        for t in range(19,0,-1):
+            tp, fp, fn, tn = confusion_matrix(hit, no_hit, t/20)
+            fr.append(fp/(tn + fp))
+            tr.append(tp/(tp + fn))
 
-    fpr = np.concatenate([[0.],fpr,[1.]],0)
-    tpr = np.concatenate([[0.],tpr,[1.]],0)
+        fr = np.concatenate([[0.],fr,[1.]],0)
+        tr = np.concatenate([[0.],tr,[1.]],0)
 
-    auc = ((fpr[1:] - fpr[:-1])*tpr[1:]).sum()
+        fpr.append(fr)
+        tpr.append(tr)
 
-    return fpr, tpr, auc
+        auc.append(((fr[1:] - fr[:-1])*tr[1:]).sum())
+
+    def expected(x):
+        return np.mean(x,0)
+
+    def unc(x):
+        return np.std(x,0)/np.sqrt(len(x))
+
+    fpr_mean = expected(fpr)
+    fpr_std = unc(fpr)
+
+    tpr_mean = expected(tpr)
+    tpr_std = unc(tpr)
+
+    auc_mean = np.mean(auc)
+    auc_std = np.std(auc)/np.sqrt(len(auc))
+
+    return [fpr_mean, fpr_std], [tpr_mean, tpr_std],\
+           [auc_mean, auc_std]
 
 
 def testing_plots():
-    y = testing_res()
-    mask = y[0].astype(bool)
-    hit = y[1][mask]
-    no_hit = y[1][~mask]
+    x = testing_res()
 
-    hit_gc = y[2][mask]
-    no_hit_gc = y[2][~mask]
+    mask = x[0].astype(bool)
+    hit = x[1][mask]
+    no_hit = x[1][~mask]
+
+    hit_gc = x[2][mask]
+    no_hit_gc = x[2][~mask]
 
     fig = plt.figure()
     fig.suptitle('Final evaluation')   
     ax = fig.add_subplot()
     ax.set_xlabel('NN score')
-    ax.hist(hit,100,range=(0,1), histtype='step',
+    ax.hist(hit.flatten(),100,range=(0,1), histtype='step',
             label='cnn hit', color='r')
-    ax.hist(no_hit,100,range=(0,1), histtype='step',
+    ax.hist(no_hit.flatten(),100,range=(0,1), histtype='step',
             label='cnn no-hit', color='g')
-    ax.hist(hit_gc,100,range=(0,1), histtype='step',
+    ax.hist(hit_gc.flatten(),100,range=(0,1), histtype='step',
             label='gcnn hit', color='r', linestyle='--')
-    ax.hist(no_hit_gc,100,range=(0,1), histtype='step',
+    ax.hist(no_hit_gc.flatten(),100,range=(0,1), histtype='step',
             label='gcnn no-hit', color='g', linestyle='--')
     ax.legend(frameon=False, ncol=2)
     ax.set_yscale('log')
@@ -321,16 +345,18 @@ def testing_plots():
                 bbox='tight',dpi=300)
     plt.close()
 
-    fpr, tpr, auc = compute_roc(hit, no_hit)
-    fpr_gc, tpr_gc, auc_gc = compute_roc(hit_gc, no_hit_gc)
+    fpr, tpr, auc = compute_roc(x[1], x[0].astype(bool))
+    fpr_gc, tpr_gc, auc_gc = compute_roc(x[2], x[0].astype(bool))
 
     fig = plt.figure()
     fig.suptitle('Final evaluation: ROC curve')
     ax = fig.add_subplot()
     ax.set_xlabel('False Positive ratio')
     ax.set_ylabel('Sensitivity')
-    ax.plot(fpr, tpr, label='cnn, AUC=%.4f'%auc, color='#ff7f0e')
-    ax.plot(fpr_gc, tpr_gc, label='gcnn, AUC=%.4f'%auc_gc, color='b')
+    label = r'cnn, AUC=$%.4f \pm %.4f$'%(auc[0], auc[1])
+    ax.errorbar(fpr[0], tpr[0], xerr=fpr[1], yerr=tpr[1], label=label, color='#ff7f0e')
+    label = r'gcnn, AUC=$%.4f \pm %.4f$'%(auc_gc[0], auc_gc[1])
+    ax.errorbar(fpr_gc[0], tpr_gc[0], xerr=fpr_gc[1], yerr=tpr_gc[1], label=label, color='b')
     n = [i/20 for i in range(21)]
     ax.plot(n,n, lw=0.8, linestyle='--', color='grey', alpha=0.4)
     ax.legend(frameon=False)
@@ -348,8 +374,26 @@ def testing_plots():
                 bbox='tight',dpi=300)
     plt.close()
 
-    print('AUC cnn', auc)
-    print('AUC gcnn', auc_gc)
+    print('AUC cnn', auc[0] + auc[1])
+    print('AUC gcnn', auc_gc[0] +- auc_gc[1])
+
+    print(f'cnn Significance: {tpr[0][11]}+-{tpr[1][11]}')
+    dir_name = './denoising/output/CNN_dn_final/final_test/'
+    fname = dir_name + 'roi_test_metrics.npy'
+    cm_save = np.array([0,0,
+                        tpr[0][11], tpr[1][11],
+                        1-fpr[0][11], fpr[1][11],
+                        auc[0], auc[1]])
+    np.save(fname, cm_save)
+
+    print(f'gcnn Significance: {tpr_gc[0][11]}+-{tpr_gc[1][11]}')
+    dir_name = './denoising/output/GCNN_dn_final/final_test/'
+    fname = dir_name + 'roi_test_metrics.npy'
+    cm_save_gc = np.array([0,0,
+                          tpr_gc[0][11], tpr_gc[1][11],
+                          1-fpr_gc[0][11], fpr_gc[1][11],
+                          auc_gc[0], auc_gc[1]])
+    np.save(fname, cm_save_gc)
 
 
 def main():
@@ -361,7 +405,7 @@ def main():
     mpl.rcParams['xtick.labelsize'] = 14
     mpl.rcParams['legend.fontsize'] = 14
     
-    training_plots()
+    #training_plots()
 
     testing_plots()
 

@@ -15,6 +15,8 @@ from dataloader import PlaneLoader
 from utils.utils import compute_psnr
 from losses import loss_ssim, loss_mse
 
+from analysis_roi import set_ticks
+
 
 def metrics_list():
     dir_name = './denoising/output/CNN_dn_final/final_test/'
@@ -22,12 +24,10 @@ def metrics_list():
     dir_name_c = './denoising/benchmarks/results/'
 
     fname = dir_name + 'roi_test_metrics.npy'
-    #roi_test_metrics = np.load(fname)
-    roi_test_metrics = [0 for i in range(8)]
+    roi_test_metrics = np.load(fname)
 
     fname = dir_name_gc + 'roi_test_metrics.npy'
-    #roi_test_metrics_gc = np.load(fname)
-    roi_test_metrics_gc = [0 for i in range(8)]
+    roi_test_metrics_gc = np.load(fname)
 
     fname = dir_name_c + 'canny_metrics.npy'
     c_metrics = np.load(fname)
@@ -35,9 +35,9 @@ def metrics_list():
     D = [(r'cnn'  , *roi_test_metrics),
          (r'gcnn' , *roi_test_metrics_gc),
          (r'Canny', *c_metrics.flatten())]
-
+    # metrics: acc, sns, spc, auc
     return D
-
+'''
 def set_ticks(ax, start, end, numticks, axis, nskip=2):
     """
     Set both major and minor axes ticks in the logarithmical scale
@@ -63,7 +63,7 @@ def set_ticks(ax, start, end, numticks, axis, nskip=2):
         ax.xaxis.set_minor_locator(locmin)
         ax.xaxis.set_minor_formatter(mpl.ticker.NullFormatter())
     return ax
-
+'''
 
 def bar_plot(lang, use, err, fname, label, log=False):
     """
@@ -80,6 +80,8 @@ def bar_plot(lang, use, err, fname, label, log=False):
         ax.set_xscale('log')
 
     ax.tick_params(axis='x', which='both', direction='in')
+    ax.set_xlim([0,1])
+    ax = set_ticks(ax,'x',0,1,6,div=4, d=1)
 
     plt.xlabel(label)
     plt.title(r'Final Evaluation')
@@ -90,37 +92,37 @@ def bar_plot(lang, use, err, fname, label, log=False):
 def metrics_plots():
     D = metrics_list()
     Dsort = sorted(D, key=itemgetter(3), reverse=True)
+    #print(Dsort)
 
     lang = [x[0] for x in Dsort]
 
-
     dir_name = 'denoising/benchmarks/plots/'
+    '''
     fname = dir_name + 'roi_canny_acc.pdf'
-    use  = [1-x[1] for x in Dsort]
+    use  = [x[1] for x in Dsort]
     err = [x[2] for x in Dsort]
     bar_plot(lang, use, err, fname,
              r'$1-$ Accuracy', True)
-    print(use)
+    '''
 
     fname = dir_name + 'roi_canny_sns.pdf'
     use  = [x[3] for x in Dsort]
     err = [x[4] for x in Dsort]
     bar_plot(lang, use, err, fname, r'Sensitivity')
-    print(use)
 
+    '''
     fname = dir_name + 'roi_canny_spc.pdf'
-    use  = [1-x[5] for x in Dsort]
+    use  = [x[5] for x in Dsort]
     err = [x[6] for x in Dsort]
     bar_plot(lang, use, err, fname,
              r'$1-$ Specificity', True)
-    print(use)
 
     fname = dir_name + 'roi_canny_auc.pdf'
-    use  = [1-x[7] for x in Dsort]
+    use  = [x[7] for x in Dsort]
     err = [x[8] for x in Dsort]
     bar_plot(lang, use, err, fname,
              r'$1-$ Area Under Curve', True)
-    print(use)
+    '''
 
 
 def image_plots():

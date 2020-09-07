@@ -14,6 +14,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 from dataloader import PlaneLoader
 from utils.utils import compute_psnr
 from losses import loss_ssim, loss_mse
+from analysis_roi import set_ticks
 
 
 def metrics_list():
@@ -81,12 +82,73 @@ def metrics_plots():
     bar_plot(lang, use, err, fname, r'mse')
 
 
+def image_arrays():
+    dir_name = 'denoising/output/CNN_dn_final/final_test/'
+    fname = dir_name + 'dn_test_res.npy'
+    dn = np.load(fname)[0,0]
+
+    dir_name = 'denoising/output/GCNN_dn_final/final_test/'
+    fname = dir_name + 'dn_test_res.npy'
+    dn_gc = np.load(fname)[0,0]
+
+    dir_name = '../datasets/denoising/test/planes/'
+    fname = dir_name + 'collection_clear.npy'
+    clear = np.load(fname)[0,0]
+
+    dir_name = '../datasets/denoising/test/planes/'
+    fname = dir_name + 'collection_noisy.npy'
+    noisy = np.load(fname)[0,0]
+
+    return dn, dn_gc, clear, noisy
+
+
 def image_plots():
-    pass
+    dn, dn_gc, clear, noisy = image_arrays()
+
+    dir_name = 'denoising/benchmarks/plots/'
+    fname = dir_name + 'planes.pdf'
+
+    fig = plt.figure()
+    fig.suptitle('Denoising final evaluation')
+    gs = fig.add_gridspec(nrows=2, ncols=1, hspace=0.05)
+
+    ax = plt.subplot(gs[0])
+    ax.set_ylabel('Wire with hits')
+    ax.plot(clear[500], lw=0.3, color='grey', label='target')
+    ax.plot(dn[500], lw=0.3, label='cnn', color='#ff7f0e')
+    ax.plot(dn_gc[500], lw=0.3, label='gcnn', color='b')
+    ax.legend(frameon=False)
+    ax.set_xlim([0,6000])
+    #ax = set_ticks(ax,'y', 0, .7, 5, d=1)
+    ax.tick_params(axis='x', which='both', direction='in',
+                   top=True, labeltop=False,
+                   bottom=True, labelbottom=False)
+    ax.tick_params(axis='y', which='both', direction='in',
+                   right=True, labelright=False,
+                   left=True, labelleft=True)
+
+    ax = plt.subplot(gs[1])
+    ax.set_ylabel('Wire w/o hits')
+    ax.set_xlabel('Time ticks')
+    ax.plot(clear[0], lw=0.3, color='grey', label='target')
+    ax.plot(dn[0], lw=0.3, label='cnn', color='#ff7f0e')
+    ax.plot(dn_gc[0], lw=0.3, label='gcnn', color='b')
+    ax.set_xlim([0,6000])
+    ax.set_ylim([-1.5,1.5])
+    ax = set_ticks(ax,'y', -1.5, 1.5, 5, div=4, d=1)
+    ax.tick_params(axis='x', which='both', direction='in',
+                   top=True, labeltop=False,
+                   bottom=True, labelbottom=True)
+    ax.tick_params(axis='y', which='both', direction='in',
+                   right=True, labelright=False,
+                   left=True, labelleft=True)
+
+    plt.savefig(fname, bbox_inches='tight', dpi=300)
+    plt.close()
 
 
 def main():
-    metrics_plots()
+    #metrics_plots()
 
     image_plots()
 

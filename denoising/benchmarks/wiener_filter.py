@@ -108,6 +108,9 @@ def main(device, kernel_size):
     fname = f'./denoising/benchmarks/results/wiener_{kernel_size}_metrics'
     np.save(fname, res)
 
+    fname = f'./denoising/benchmarks/results/wiener_{kernel_size}_res'
+    np.save(fname, out_img)
+
 
 if __name__ == '__main__':
     ARGS = vars(PARSER.parse_args())
