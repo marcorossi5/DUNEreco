@@ -1,7 +1,6 @@
 """ This module compare results on test set of ROI against Canny filters"""
 import sys
 import os
-import argparse
 import numpy as np
 import time as tm
 import matplotlib.pyplot as plt
@@ -35,8 +34,7 @@ def metrics_list():
     D = [(r'cnn'  , *roi_test_metrics),
          (r'gcnn' , *roi_test_metrics_gc),
          (r'Canny', *c_metrics.flatten())]
-    # metrics: acc, sns, spc, auc
-    # TODO: remove auc because is nonsense for canny
+    # metrics: acc, sns, spc
     return D
 
 
@@ -65,34 +63,23 @@ def bar_plot(lang, use, err, fname, label, log=False):
 
 
 def metrics_plots():
+    """
+    Just plot sensitivity as figure of merit
+    others quantities are biased due to dataset
+    unbalance in hit/no-hit
+    """
     D = metrics_list()
     Dsort = sorted(D, key=itemgetter(3), reverse=True)
-    #print(Dsort)
 
     lang = [x[0] for x in Dsort]
 
     dir_name = 'denoising/benchmarks/plots/'
-    '''
-    fname = dir_name + 'roi_canny_acc.pdf'
-    use  = [x[1] for x in Dsort]
-    err = [x[2] for x in Dsort]
-    bar_plot(lang, use, err, fname,
-             r'$1-$ Accuracy', True)
-    '''
+
 
     fname = dir_name + 'roi_canny_sns.pdf'
     use  = [x[3] for x in Dsort]
     err = [x[4] for x in Dsort]
     bar_plot(lang, use, err, fname, r'Sensitivity')
-
-    '''
-    fname = dir_name + 'roi_canny_spc.pdf'
-    use  = [x[5] for x in Dsort]
-    err = [x[6] for x in Dsort]
-    bar_plot(lang, use, err, fname,
-             r'$1-$ Specificity', True)
-
-    '''
 
 
 def image_arrays():
@@ -115,7 +102,7 @@ def image_arrays():
 
     dir_name = 'denoising/benchmarks/results/'
     fname = dir_name + 'canny_res.npy'
-    canny = np.load(fname)
+    canny = np.load(fname)[0,0]
 
     return [roi, roi_gc, canny], clear, noisy
 

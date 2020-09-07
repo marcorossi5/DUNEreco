@@ -1,7 +1,6 @@
 """ This module compare results on test set of DN against Wiener filters"""
 import sys
 import os
-import argparse
 import numpy as np
 import time as tm
 import matplotlib.pyplot as plt
@@ -132,7 +131,6 @@ def image_plots():
     ax.plot(dn[4][500], lw=0.3, label='Wiener 7', color='cyan')
     ax.legend(frameon=False)
     ax.set_xlim([0,6000])
-    #ax = set_ticks(ax,'y', 0, .7, 5, d=1)
     ax.tick_params(axis='x', which='both', direction='in',
                    top=True, labeltop=False,
                    bottom=True, labelbottom=False)

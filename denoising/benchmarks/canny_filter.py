@@ -1,22 +1,14 @@
 """ This module computes the Canny filter for planes in the test set"""
 import os
 import sys
-import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.feature import canny
-#from sklearn.metrics import confusion_matrix
 import time as tm
 
-
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-#sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from analysis.analysis_roi import confusion_matrix
-
-#PARSER = argparse.ArgumentParser()
-#PARSER.add_argument("--threshold", "-t", default=0.5,
-#                    type=float, help='Threshold to compute predictions')
 
 
 def main():
@@ -82,8 +74,6 @@ def main():
 
 
 if __name__ == '__main__':
-    #ARGS = vars(PARSER.parse_args())
-
     START = tm.time()
     main()
     print('Program done in %f'%(tm.time()-START))

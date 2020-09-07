@@ -1,6 +1,5 @@
 import sys
 import os
-import argparse
 import numpy as np
 import time as tm
 import matplotlib.pyplot as plt
@@ -56,11 +55,6 @@ def training_timings(warmup):
     fname = dir_name_gc + 'timings_test.npy'
     timings_val_gc = np.load(fname)
 
-    #print('Mean training times cnn: ', timings_train.mean())
-    #print('Mean training times gcnn: ', timings_train_gc.mean())
-    #print('Mean validation times cnn: ', timings_val.mean())
-    #print('Mean validation times gcnn: ', timings_val_gc.mean())
-
     return ([timings_train, timings_train_gc],
             [timings_val, timings_val_gc])
 
@@ -77,7 +71,6 @@ def set_ticks(ax, axis, start=None, end=None,
         div: int, how to partition interval between maj ticks
         d: int, decimal digits axis labels
     """
-    #to divide each in 5 parts: num_min = (num_maj - 1)*5 -1
     rng = end - start
     ticks = [i*rng/(num_maj-1) + start for i in range(num_maj)]
     def format_func(x):
@@ -405,7 +398,7 @@ def main():
     mpl.rcParams['xtick.labelsize'] = 14
     mpl.rcParams['legend.fontsize'] = 14
     
-    #training_plots()
+    training_plots()
 
     testing_plots()
 

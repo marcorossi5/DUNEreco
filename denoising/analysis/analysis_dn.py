@@ -1,7 +1,6 @@
 """ This module computes the Wiener filter for planes in the test set"""
 import sys
 import os
-import argparse
 import numpy as np
 import time as tm
 import matplotlib.pyplot as plt
@@ -203,7 +202,6 @@ def testing_plots():
 def main():
     mpl.rcParams['text.usetex'] = True
     mpl.rcParams['savefig.format'] = 'pdf'
-    #mpl.rcParams['figure.figsize'] = [11,5.5]
     mpl.rcParams['figure.titlesize'] = 20
     mpl.rcParams['axes.titlesize'] = 17
     mpl.rcParams['ytick.labelsize'] = 14
@@ -215,8 +213,6 @@ def main():
 
 
 if __name__ == '__main__':
-    #args = vars(PARSER.parse_args())
-    #assert args['warmup'] in ['roi', 'dn']
     start = tm.time()
     main()
     print(f'Program done in {tm.time()-start}')
