@@ -109,7 +109,7 @@ def main(device, kernel_size):
     np.save(fname, res)
 
     fname = f'./denoising/benchmarks/results/wiener_{kernel_size}_res'
-    np.save(fname, out_img)
+    np.save(fname, out_img.cpu().numpy())
 
 
 if __name__ == '__main__':
