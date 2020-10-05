@@ -1,0 +1,34 @@
+# dataset folder
+dir_name: ../datasets/denoising
+
+# Select model, available options are:
+# CNN, CNNv2, GCNN, GCNNv2
+model: CNNv2
+
+# Number of ecpochs
+epochs: 30
+
+# Batch size
+#batch_size: hp.quniform('batch_size',64,128,5)
+batch_size: hp.choice('batch_size',[2048, 1024, 512])
+# Loss function, available options are:
+# mse, ssim, ssim_l1, ssim_l2
+loss_fn: 'loss_ssim_l2'
+#loss_fn: hp.choice('loss_fn', ['loss_mse',
+#                               'loss_ssim',
+#                               'loss_ssim_l1',
+#                               'loss_ssim_l2'])
+
+# Main GPU, available options are:
+# cuda:0, cuda:1, cuda:2, cuda:3
+device: 'cuda:0'
+
+# Optimizer parameters
+# options are: Adam, RMSprop, Adagrad, SGD
+#optimizer: hp.choice('optimizer', ['Adam', 'RMSprop', 'Adagrad'])
+# Learning rate
+lr: hp.loguniform('lr', -10, 0)
+amsgrad: hp.choice('amsgrad', [True, False])
+
+# Output folder
+out_name: None
