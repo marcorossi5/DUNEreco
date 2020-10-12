@@ -65,7 +65,7 @@ def inference(args, model, channel):
     """
     #load dataset
     print('[+] Inference')
-    ploader = PlaneLoader(args, 'test', 'collection', args.threshold)
+    ploader = PlaneLoader(args, 'test', 'collection')
     test_data = DataLoader(ploader,num_workers=args.num_workers)
     if args.warmup == 'roi':
         labels = ploader.clear[:,:1]
