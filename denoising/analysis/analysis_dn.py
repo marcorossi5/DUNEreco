@@ -1,6 +1,7 @@
 """ This module computes the Wiener filter for planes in the test set"""
 import sys
 import os
+import argparse
 import numpy as np
 import time as tm
 import matplotlib.pyplot as plt
@@ -11,8 +12,12 @@ from analysis_roi import set_ticks, training_metrics,\
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-def training_plots():
-    loss, val_epochs, val_metrics = training_metrics('dn')
+PARSER = argparse.ArgumentParser()
+PARSER.add_argument("--dirname", "-p", default="final",
+                    type=str, help='Directory containing results to plot, format: denoising/output/CNN_dn_<XXX>/final_test')
+
+def training_plots(dirname):
+    loss, val_epochs, val_metrics = training_metrics('dn', dirname)
     epochs = [i for i in range(len(loss[0]))]
 
     fig = plt.figure()
@@ -121,7 +126,7 @@ def training_plots():
 
     ##########################################################################
 
-    timings_train, timings_val = training_timings('dn')
+    timings_train, timings_val = training_timings('dn', dirname)
 
     fig = plt.figure()
     fig.suptitle('Timings')
@@ -199,7 +204,7 @@ def testing_plots():
     pass    
 
 
-def main():
+def main(dirname):
     mpl.rcParams['text.usetex'] = True
     mpl.rcParams['savefig.format'] = 'pdf'
     mpl.rcParams['figure.titlesize'] = 20
@@ -207,12 +212,13 @@ def main():
     mpl.rcParams['ytick.labelsize'] = 14
     mpl.rcParams['xtick.labelsize'] = 14
     mpl.rcParams['legend.fontsize'] = 14
-    training_plots()
+    training_plots(dirname)
 
     testing_plots()
 
 
 if __name__ == '__main__':
+    args = vars(PARSER.parse_args())
     start = tm.time()
-    main()
+    main(**args)
     print(f'Program done in {tm.time()-start}')

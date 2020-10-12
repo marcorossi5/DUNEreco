@@ -1,5 +1,6 @@
 import sys
 import os
+import argparse
 import numpy as np
 import time as tm
 import matplotlib.pyplot as plt
@@ -8,13 +9,17 @@ import matplotlib as mpl
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-def training_metrics(warmup):
-    dir_name = f'./denoising/output/CNN_{warmup}_final/metrics/'
-    dir_name_gc = f'./denoising/output/GCNN_{warmup}_final/metrics/'
+PARSER = argparse.ArgumentParser()
+PARSER.add_argument("--dirname", "-p", default="final",
+                    type=str, help='Directory containing results to plot, format: denoising/output/CNN_dn_<XXX>/final_test')
+
+def training_metrics(warmup, dirname):
+    dir_name = f'./denoising/output/CNN_{warmup}_{dirname}/metrics/'
+    dir_name_gc = f'./denoising/output/GCNN_{warmup}_{dirname}/metrics/'
     
     fname = dir_name + 'loss_sum.npy'
     loss = np.load(fname)[0]
-    # shape (1. train_epochs)
+    # shape (1, train_epochs)
 
     fname = dir_name + 'test_epochs.npy'
     val_epochs = np.load(fname)
@@ -37,9 +42,9 @@ def training_metrics(warmup):
             [val_metrics, val_metrics_gc])
 
 
-def training_timings(warmup):
-    dir_name = f'./denoising/output/CNN_{warmup}_final/timings/'
-    dir_name_gc = f'./denoising/output/GCNN_{warmup}_final/timings/'
+def training_timings(warmup, dirname):
+    dir_name = f'./denoising/output/CNN_{warmup}_{dirname}/timings/'
+    dir_name_gc = f'./denoising/output/GCNN_{warmup}_{dirname}/timings/'
     
     fname = dir_name + 'timings_train.npy'
     timings_train = np.load(fname)
@@ -107,8 +112,8 @@ def special_ticks(ax, start, end, ticks):
     return ax
 
 
-def training_plots():
-    loss, val_epochs, val_metrics = training_metrics('roi')
+def training_plots(dirname):
+    loss, val_epochs, val_metrics = training_metrics('roi', dirname)
     
     epochs = [i for i in range(len(loss[0]))]
 
@@ -156,7 +161,7 @@ def training_plots():
 
     ##########################################################################
 
-    timings_train, timings_val = training_timings('roi')
+    timings_train, timings_val = training_timings('roi', dirname)
 
     fig = plt.figure()
     fig.suptitle('Timings')
@@ -229,17 +234,20 @@ def training_plots():
     plt.close()
 
 
-def testing_res():
+def testing_res(dirname):
     fname = '../datasets/denoising/test/planes/collection_clear.npy'
-    y_true = np.load(fname).reshape([6,-1])
+    y_true = np.load(fname)
+    y_true = y_true.reshape([y_true.shape[0],-1])
 
-    dir_name = './denoising/output/CNN_dn_final/final_test/'
+    dir_name = f'./denoising/output/CNN_dn_{dirname}/final_test/'
     fname = dir_name + 'roi_test_res.npy'
-    y_pred = np.load(fname).reshape([6,-1])
+    y_pred = np.load(fname)
+    y_pred = y_pred.reshape([y_pred.shape[0],-1])
 
-    dir_name = './denoising/output/GCNN_dn_final/final_test/'
+    dir_name = f'./denoising/output/GCNN_dn_{dirname}/final_test/'
     fname = dir_name + 'roi_test_res.npy'
-    y_pred_gc = np.load(fname).reshape([6,-1])
+    y_pred_gc = np.load(fname)
+    y_pred_gc = y_pred_gc.reshape([y_pred_gc.shape[0],-1])
 
     return [y_true, y_pred, y_pred_gc]
 
@@ -304,8 +312,8 @@ def compute_roc(pred, mask):
            [auc_mean, auc_std]
 
 
-def testing_plots():
-    x = testing_res()
+def testing_plots(dirname):
+    x = testing_res(dirname)
 
     mask = x[0].astype(bool)
     hit = x[1][mask]
@@ -371,7 +379,7 @@ def testing_plots():
     print('AUC gcnn', auc_gc[0] +- auc_gc[1])
 
     print(f'cnn Significance: {tpr[0][11]}+-{tpr[1][11]}')
-    dir_name = './denoising/output/CNN_dn_final/final_test/'
+    dir_name = f'./denoising/output/CNN_dn_{dirname}/final_test/'
     fname = dir_name + 'roi_test_metrics.npy'
     cm_save = np.array([0,0,
                         tpr[0][11], tpr[1][11],
@@ -380,7 +388,7 @@ def testing_plots():
     np.save(fname, cm_save)
 
     print(f'gcnn Significance: {tpr_gc[0][11]}+-{tpr_gc[1][11]}')
-    dir_name = './denoising/output/GCNN_dn_final/final_test/'
+    dir_name = f'./denoising/output/GCNN_dn_{dirname}/final_test/'
     fname = dir_name + 'roi_test_metrics.npy'
     cm_save_gc = np.array([0,0,
                           tpr_gc[0][11], tpr_gc[1][11],
@@ -389,7 +397,7 @@ def testing_plots():
     np.save(fname, cm_save_gc)
 
 
-def main():
+def main(dirname):
     mpl.rcParams['text.usetex'] = True
     mpl.rcParams['savefig.format'] = 'pdf'
     mpl.rcParams['figure.titlesize'] = 20
@@ -398,12 +406,13 @@ def main():
     mpl.rcParams['xtick.labelsize'] = 14
     mpl.rcParams['legend.fontsize'] = 14
     
-    training_plots()
+    training_plots(dirname)
 
-    testing_plots()
+    testing_plots(dirname)
 
 
 if __name__ == '__main__':
+    args = vars(PARSER.parse_args())
     start = tm.time()
-    main()
+    main(**args)
     print(f'Program done in {tm.time()-start}')
