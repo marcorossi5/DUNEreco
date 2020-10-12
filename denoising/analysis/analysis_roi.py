@@ -12,6 +12,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument("--dirname", "-p", default="final",
                     type=str, help='Directory containing results to plot, format: denoising/output/CNN_dn_<XXX>/final_test')
+PARSER.add_argument("--threshold", "-t", default=3.5, type=float,
+                    help="Threshold to distinguish signal/noise in labels")
 
 def training_metrics(warmup, dirname):
     dir_name = f'./denoising/output/CNN_{warmup}_{dirname}/metrics/'
@@ -234,10 +236,13 @@ def training_plots(dirname):
     plt.close()
 
 
-def testing_res(dirname):
+def testing_res(dirname, threshold):
     fname = '../datasets/denoising/test/planes/collection_clear.npy'
     y_true = np.load(fname)
     y_true = y_true.reshape([y_true.shape[0],-1])
+    mask = np.logical_and(y_true >= 0, y_true <= threshold)
+    y_true[ mask ] = 0
+    y_true[ ~mask ] = 1
 
     dir_name = f'./denoising/output/CNN_dn_{dirname}/final_test/'
     fname = dir_name + 'roi_test_res.npy'
@@ -312,10 +317,10 @@ def compute_roc(pred, mask):
            [auc_mean, auc_std]
 
 
-def testing_plots(dirname):
-    x = testing_res(dirname)
+def testing_plots(dirname, threshold):
+    x = testing_res(dirname, threshold)
 
-    mask = x[0].astype(bool)
+    mask = x[0].astype(bool) # everything non zero is True
     hit = x[1][mask]
     no_hit = x[1][~mask]
 
@@ -378,7 +383,8 @@ def testing_plots(dirname):
     print('AUC cnn', auc[0] + auc[1])
     print('AUC gcnn', auc_gc[0] +- auc_gc[1])
 
-    print(f'cnn Significance: {tpr[0][11]}+-{tpr[1][11]}')
+    print(f'cnn Sensitivity: {tpr[0][11]}+-{tpr[1][11]}')
+    print(f'cnn Specificity: {fpr[0][11]}+-{fpr[1][11]}')
     dir_name = f'./denoising/output/CNN_dn_{dirname}/final_test/'
     fname = dir_name + 'roi_test_metrics.npy'
     cm_save = np.array([0,0,
@@ -387,7 +393,8 @@ def testing_plots(dirname):
                         auc[0], auc[1]])
     np.save(fname, cm_save)
 
-    print(f'gcnn Significance: {tpr_gc[0][11]}+-{tpr_gc[1][11]}')
+    print(f'gcnn Sensitivity: {tpr_gc[0][11]}+-{tpr_gc[1][11]}')
+    print(f'cnn Specificity: {fpr_gc[0][11]}+-{fpr_gc[1][11]}')
     dir_name = f'./denoising/output/GCNN_dn_{dirname}/final_test/'
     fname = dir_name + 'roi_test_metrics.npy'
     cm_save_gc = np.array([0,0,
@@ -397,7 +404,7 @@ def testing_plots(dirname):
     np.save(fname, cm_save_gc)
 
 
-def main(dirname):
+def main(dirname, threshold):
     mpl.rcParams['text.usetex'] = True
     mpl.rcParams['savefig.format'] = 'pdf'
     mpl.rcParams['figure.titlesize'] = 20
@@ -408,7 +415,7 @@ def main(dirname):
     
     training_plots(dirname)
 
-    testing_plots(dirname)
+    testing_plots(dirname, threshold)
 
 
 if __name__ == '__main__':

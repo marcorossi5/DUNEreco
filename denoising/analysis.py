@@ -1,7 +1,5 @@
 """
 This module computes inference either for roi and dn, saves results and metrics
-Please provide a --threshold=0 flag to remove thresholding based on measured
-Electronic Noise Charge (ENC) at protoDUNE SP
 """
 import os
 import sys
@@ -45,9 +43,6 @@ PARSER.add_argument("--warmup", default='dn', type=str,
                     help="roi / dn")
 PARSER.add_argument("--load_path", default=None, type=str,
                     help="torch .dat file to load the model")
-PARSER.add_argument("--threshold", "-t", default=3.5, type=float,
-                    help="Threshold to distinguish signal/noise in labels")
-
 
 
 def inference(args, model, channel):

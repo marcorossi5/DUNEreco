@@ -101,10 +101,7 @@ class PlaneLoader(torch.utils.data.Dataset):
         self.norm = np.load(fname)
 
         hits = torch.clone(clear)
-        mask = hits > args.threshold
-        hits[mask] = 1
-        hits[~mask] = 0
-        #clear planes don't need to be normalized
+        hits[hits!= 0] = 1
         self.clear = clear
         self.noisy = (noisy-self.norm[0])/(self.norm[1]-self.norm[0])
 

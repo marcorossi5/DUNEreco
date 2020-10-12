@@ -19,6 +19,9 @@ from analysis_roi import set_ticks
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument("--dirname", "-p", default="final",
                     type=str, help='Directory containing results to plot, format: denoising/output/CNN_dn_<XXX>/final_test')
+PARSER.add_argument("--threshold", "-t", default=3.5, type=float,
+                    help="Threshold to distinguish signal/noise in labels")
+
 
 
 def metrics_list(dirname):
@@ -86,19 +89,21 @@ def metrics_plots(dirname):
     bar_plot(lang, use, err, fname, r'Sensitivity')
 
 
-def image_arrays(dirname):
+def image_arrays(dirname, threshold):
     dir_name = f'denoising/output/CNN_dn_{dirname}/final_test/'
     fname = dir_name + 'roi_test_res.npy'
     roi = np.load(fname)[0,0]
 
-    dir_name = f'denoising/output/GCNN_dn_{final}/final_test/'
+    dir_name = f'denoising/output/GCNN_dn_{dirname}/final_test/'
     fname = dir_name + 'roi_test_res.npy'
     roi_gc = np.load(fname)[0,0]
 
     dir_name = '../datasets/denoising/test/planes/'
     fname = dir_name + 'collection_clear.npy'
     clear = np.load(fname)[0,0]
-    clear[clear!=0] = 1
+    mask = np.logical_and(clear>=0, clear<=threshold)
+    clear[mask] = 0
+    clear[~mask] = 1
 
     dir_name = '../datasets/denoising/test/planes/'
     fname = dir_name + 'collection_noisy.npy'
@@ -111,8 +116,8 @@ def image_arrays(dirname):
     return [roi, roi_gc, canny], clear, noisy
 
 
-def image_plots(dirname):
-    roi, clear, noisy = image_arrays(dirname)
+def image_plots(dirname, threshold):
+    roi, clear, noisy = image_arrays(dirname, threshold)
 
     dir_name = 'denoising/benchmarks/plots/'
     fname = dir_name + 'roi_res_plot.pdf'
@@ -168,8 +173,59 @@ def image_plots(dirname):
     plt.savefig(fname, bbox_inches='tight', dpi=400)
     plt.close()
 
+    ##########################################################################
 
-def main(dirname):
+    dir_name = 'denoising/benchmarks/plots/'
+    fname = dir_name + 'roi_mismatch_plot.pdf'
+
+    fig = plt.figure(figsize=(16,4.5))
+    fig.suptitle('Mismatched points')
+    
+    cmap_mis = mpl.colors.ListedColormap(['green', 'white','darkred'])
+    boundaries = [-1.5, -0.5, 0.5, 1]
+    norm_mis = mpl.colors.BoundaryNorm(boundaries, cmap_mis.N, clip=True)
+    
+    gs = fig.add_gridspec(nrows=2, ncols=1, hspace=0.1)
+
+    ax = plt.subplot(gs[0])
+    ax.set_ylabel('CNN')
+
+    difference = (roi[0] > 0.5).astype(int) - clear
+    ax.imshow(difference, cmap=cmap_mis, norm=norm_mis)
+    ax.tick_params(axis='x', which='both', direction='in',
+                   top=True, labeltop=False,
+                   bottom=True, labelbottom=False)
+    ax.tick_params(axis='y', which='both', direction='in',
+                   right=True, labelright=False,
+                   left=True, labelleft=True)
+
+    from matplotlib.lines import Line2D
+    legend_elements = [Line2D([0], [0], marker='o', color='white', label='False Positive',
+                          markerfacecolor='green', markeredgecolor='black', markersize=7),
+                       Line2D([0], [0], marker='o', color='white', label='True',
+                          markerfacecolor='white', markeredgecolor='black', markersize=7),
+                       Line2D([0], [0], marker='o', color='white', label='False Negative',
+                          markerfacecolor='darkred', markeredgecolor='black', markersize=7),]
+    ax.legend(handles=legend_elements, frameon=False)
+
+
+    ax = plt.subplot(gs[1])
+    ax.set_ylabel('GCNN')
+    difference = (roi[1] > 0.5).astype(int) - clear
+    z =ax.imshow(difference, cmap=cmap_mis, norm=norm_mis)
+    ax.tick_params(axis='x', which='both', direction='in',
+                   top=True, labeltop=False,
+                   bottom=True, labelbottom=True)
+    ax.tick_params(axis='y', which='both', direction='in',
+                   right=True, labelright=False,
+                   left=True, labelleft=True)
+
+    plt.savefig(fname, bbox_inches='tight', dpi=400)
+    plt.close()
+
+
+
+def main(dirname, threshold):
     mpl.rcParams['text.usetex'] = True
     mpl.rcParams['savefig.format'] = 'pdf'
     mpl.rcParams['figure.titlesize'] = 20
@@ -179,7 +235,7 @@ def main(dirname):
     mpl.rcParams['legend.fontsize'] = 14
     metrics_plots(dirname)
 
-    image_plots(dirname)
+    image_plots(dirname, threshold)
 
 
 if __name__ == '__main__':
