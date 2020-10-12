@@ -1,0 +1,6 @@
+*.[oa]
+*~
+denoising/output/
+**/__pycache--/
+*.npy
+*.pyc
