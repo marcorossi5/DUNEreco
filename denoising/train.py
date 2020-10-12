@@ -131,7 +131,6 @@ def test_epoch(args, epoch, test_data, model,
         dn = []
         for chunk in loader:
             answer = model(chunk.to(args.device), warmup=warmup).data
-            answer[answer <= args.threshold] = 0
             dn.append(answer)
         dn = torch.cat(dn).unsqueeze(1)
         dn = recombine_img(dn, crops_shape, pad)
@@ -139,6 +138,7 @@ def test_epoch(args, epoch, test_data, model,
             loss.append(model.xent(target, dn).cpu().item())
         if warmup == 'dn':
             dn = dn * (norm[1]-norm[0]) + norm[0]
+            dn [dn <= args.threshold] = 0
             loss.append((model.loss_fn(target, dn)).cpu().item())
             ssim.append(1-loss_ssim()(target, dn).cpu().item())
             mse.append(torch.nn.MSELoss()(target, dn).cpu().item())
