@@ -131,6 +131,7 @@ def test_epoch(args, epoch, test_data, model,
         dn = []
         for chunk in loader:
             answer = model(chunk.to(args.device), warmup=warmup).data
+            answer[answer <= args.threshold] = 0
             dn.append(answer)
         dn = torch.cat(dn).unsqueeze(1)
         dn = recombine_img(dn, crops_shape, pad)
