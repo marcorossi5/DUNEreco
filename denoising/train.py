@@ -139,9 +139,9 @@ def test_epoch(args, epoch, test_data, model,
         if warmup == 'dn':
             dn = dn * (norm[1]-norm[0]) + norm[0]
             dn [dn <= args.threshold] = 0
-            loss.append((model.loss_fn(target, dn)).cpu().item())
+            loss.append((model.loss_fn(dn, target)).cpu().item())
             ssim.append(1-loss_ssim()(target, dn).cpu().item())
-            mse.append(torch.nn.MSELoss()(target, dn).cpu().item())
+            mse.append(torch.nn.MSELoss()(dn, target).cpu().item())
             psnr.append(compute_psnr(target, dn))
         res.append(dn.cpu().detach())
     res = torch.cat(res)

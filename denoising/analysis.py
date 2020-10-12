@@ -65,12 +65,16 @@ def inference(args, model, channel):
     """
     #load dataset
     print('[+] Inference')
-    test_data = DataLoader(PlaneLoader(args, 'test', 'collection'),
-                                       num_workers=args.num_workers,
-                                       t=args.threshold)
+    ploader = PlaneLoader(args, 'test', 'collection', args.threshold)
+    test_data = DataLoader(ploader,num_workers=args.num_workers)
+    if args.warmup == 'roi':
+        labels = ploader.clear[:,:1]
+    elif args.warmup == 'dn':
+        labels = ploader.clear[:,1:2]
 
     metrics, res, t = test_epoch(args, None, test_data, model,
-                                 ana=True, warmup=args.warmup)
+                                 ana=True, warmup=args.warmup,
+                                 labels=labels)
 
     #save results for further testing
     fname = os.path.join(args.dir_final_test, f'{args.warmup}_test_metrics')
@@ -102,7 +106,7 @@ def main(args):
     else:
         bname = os.path.join(args.dir_final_test, 'best_model.txt')
         with open(bname, 'r') as f:
-            bname = f.read().strip('\n')
+            fname = f.read().strip('\n')
             f.close()
     model.load_state_dict(torch.load(fname))
 
