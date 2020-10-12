@@ -67,7 +67,7 @@ class CropLoader(torch.utils.data.Dataset):
         return self.clear[index], self.noisy[index]
 
 class PlaneLoader(torch.utils.data.Dataset):
-    def __init__(self, args, folder, channel, t=0):
+    def __init__(self, args, folder, channel):
         """
         This function loads the planes for inference.
         Only noisy planes are normalized since clear planes don't
@@ -101,7 +101,7 @@ class PlaneLoader(torch.utils.data.Dataset):
         self.norm = np.load(fname)
 
         hits = torch.clone(clear)
-        mask = hits > t
+        mask = hits > args.threshold
         hits[mask] = 1
         hits[~mask] = 0
         #clear planes don't need to be normalized
