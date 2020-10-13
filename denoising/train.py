@@ -152,8 +152,9 @@ def test_epoch(args, epoch, test_data, model,
     fname = os.path.join(args.dir_testing, f'test_{warmup}_{epoch}')
 
     if warmup == 'roi':
-        plot_test_panel(labels[0,0], (res[0,0] > args.t).long(),fname+'_threshold')
-        plot_test_panel(labels[0,0, 550:700, 5500:], res[0,0, 550:700, 5500:],fname)
+        if not ana:
+            plot_test_panel(labels[0,0], (res[0,0] > args.t).long(),fname+'_threshold')
+            plot_test_panel(labels[0,0, 550:700, 5500:], res[0,0, 550:700, 5500:],fname)
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), res, dry_inf
 
     if warmup == 'dn':

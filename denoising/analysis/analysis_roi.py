@@ -384,7 +384,7 @@ def testing_plots(dirname, threshold):
     print('AUC gcnn', auc_gc[0] +- auc_gc[1])
 
     print(f'cnn Sensitivity: {tpr[0][11]}+-{tpr[1][11]}')
-    print(f'cnn Specificity: {fpr[0][11]}+-{fpr[1][11]}')
+    print(f'cnn Specificity: {1-fpr[0][11]}+-{fpr[1][11]}')
     dir_name = f'./denoising/output/CNN_dn_{dirname}/final_test/'
     fname = dir_name + 'roi_test_metrics.npy'
     cm_save = np.array([0,0,
@@ -394,7 +394,7 @@ def testing_plots(dirname, threshold):
     np.save(fname, cm_save)
 
     print(f'gcnn Sensitivity: {tpr_gc[0][11]}+-{tpr_gc[1][11]}')
-    print(f'cnn Specificity: {fpr_gc[0][11]}+-{fpr_gc[1][11]}')
+    print(f'cnn Specificity: {1-fpr_gc[0][11]}+-{fpr_gc[1][11]}')
     dir_name = f'./denoising/output/GCNN_dn_{dirname}/final_test/'
     fname = dir_name + 'roi_test_metrics.npy'
     cm_save_gc = np.array([0,0,

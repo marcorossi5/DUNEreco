@@ -58,10 +58,11 @@ def bar_plot(lang, use, err, fname, label, log=False):
     ax.set(yticks=ind, yticklabels=lang)
     if log:
         ax.set_xscale('log')
-
-    ax.tick_params(axis='x', which='both', direction='in')
-    ax.set_xlim([0,1])
-    ax = set_ticks(ax,'x',0,1,6,div=4, d=1)
+        ax.set_xlim([1e-4,1e-2])
+    else:
+        ax.tick_params(axis='x', which='both', direction='in')
+        ax.set_xlim([0,1])
+        ax = set_ticks(ax,'x',0,1,6,div=4, d=1)
 
     plt.xlabel(label)
     plt.title(r'Final Evaluation')
@@ -82,11 +83,15 @@ def metrics_plots(dirname):
 
     dir_name = 'denoising/benchmarks/plots/'
 
-
     fname = dir_name + 'roi_canny_sns.pdf'
     use  = [x[3] for x in Dsort]
     err = [x[4] for x in Dsort]
     bar_plot(lang, use, err, fname, r'Sensitivity')
+
+    fname = dir_name + 'roi_canny_spc.pdf'
+    use  = [1-x[5] for x in Dsort]
+    err = [x[6] for x in Dsort]
+    bar_plot(lang, use, err, fname, r'False Positive Rate', log=True)
 
 
 def image_arrays(dirname, threshold):
@@ -200,11 +205,11 @@ def image_plots(dirname, threshold):
                    left=True, labelleft=True)
 
     from matplotlib.lines import Line2D
-    legend_elements = [Line2D([0], [0], marker='o', color='white', label='False Positive',
+    legend_elements = [Line2D([0], [0], marker='o', color='white', label='False Negative',
                           markerfacecolor='green', markeredgecolor='black', markersize=7),
                        Line2D([0], [0], marker='o', color='white', label='True',
                           markerfacecolor='white', markeredgecolor='black', markersize=7),
-                       Line2D([0], [0], marker='o', color='white', label='False Negative',
+                       Line2D([0], [0], marker='o', color='white', label='False Positive',
                           markerfacecolor='darkred', markeredgecolor='black', markersize=7),]
     ax.legend(handles=legend_elements, frameon=False)
 
