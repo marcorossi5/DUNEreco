@@ -4,13 +4,7 @@ import sys
 import argparse
 import numpy as np
 import glob
-import matplotlib.pyplot as plt
-from skimage.feature import canny
 import time as tm
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from analysis.analysis_roi import confusion_matrix
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dirname", "-p", default="../datasets/IML2020/test/benchmark",
@@ -33,7 +27,8 @@ def process_hits(fname):
         mask = np.logical_and(hits[:,0] >= first_ch, hits[:,0] < last_ch)
 
         for hit in hits[mask]:
-            ROIs[hit[0], hit[1]:hit[2]] = 1
+            ch = hit[0] - first_ch
+            ROIs[apa, ch, hit[1]:hit[2]] = 1
     return ROIs
 
 def process_wires(fname):
@@ -80,7 +75,7 @@ def process_wires_and_dump(dirname):
     
     wires = []
     for fname in fnames:
-        wires.expand(process_wires(fname))
+        wires.extend(process_wires(fname))
     wires = np.stack(wires)
     outname = os.path.join(output_dir, "collection_wires")
     np.save(outname, wires)
