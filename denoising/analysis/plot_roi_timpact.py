@@ -76,12 +76,12 @@ def main():
                     step='post', color="coral")
     
     ax.step([],[],'', color="white", label="Specificity:")
-    ax.step(thresholds, spc_mean[:,0], color= "lime",
+    ax.step(thresholds, spc_mean[:,0], color= "forestgreen",
                 linestyle='--', label='cnn', lw=0.5, where='post')
     ax.fill_between(thresholds, spc_mean[:,0]-spc_std[:,0],
                     spc_mean[:,0]+spc_std[:,0], alpha=0.5,
                     step='post', color="lime")
-    ax.step(thresholds, spc_mean[:,1], color= "coral",
+    ax.step(thresholds, spc_mean[:,1], color= "darkred",
                 linestyle='--', label='gcnn', lw=0.5, where='post')
     ax.fill_between(thresholds, spc_mean[:,0]-spc_std[:,0],
                     spc_mean[:,0]+spc_std[:,0], alpha=0.5,
