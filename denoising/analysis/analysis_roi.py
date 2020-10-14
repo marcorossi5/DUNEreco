@@ -328,7 +328,8 @@ def testing_plots(dirname, threshold):
     no_hit_gc = x[2][~mask]
 
     fig = plt.figure()
-    fig.suptitle('Final evaluation')   
+    suptitle = f'Final evaluation: cut on labels $t={int(threshold)}$'
+    fig.suptitle(r'%s'%suptitle)   
     ax = fig.add_subplot()
     ax.set_xlabel('NN score')
     ax.hist(hit.flatten(),100,range=(0,1), histtype='step',
@@ -347,7 +348,7 @@ def testing_plots(dirname, threshold):
     ax.tick_params(axis='y', which='both', direction='in',
                    right=True, labelright=False,
                    left=True, labelleft=True)
-    plt.savefig('denoising/benchmarks/plots/scores_roi_test.pdf',
+    plt.savefig(f'denoising/benchmarks/plots/scores_roi_test_t{int(threshold)}.pdf',
                 bbox='tight',dpi=300)
     plt.close()
 
@@ -355,7 +356,8 @@ def testing_plots(dirname, threshold):
     fpr_gc, tpr_gc, auc_gc = compute_roc(x[2], x[0].astype(bool))
 
     fig = plt.figure()
-    fig.suptitle('Final evaluation: ROC curve')
+    suptitle = f'Final evaluation: ROC curve, cut $t={int(threshold)}$'
+    fig.suptitle(r'%s'%suptitle)
     ax = fig.add_subplot()
     ax.set_xlabel('False Positive ratio')
     ax.set_ylabel('Sensitivity')
@@ -376,7 +378,7 @@ def testing_plots(dirname, threshold):
     ax.tick_params(axis='y', which='both', direction='in',
                    right=True, labelright=False,
                    left=True, labelleft=True)
-    plt.savefig('denoising/benchmarks/plots/roc_roi_test.pdf',
+    plt.savefig(f'denoising/benchmarks/plots/roc_roi_test_t{int(threshold)}.pdf',
                 bbox='tight',dpi=300)
     plt.close()
 
