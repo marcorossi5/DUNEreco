@@ -31,20 +31,12 @@ def metrics_list(dirname):
     fname = dir_name_gc + 'dn_test_metrics.npy'
     dn_test_metrics_gc = np.load(fname)
 
-    fname = dir_name_w + 'wiener_3_metrics.npy'
-    w_3_metrics = np.load(fname)
-
-    fname = dir_name_w + 'wiener_5_metrics.npy'
-    w_5_metrics = np.load(fname)
-
-    fname = dir_name_w + 'wiener_7_metrics.npy'
-    w_7_metrics = np.load(fname)
+    fname = dir_name_w + 'pandora_wires_metrics.npy'
+    pandora_wires = np.load(fname)
 
     D = [(r'cnn'       , *dn_test_metrics[2:]),
          (r'gcnn'      , *dn_test_metrics_gc[2:]),
-         (r'Wiener $3$', *w_3_metrics.flatten()),
-         (r'Wiener $5$', *w_5_metrics.flatten()),
-         (r'Wiener $7$', *w_7_metrics.flatten())]
+         (r'Pandora', *pandora_wires.flatten())]
 
     return D
 
@@ -110,6 +102,7 @@ def image_arrays(dirname):
 
 
 def image_plots(dirname):
+    # uncomment to plot ratio raw::RawDigits/recob:Wire
     dn, clear, noisy = image_arrays(dirname)
 
     dir_name = 'denoising/benchmarks/plots/'
@@ -117,9 +110,10 @@ def image_plots(dirname):
 
     fig = plt.figure(figsize=(12,9))
     fig.suptitle('Denoising final evaluation')
-    gs = fig.add_gridspec(nrows=2, ncols=1, hspace=0.05)
+    gs = fig.add_gridspec(nrows=4, ncols=1, hspace=0.05)
 
-    ax = plt.subplot(gs[0])
+    ax = plt.subplot(gs[:3])
+    #ax = plt.subplot(gs[:2])
     ax.set_ylabel('Wire with hits')
     ax.plot(clear[500], lw=1, alpha=0.8, color='grey', label='target')
     ax.plot(dn[0][500], lw=0.3, label='cnn', color='orange')
@@ -134,9 +128,16 @@ def image_plots(dirname):
                    right=True, labelright=False,
                    left=True, labelleft=True)
 
-    ax = plt.subplot(gs[1])
+    #ax = plt.subplot(gs[-2:])
+    ax = plt.subplot(gs[-1])
     ax.set_ylabel('Wire w/o hits')
+    #ax.set_ylabel('Ratio')
     ax.set_xlabel('TDC Ticks')
+
+    #mask = dn[2][500]==0
+    #div = clear[500]/dn[2][500]
+    #div[mask] = 0
+    #ax.plot(div, lw=1, alpha=0.8, color='green')
     ax.plot(clear[0], lw=1, alpha=0.8, color='grey', label='target')
     ax.plot(dn[0][0], lw=0.3, label='cnn', color='orange')
     ax.plot(dn[1][0], lw=0.3, label='gcnn', color='b')
