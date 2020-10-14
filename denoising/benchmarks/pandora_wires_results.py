@@ -7,8 +7,6 @@ hit with signal.
 Output file contains ssim, psnr and mse provided with mean values
 and uncertainties.
 """
-from utils.utils import compute_psnr
-from losses import loss_mse, loss_ssim
 import sys
 import os
 import argparse
@@ -20,9 +18,11 @@ import torch
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))))
+from utils.utils import compute_psnr
+from losses import loss_mse, loss_ssim
 
 PARSER = argparse.ArgumentParser()
-parser.add_argument("--dirname", "-p", default="../datasets/backup/test",
+PARSER.add_argument("--dirname", "-p", default="../datasets/backup/test",
                     type=str, help='Directory path to datasets')
 PARSER.add_argument("--device", "-d", default="0", type=str,
                     help="gpu number")
@@ -38,8 +38,9 @@ def main(dirname, device):
                              'pandora_collection_wires.npy')
     wires = np.load(file_name)
 
-    digits = torch.Tensor(digits).to(device)
-    wires = torch.Tensor(wires).to(device)
+    # input images should be 4-d tensors
+    digits = torch.Tensor(digits[:,None]).to(device)
+    wires = torch.Tensor(wires[:,None]).to(device)
 
     ssim = []
     mse = []
@@ -62,7 +63,7 @@ def main(dirname, device):
     res = np.array([[ssim_mean, ssim_std],
                     [psnr_mean, psnr_std],
                     [mse_mean, mse_std]])
-    fname = f'/denoising/benchmarks/results/pandora_wires_metrics'
+    fname = f'denoising/benchmarks/results/pandora_wires_metrics'
     np.save(fname, res)
 
 

@@ -30,7 +30,7 @@ def process_hits(fname):
         for hit in hits[mask]:
             ch = hit[0] - first_ch
             ROIs[apa, ch, hit[1]:hit[2]] = 1
-    return ROIs
+    return ROIs[:, None]
 
 
 def process_wires(fname):
@@ -45,7 +45,7 @@ def process_wires(fname):
 
         valid = wires[mask]
         coll_wire[valid[:,1]-first_ch] = valid[:,2:]
-        coll_wires.append(coll_wire)
+        coll_wires.append(coll_wire[None])
 
     return coll_wires
 

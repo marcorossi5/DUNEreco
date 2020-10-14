@@ -43,15 +43,15 @@ def main(dirname, threshold):
     # TODO: calculate acc, sns, spc (mean +- inc)
 
     # Load recob::hits
-    file_name = os.path.join(dirname, "benchmarks/hits",
-                             "collection_hits.npy")
+    file_name = os.path.join(dirname, "benchmark/hits",
+                             "pandora_collection_hits.npy")
 
     pandora_hits = np.load(file_name)
 
     acc = []
     sns = []
     spc = []
-
+    
     for pandora_hit, true_hit in zip(pandora_hits, true_hits):
         hit = pandora_hit[true_hit]
         no_hit = pandora_hit[~true_hit]
