@@ -7,7 +7,7 @@ import glob
 import time as tm
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--dirname", "-p", default="../datasets/IML2020/test/benchmark",
+parser.add_argument("--dirname", "-p", default="../datasets/backup/test/benchmark",
                     type=str, help='Directory path to datasets')
 
 N_CHANNELS = 2560
@@ -38,9 +38,15 @@ def process_wires(fname):
 
     coll_wires = []
     for apa in range(N_APAS):
+        coll_wire = np.zeros((N_COLLECTION, N_TICKS))
         first_ch = N_CHANNELS*apa + 2*N_INDUCTION
         last_ch = N_CHANNELS*(apa+1)
-        coll_wires.append(wires[first_ch:last_ch, 2:])
+        mask = np.logical_and(wires[:,1] >= first_ch, wires[:, 1] < last_ch)
+
+        valid = wires[mask]
+        coll_wire[valid[:,1]-first_ch] = valid[:,2:]
+        coll_wires.append(coll_wire)
+
     return coll_wires
 
 

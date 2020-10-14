@@ -7,7 +7,6 @@ hit with signal.
 Output file contains accuracy, sensitivity and specificity provided
 with mean values and uncertainties.
 """
-from analysis.analysis_roi import confusion_matrix
 import os
 import sys
 import argparse
@@ -16,10 +15,11 @@ import matplotlib.pyplot as plt
 import time as tm
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from analysis.analysis_roi import confusion_matrix
 
 
 PARSER = argparse.ArgumentParser()
-parser.add_argument("--dirname", "-p", default="../datasets/backup/test",
+PARSER.add_argument("--dirname", "-p", default="../datasets/backup/test",
                     type=str, help='Directory path to datasets')
 PARSER.add_argument("--threshold", "-t", default=3.5, type=float,
                     help="Threshold to distinguish signal/noise in labels")
