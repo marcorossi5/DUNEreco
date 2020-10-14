@@ -138,7 +138,7 @@ def test_epoch(args, epoch, test_data, model,
             loss.append(model.xent(target, dn).cpu().item())
         if warmup == 'dn':
             dn = dn * (norm[1]-norm[0]) + norm[0]
-            dn [dn <= 1] = 0
+            dn [dn <= args.threshold] = 0
             loss.append((model.loss_fn(dn, target)).cpu().item())
             ssim.append(1-loss_ssim()(target, dn).cpu().item())
             mse.append(torch.nn.MSELoss()(dn, target).cpu().item())

@@ -43,6 +43,8 @@ PARSER.add_argument("--warmup", default='dn', type=str,
                     help="roi / dn")
 PARSER.add_argument("--load_path", default=None, type=str,
                     help="torch .dat file to load the model")
+PARSER.add_argument("--threshold", "-t", default=3, type=float,
+                    help="Cut threshold on labels")
 
 
 def inference(args, model, channel):
