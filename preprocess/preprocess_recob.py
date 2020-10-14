@@ -16,6 +16,7 @@ N_COLLECTION = 960
 N_APAS = 6
 N_TICKS = 6000
 
+
 def process_hits(fname):
     hits = np.load(os.path.join(fname))
 
@@ -24,12 +25,13 @@ def process_hits(fname):
     for apa in range(N_APAS):
         first_ch = N_CHANNELS*apa + 2*N_INDUCTION
         last_ch = N_CHANNELS*(apa+1)
-        mask = np.logical_and(hits[:,0] >= first_ch, hits[:,0] < last_ch)
+        mask = np.logical_and(hits[:, 0] >= first_ch, hits[:, 0] < last_ch)
 
         for hit in hits[mask]:
             ch = hit[0] - first_ch
             ROIs[apa, ch, hit[1]:hit[2]] = 1
     return ROIs
+
 
 def process_wires(fname):
     wires = np.load(os.path.join(fname))
@@ -41,6 +43,7 @@ def process_wires(fname):
         coll_wires.append(wires[first_ch:last_ch, 2:])
     return coll_wires
 
+
 def process_hits_and_dump(dirname):
     """
     Processes hits to cast them into an array of shape (N_CHANNELS, N_TICKS).
@@ -51,13 +54,13 @@ def process_hits_and_dump(dirname):
     input_dir = os.path.join(dirname, "pandora_out")
     output_dir = os.path.join(dirname, "hits")
     fnames = glob.glob(os.path.join(input_dir, "*recobhits*"))
-    
+
     ROIs = []
     for fname in fnames:
         ROIs.append(process_hits(fname))
-    
+
     ROIs = np.concatenate(ROIs)
-    outname = os.path.join(output_dir, "collection_hits")
+    outname = os.path.join(output_dir, "pandora_collection_hits")
     np.save(outname, ROIs)
 
 
@@ -72,12 +75,12 @@ def process_wires_and_dump(dirname):
     input_dir = os.path.join(dirname, "pandora_out")
     output_dir = os.path.join(dirname, "wires")
     fnames = glob.glob(os.path.join(input_dir, "*recobwires*"))
-    
+
     wires = []
     for fname in fnames:
         wires.extend(process_wires(fname))
     wires = np.stack(wires)
-    outname = os.path.join(output_dir, "collection_wires")
+    outname = os.path.join(output_dir, "pandora_collection_wires")
     np.save(outname, wires)
 
 
@@ -91,4 +94,4 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     START = tm.time()
     main(**args)
-    print('Program done in %f'%(tm.time()-START))
+    print('Program done in %f' % (tm.time()-START))
