@@ -16,10 +16,11 @@ def main():
     mpl.rcParams['text.usetex'] = True
     mpl.rcParams['savefig.format'] = 'pdf'
     mpl.rcParams['figure.titlesize'] = 20
-    mpl.rcParams['axes.titlesize'] = 17
+    mpl.rcParams['axes.titlesize'] = 18
+    mpl.rcParams['axes.labelsize'] = 16
     mpl.rcParams['ytick.labelsize'] = 14
     mpl.rcParams['xtick.labelsize'] = 14
-    mpl.rcParams['legend.fontsize'] = 11
+    mpl.rcParams['legend.fontsize'] = 13
 
     sns_all = []
     spc_all = []
@@ -62,9 +63,10 @@ def main():
     spc_std = spc_all.std(1)/spc_all.shape[1]
     
     fig = plt.figure()
-    fig.suptitle('Final evaluation: threshold impact')
-    ax = fig.add_subplot()
+    fig.suptitle('ProtoDUNE-SP Simulation Preliminary')
     
+    ax = fig.add_subplot()
+    ax.set_title('Final evaluation: threshold impact')
     ax.step([],[],'', color="white", label="Sensitivity:")
     ax.step(thresholds, sns_mean[:,0], color="lime", label='cnn', lw=0.5, where='post')
     ax.fill_between(thresholds, sns_mean[:,0]-sns_std[:,0],

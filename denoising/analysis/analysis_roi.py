@@ -328,10 +328,11 @@ def testing_plots(dirname, threshold):
     no_hit_gc = x[2][~mask]
 
     fig = plt.figure()
-    suptitle = f'Final evaluation: cut on labels $t={int(threshold)}$'
-    fig.suptitle(r'%s'%suptitle)   
+    fig.suptitle('ProtoDUNE-SP Simulation Preliminary')
     ax = fig.add_subplot()
-    ax.set_xlabel('NN score')
+    title = f'$t={int(threshold)}$'
+    ax.set_title(r'Histogram of Scores: cut on labels %s'%title)
+    ax.set_xlabel('NN Score', fontsize=16)
     ax.hist(hit.flatten(),100,range=(0,1), histtype='step',
             label='cnn hit', color='r')
     ax.hist(no_hit.flatten(),100,range=(0,1), histtype='step',
@@ -340,6 +341,8 @@ def testing_plots(dirname, threshold):
             label='gcnn hit', color='r', linestyle='--')
     ax.hist(no_hit_gc.flatten(),100,range=(0,1), histtype='step',
             label='gcnn no-hit', color='g', linestyle='--')
+    ax.plot([0.5,0.5], [0, 8e5], lw=0.8, color='black', alpha=0.6)
+    ax.quiver(0.5, 8e5, 0.25, 0, width=0.0025, linestyle='dashed', alpha=0.6)
     ax.legend(frameon=False, ncol=2)
     ax.set_yscale('log')
     ax.tick_params(axis='x', which='both', direction='in',
@@ -356,11 +359,12 @@ def testing_plots(dirname, threshold):
     fpr_gc, tpr_gc, auc_gc = compute_roc(x[2], x[0].astype(bool))
 
     fig = plt.figure()
-    suptitle = f'Final evaluation: ROC curve, cut $t={int(threshold)}$'
-    fig.suptitle(r'%s'%suptitle)
+    fig.suptitle('ProtoDUNE-SP Simulation Preliminary')
     ax = fig.add_subplot()
-    ax.set_xlabel('False Positive ratio')
-    ax.set_ylabel('Sensitivity')
+    title = f'$t={int(threshold)}$'
+    ax.set_title(r'ROC Curve: cut on labels %s'%title)
+    ax.set_xlabel('False Positive Ratio', fontsize=16)
+    ax.set_ylabel('Sensitivity', fontsize=16)
     label = r'cnn, AUC=$%.4f \pm %.4f$'%(auc[0], auc[1])
     ax.errorbar(fpr[0], tpr[0], xerr=fpr[1], yerr=tpr[1], label=label, color='#ff7f0e')
     label = r'gcnn, AUC=$%.4f \pm %.4f$'%(auc_gc[0], auc_gc[1])

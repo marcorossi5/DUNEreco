@@ -201,7 +201,7 @@ def training_plots(dirname):
 
 
 def testing_plots():
-    pass    
+    pass
 
 
 def main(dirname):
