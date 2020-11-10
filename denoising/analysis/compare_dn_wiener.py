@@ -1,6 +1,7 @@
 """ This module compare results on test set of DN against Wiener filters"""
 import sys
 import os
+import argparse
 import numpy as np
 import time as tm
 import matplotlib.pyplot as plt
@@ -15,10 +16,13 @@ from utils.utils import compute_psnr
 from losses import loss_ssim, loss_mse
 from analysis_roi import set_ticks
 
+PARSER = argparse.ArgumentParser()
+PARSER.add_argument("--dirname", "-p", default="final",
+                    type=str, help='Directory containing results to plot, format: denoising/output/CNN_dn_<XXX>/final_test')
 
-def metrics_list():
-    dir_name = './denoising/output/CNN_dn_final/final_test/'
-    dir_name_gc = './denoising/output/GCNN_dn_final/final_test/'
+def metrics_list(dirname):
+    dir_name = f'./denoising/output/CNN_dn_{dirname}/final_test/'
+    dir_name_gc = f'./denoising/output/GCNN_dn_{dirname}/final_test/'
     dir_name_w = './denoising/benchmarks/results/'
 
     fname = dir_name + 'dn_test_metrics.npy'
@@ -58,8 +62,8 @@ def bar_plot(lang, use, err, fname, label):
     plt.close()
 
 
-def metrics_plots():
-    D = metrics_list()
+def metrics_plots(dirname):
+    D = metrics_list(dirname)
     Dsort = sorted(D, key=itemgetter(3), reverse=True)
 
     lang = [x[0] for x in Dsort]
@@ -81,12 +85,12 @@ def metrics_plots():
     bar_plot(lang, use, err, fname, r'mse')
 
 
-def image_arrays():
-    dir_name = 'denoising/output/CNN_dn_final/final_test/'
+def image_arrays(dirname):
+    dir_name = f'denoising/output/CNN_dn_{dirname}/final_test/'
     fname = dir_name + 'dn_test_res.npy'
     dn = np.load(fname)[0,0]
 
-    dir_name = 'denoising/output/GCNN_dn_final/final_test/'
+    dir_name = f'denoising/output/GCNN_dn_{dirname}/final_test/'
     fname = dir_name + 'dn_test_res.npy'
     dn_gc = np.load(fname)[0,0]
 
@@ -111,8 +115,8 @@ def image_arrays():
     return [dn, dn_gc, w_3, w_5, w_7], clear, noisy
 
 
-def image_plots():
-    dn, clear, noisy = image_arrays()
+def image_plots(dirname):
+    dn, clear, noisy = image_arrays(dirname)
 
     dir_name = 'denoising/benchmarks/plots/'
     fname = dir_name + 'dn_wires.pdf'
@@ -161,7 +165,7 @@ def image_plots():
     plt.close()
 
 
-def main():
+def main(dirname):
     mpl.rcParams['text.usetex'] = True
     mpl.rcParams['savefig.format'] = 'pdf'
     mpl.rcParams['figure.titlesize'] = 20
@@ -169,12 +173,13 @@ def main():
     mpl.rcParams['ytick.labelsize'] = 17
     mpl.rcParams['xtick.labelsize'] = 17
     mpl.rcParams['legend.fontsize'] = 14
-    metrics_plots()
+    metrics_plots(dirname)
 
-    image_plots()
+    image_plots(dirname)
 
 
 if __name__ == '__main__':
+    args = vars(PARSER.parse_args())
     start = tm.time()
-    main()
+    main(**args)
     print(f'Program done in {tm.time()-start}')

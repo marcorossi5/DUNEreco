@@ -138,9 +138,10 @@ def test_epoch(args, epoch, test_data, model,
             loss.append(model.xent(target, dn).cpu().item())
         if warmup == 'dn':
             dn = dn * (norm[1]-norm[0]) + norm[0]
-            loss.append((model.loss_fn(target, dn)).cpu().item())
+            dn [dn <= args.threshold] = 0
+            loss.append((model.loss_fn(dn, target)).cpu().item())
             ssim.append(1-loss_ssim()(target, dn).cpu().item())
-            mse.append(torch.nn.MSELoss()(target, dn).cpu().item())
+            mse.append(torch.nn.MSELoss()(dn, target).cpu().item())
             psnr.append(compute_psnr(target, dn))
         res.append(dn.cpu().detach())
     res = torch.cat(res)
@@ -154,9 +155,6 @@ def test_epoch(args, epoch, test_data, model,
         if not ana:
             plot_test_panel(labels[0,0], (res[0,0] > args.t).long(),fname+'_threshold')
             plot_test_panel(labels[0,0, 550:700, 5500:], res[0,0, 550:700, 5500:],fname)
-        if ana:
-            save_ROI_stats(args,epoch,labels,res,args.t,ana)
-            print('Confusion matrix time:', tm()-end)
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), res, dry_inf
 
     if warmup == 'dn':

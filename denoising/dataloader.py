@@ -54,7 +54,7 @@ class CropLoader(torch.utils.data.Dataset):
         m, M = np.load(fname)
 
         hits = torch.clone(clear)
-        hits[hits!=0] = 1 
+        hits[hits!=0] = 1
 
         self.clear = (clear-m)/(M-m)
         self.noisy = (noisy-m)/(M-m)
@@ -76,6 +76,7 @@ class PlaneLoader(torch.utils.data.Dataset):
             args: Args object
             folder: str, one of ['train','val','test']
             channel: str, one of ['readout','collection']
+            t: float, threshold to be put on labels
         """
         data_dir = os.path.join(args.dataset_dir, folder)
 
@@ -100,8 +101,7 @@ class PlaneLoader(torch.utils.data.Dataset):
         self.norm = np.load(fname)
 
         hits = torch.clone(clear)
-        hits[hits!=0] = 1
-        #clear planes don't need to be normalized
+        hits[hits!= 0] = 1
         self.clear = clear
         self.noisy = (noisy-self.norm[0])/(self.norm[1]-self.norm[0])
 

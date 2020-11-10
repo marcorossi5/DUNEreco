@@ -1,5 +1,6 @@
 import sys
 import os
+import argparse
 import numpy as np
 import time as tm
 import matplotlib.pyplot as plt
@@ -8,13 +9,19 @@ import matplotlib as mpl
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-def training_metrics(warmup):
-    dir_name = f'./denoising/output/CNN_{warmup}_final/metrics/'
-    dir_name_gc = f'./denoising/output/GCNN_{warmup}_final/metrics/'
+PARSER = argparse.ArgumentParser()
+PARSER.add_argument("--dirname", "-p", default="final",
+                    type=str, help='Directory containing results to plot, format: denoising/output/CNN_dn_<XXX>/final_test')
+PARSER.add_argument("--threshold", "-t", default=3.5, type=float,
+                    help="Threshold to distinguish signal/noise in labels")
+
+def training_metrics(warmup, dirname):
+    dir_name = f'./denoising/output/CNN_{warmup}_{dirname}/metrics/'
+    dir_name_gc = f'./denoising/output/GCNN_{warmup}_{dirname}/metrics/'
     
     fname = dir_name + 'loss_sum.npy'
     loss = np.load(fname)[0]
-    # shape (1. train_epochs)
+    # shape (1, train_epochs)
 
     fname = dir_name + 'test_epochs.npy'
     val_epochs = np.load(fname)
@@ -37,9 +44,9 @@ def training_metrics(warmup):
             [val_metrics, val_metrics_gc])
 
 
-def training_timings(warmup):
-    dir_name = f'./denoising/output/CNN_{warmup}_final/timings/'
-    dir_name_gc = f'./denoising/output/GCNN_{warmup}_final/timings/'
+def training_timings(warmup, dirname):
+    dir_name = f'./denoising/output/CNN_{warmup}_{dirname}/timings/'
+    dir_name_gc = f'./denoising/output/GCNN_{warmup}_{dirname}/timings/'
     
     fname = dir_name + 'timings_train.npy'
     timings_train = np.load(fname)
@@ -107,8 +114,8 @@ def special_ticks(ax, start, end, ticks):
     return ax
 
 
-def training_plots():
-    loss, val_epochs, val_metrics = training_metrics('roi')
+def training_plots(dirname):
+    loss, val_epochs, val_metrics = training_metrics('roi', dirname)
     
     epochs = [i for i in range(len(loss[0]))]
 
@@ -156,7 +163,7 @@ def training_plots():
 
     ##########################################################################
 
-    timings_train, timings_val = training_timings('roi')
+    timings_train, timings_val = training_timings('roi', dirname)
 
     fig = plt.figure()
     fig.suptitle('Timings')
@@ -229,17 +236,23 @@ def training_plots():
     plt.close()
 
 
-def testing_res():
+def testing_res(dirname, threshold):
     fname = '../datasets/denoising/test/planes/collection_clear.npy'
-    y_true = np.load(fname).reshape([6,-1])
+    y_true = np.load(fname)
+    y_true = y_true.reshape([y_true.shape[0],-1])
+    mask = np.logical_and(y_true >= 0, y_true <= threshold)
+    y_true[ mask ] = 0
+    y_true[ ~mask ] = 1
 
-    dir_name = './denoising/output/CNN_dn_final/final_test/'
+    dir_name = f'./denoising/output/CNN_dn_{dirname}/final_test/'
     fname = dir_name + 'roi_test_res.npy'
-    y_pred = np.load(fname).reshape([6,-1])
+    y_pred = np.load(fname)
+    y_pred = y_pred.reshape([y_pred.shape[0],-1])
 
-    dir_name = './denoising/output/GCNN_dn_final/final_test/'
+    dir_name = f'./denoising/output/GCNN_dn_{dirname}/final_test/'
     fname = dir_name + 'roi_test_res.npy'
-    y_pred_gc = np.load(fname).reshape([6,-1])
+    y_pred_gc = np.load(fname)
+    y_pred_gc = y_pred_gc.reshape([y_pred_gc.shape[0],-1])
 
     return [y_true, y_pred, y_pred_gc]
 
@@ -304,10 +317,10 @@ def compute_roc(pred, mask):
            [auc_mean, auc_std]
 
 
-def testing_plots():
-    x = testing_res()
+def testing_plots(dirname, threshold):
+    x = testing_res(dirname, threshold)
 
-    mask = x[0].astype(bool)
+    mask = x[0].astype(bool) # everything non zero is True
     hit = x[1][mask]
     no_hit = x[1][~mask]
 
@@ -315,9 +328,11 @@ def testing_plots():
     no_hit_gc = x[2][~mask]
 
     fig = plt.figure()
-    fig.suptitle('Final evaluation')   
+    fig.suptitle('ProtoDUNE-SP Simulation Preliminary')
     ax = fig.add_subplot()
-    ax.set_xlabel('NN score')
+    title = f'$t={int(threshold)}$'
+    ax.set_title(r'Histogram of Scores: cut on labels %s'%title)
+    ax.set_xlabel('NN Score', fontsize=16)
     ax.hist(hit.flatten(),100,range=(0,1), histtype='step',
             label='cnn hit', color='r')
     ax.hist(no_hit.flatten(),100,range=(0,1), histtype='step',
@@ -326,6 +341,8 @@ def testing_plots():
             label='gcnn hit', color='r', linestyle='--')
     ax.hist(no_hit_gc.flatten(),100,range=(0,1), histtype='step',
             label='gcnn no-hit', color='g', linestyle='--')
+    ax.plot([0.5,0.5], [0, 8e5], lw=0.8, color='black', alpha=0.6)
+    ax.quiver(0.5, 8e5, 0.25, 0, width=0.0025, linestyle='dashed', alpha=0.6)
     ax.legend(frameon=False, ncol=2)
     ax.set_yscale('log')
     ax.tick_params(axis='x', which='both', direction='in',
@@ -334,7 +351,7 @@ def testing_plots():
     ax.tick_params(axis='y', which='both', direction='in',
                    right=True, labelright=False,
                    left=True, labelleft=True)
-    plt.savefig('denoising/benchmarks/plots/scores_roi_test.pdf',
+    plt.savefig(f'denoising/benchmarks/plots/scores_roi_test_t{int(threshold)}.pdf',
                 bbox='tight',dpi=300)
     plt.close()
 
@@ -342,10 +359,12 @@ def testing_plots():
     fpr_gc, tpr_gc, auc_gc = compute_roc(x[2], x[0].astype(bool))
 
     fig = plt.figure()
-    fig.suptitle('Final evaluation: ROC curve')
+    fig.suptitle('ProtoDUNE-SP Simulation Preliminary')
     ax = fig.add_subplot()
-    ax.set_xlabel('False Positive ratio')
-    ax.set_ylabel('Sensitivity')
+    title = f'$t={int(threshold)}$'
+    ax.set_title(r'ROC Curve: cut on labels %s'%title)
+    ax.set_xlabel('False Positive Ratio', fontsize=16)
+    ax.set_ylabel('Sensitivity', fontsize=16)
     label = r'cnn, AUC=$%.4f \pm %.4f$'%(auc[0], auc[1])
     ax.errorbar(fpr[0], tpr[0], xerr=fpr[1], yerr=tpr[1], label=label, color='#ff7f0e')
     label = r'gcnn, AUC=$%.4f \pm %.4f$'%(auc_gc[0], auc_gc[1])
@@ -363,15 +382,16 @@ def testing_plots():
     ax.tick_params(axis='y', which='both', direction='in',
                    right=True, labelright=False,
                    left=True, labelleft=True)
-    plt.savefig('denoising/benchmarks/plots/roc_roi_test.pdf',
+    plt.savefig(f'denoising/benchmarks/plots/roc_roi_test_t{int(threshold)}.pdf',
                 bbox='tight',dpi=300)
     plt.close()
 
     print('AUC cnn', auc[0] + auc[1])
     print('AUC gcnn', auc_gc[0] +- auc_gc[1])
 
-    print(f'cnn Significance: {tpr[0][11]}+-{tpr[1][11]}')
-    dir_name = './denoising/output/CNN_dn_final/final_test/'
+    print(f'cnn Sensitivity: {tpr[0][11]}+-{tpr[1][11]}')
+    print(f'cnn Specificity: {1-fpr[0][11]}+-{fpr[1][11]}')
+    dir_name = f'./denoising/output/CNN_dn_{dirname}/final_test/'
     fname = dir_name + 'roi_test_metrics.npy'
     cm_save = np.array([0,0,
                         tpr[0][11], tpr[1][11],
@@ -379,8 +399,9 @@ def testing_plots():
                         auc[0], auc[1]])
     np.save(fname, cm_save)
 
-    print(f'gcnn Significance: {tpr_gc[0][11]}+-{tpr_gc[1][11]}')
-    dir_name = './denoising/output/GCNN_dn_final/final_test/'
+    print(f'gcnn Sensitivity: {tpr_gc[0][11]}+-{tpr_gc[1][11]}')
+    print(f'cnn Specificity: {1-fpr_gc[0][11]}+-{fpr_gc[1][11]}')
+    dir_name = f'./denoising/output/GCNN_dn_{dirname}/final_test/'
     fname = dir_name + 'roi_test_metrics.npy'
     cm_save_gc = np.array([0,0,
                           tpr_gc[0][11], tpr_gc[1][11],
@@ -389,7 +410,7 @@ def testing_plots():
     np.save(fname, cm_save_gc)
 
 
-def main():
+def main(dirname, threshold):
     mpl.rcParams['text.usetex'] = True
     mpl.rcParams['savefig.format'] = 'pdf'
     mpl.rcParams['figure.titlesize'] = 20
@@ -398,12 +419,13 @@ def main():
     mpl.rcParams['xtick.labelsize'] = 14
     mpl.rcParams['legend.fontsize'] = 14
     
-    training_plots()
+    training_plots(dirname)
 
-    testing_plots()
+    testing_plots(dirname, threshold)
 
 
 if __name__ == '__main__':
+    args = vars(PARSER.parse_args())
     start = tm.time()
-    main()
+    main(**args)
     print(f'Program done in {tm.time()-start}')
