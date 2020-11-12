@@ -129,44 +129,51 @@ def calculate_pad(shape1, shape2):
     return return_pad
 
 
-def split_img(image, patch_size):
-    """
-    Parameters:
-        image: shape (N,C,W,H)
-    """
-    p_x, p_y = patch_size
-    N, C, _,_ = image.shape
-    #image = image.squeeze(1)
-    pad = calculate_pad(image.shape, patch_size)
-    image = F.pad(image, pad,
+class Converter:
+    """ Groups image to tiles converter functions """
+    def __init__(self, patch_size):
+        self.patch_size = patch_size
+
+    def images2tiles(self, image, patch_size):
+        """
+        Parameters:
+            image: shape (N,C,W,H)
+        """
+        p_x, p_y = self.patch_size
+        N, C, _,_ = image.shape
+        self.pad = calculate_pad(image.shape, patch_size)
+        image = F.pad(image, self.pad,
                  mode='constant', value=image.mean())
 
-    splits = torch.stack(torch.split(image, p_y,-1),1)
-    splits = torch.stack(torch.split(splits, p_x,-2),1)
+        splits = torch.stack(torch.split(image, p_y,-1),1)
+        splits = torch.stack(torch.split(splits, p_x,-2),1)
 
-    splits_shape = splits.shape #(N, split_x, split_y, C, p_x, p_y)
+        self.splits_shape = splits.shape #(N, split_x, split_y, C, p_x, p_y)
 
-    splits = splits.view(-1, C, p_x, p_y)#.unsqueeze(1)
+        splits = splits.view(-1, C, p_x, p_y)
 
-    return splits, splits_shape, pad
+        return splits
 
-def recombine_img(splits, splits_shape, pad):
-    """
-    Parameters:
-        splits: image of shape (N*split_x*split_y,C,W,H)
-        split_shape: shape ((N, split_x, split_y, C, p_x, p_y))
-        pad: shape (..,..,..,..)
-    """
-    b, a_x, a_y, C, p_x, p_y = splits_shape
-    C = splits.shape[1]
-    splits_shape = (b, a_x, a_y, C, p_x, p_y)
+    def tiles2images(self, splits):
+        """
+        Parameters:
+            splits: image of shape (N*split_x*split_y,C,W,H)
+            split_shape: shape ((N, split_x, split_y, C, p_x, p_y))
+            pad: shape (..,..,..,..)
+        """
+        b, a_x, a_y, C, p_x, p_y = self.splits_shape
+        C = splits.shape[1]
+        splits_shape = (b, a_x, a_y, C, p_x, p_y)
 
-    splits = splits.unsqueeze(1).reshape(splits_shape)
-    splits = splits.permute(0,1,4,3,2,5)
-    img = splits.reshape(-1, a_x*p_x,C, a_y*p_y)
-    img = img.permute(0,2,1,3)
+        splits = splits.unsqueeze(1).reshape(splits_shape)
+        splits = splits.permute(0,1,4,3,2,5)
+        img = splits.reshape(-1, a_x*p_x,C, a_y*p_y)
+        img = img.permute(0,2,1,3)
 
-    return img[:,:, pad[-2]:-pad[-1], pad[0]:-pad[1]]
+        return img[:,:, self.pad[-2]:-self.pad[-1], self.pad[0]:-self.pad[1]]
+    
+    def invert_normalization(self, planes):
+        return planes * (self.norm[1] - self.norm[0]) + self.norm[0]
 
 class MyDataParallel(nn.DataParallel):
     """Allow calling model's attributes"""
@@ -175,6 +182,17 @@ class MyDataParallel(nn.DataParallel):
             return super(MyDataParallel,self).__getattr__(name)
         except AttributeError:
             return getattr(self.module, name)
+
+
+class MyDDP(nn.DistributedDataParallel):
+    """Allow calling model's attributes"""
+    def __getattr__(self, name):
+        try:
+            return super(MyDDP,self).__getattr__(name)
+        except AttributeError:
+            return getattr(self.module, name)
+
+
 
 def print_summary_file(args):
     d = args.__dict__

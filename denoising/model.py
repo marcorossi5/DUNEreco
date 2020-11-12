@@ -13,7 +13,7 @@ from losses import *
 
 
 
-def get_GCNNv2(args):
+def get_GCNN(args):
     k = args.k
     input_channels = args.in_channels
     hidden_channels = args.hidden_channels
@@ -155,7 +155,7 @@ def get_GCNNv2(args):
             y = self.act(self.bn_2(self.GC_2(y, graph)))
             return x + self.act(self.bn_3(self.GC_3(y, graph)))
 
-    class GCNNv2(nn.Module):
+    class GCNN(nn.Module):
         """
         GNN for denoising
         ROI finder must be the first child module
@@ -231,7 +231,7 @@ def get_GCNNv2(args):
             graph = get_graph(y, self.k, l_mask)
             return self.act(self.GC_3(y, graph) * x)
 
-        def forward(self, noised_image=None, clear_image=None, warmup=False):
+        def forward(self, noised_image, warmup='dn'):
             """
             Parameters:
                 warmup: select the correct loss function
@@ -239,21 +239,14 @@ def get_GCNNv2(args):
                         'dn': warmup loss function for dn only
             """
             out = self.fit_image(noised_image, warmup)
-            if self.training:
-                if warmup == 'roi':
-                    loss = self.xent(out,clear_image[:,1:2])
-                if warmup == 'dn':
-                    loss = self.loss_fn(out, clear_image[:,:1])
-                return loss, out.data
             return out.data
 
+    gcnn = GCNN(k, input_channels, hidden_channels, patch_size, loss_fn)
 
-    gcnnv2 = GCNNv2(k, input_channels, hidden_channels, patch_size, loss_fn)
-
-    return gcnnv2
+    return gcnn
 
 
-def get_CNNv2(args):
+def get_CNN(args):
     k = args.k
     input_channels = args.in_channels
     hidden_channels = args.hidden_channels
@@ -385,7 +378,7 @@ def get_CNNv2(args):
             y = self.act(self.bn_2(self.GC_2(y)))
             return x + self.act(self.bn_3(self.GC_3(y)))
 
-    class CNNv2(nn.Module):
+    class CNN(nn.Module):
         def __init__(self, input_channels, hidden_channels, patch_size, loss_fn):
             super(CNNv2,self).__init__()
             self.loss_fn = loss_fn
@@ -447,22 +440,13 @@ def get_CNNv2(args):
             y = self.relu(self.bn_2(self.GC_2(y)))
             return self.act(self.GC_3(y) * x)
 
-        def forward(self, noised_image=None, clear_image=None, warmup=False):
+        def forward(self, noised_image, warmup='dn'):
             out = self.fit_image(noised_image, warmup)
-            if self.training:
-                if warmup == 'roi':
-                    loss = self.xent(out, clear_image[:,1:2])
-                if warmup == 'dn':
-                    loss = self.loss_fn(clear_image[:,:1], out)
-                return loss, out.data
             return out.data
 
-            
+    cnn = CNN(input_channels, hidden_channels, patch_size, loss_fn)
 
-
-    cnnv2 = CNNv2(input_channels, hidden_channels, patch_size, loss_fn)
-
-    return cnnv2
+    return cnn
 
 
 
@@ -485,7 +469,7 @@ def get_CNNv2(args):
 
 
 
-def get_CNN(args):
+def get_CNN_light(args):
     k = args.k
     input_channels = args.in_channels
     hidden_channels = args.hidden_channels
@@ -544,7 +528,7 @@ def get_CNN(args):
         def forward(self, x):
             return self.pipeline(x)
 
-    class CNN(nn.Module):
+    class CNN_light(nn.Module):
         def __init__(self, input_channels, hidden_channels, patch_size, loss_fn):
             super(CNN,self).__init__()
             self.loss_fn = loss_fn
@@ -582,12 +566,12 @@ def get_CNN(args):
                 return out, self.loss_fn(out, clear_image)
             return out
 
-    cnn = CNN(input_channels, hidden_channels, patch_size, loss_fn)
+    cnn_light = CNN_light(input_channels, hidden_channels, patch_size, loss_fn)
         
-    return cnn
+    return cnn_light
 
 
-def get_GCNN(args):
+def get_GCNN_light(args):
     k = args.k
     input_channels = args.in_channels
     hidden_channels = args.hidden_channels
@@ -648,7 +632,7 @@ def get_GCNN(args):
             y = self.act(self.bn_2(self.GC_2(y, graph)))
             return self.act(self.bn_3(self.GC_3(y, graph)))
 
-    class GCNN(nn.Module):
+    class GCNN_light(nn.Module):
         def __init__(self, k, input_channels, hidden_channels, patch_size, loss_fn):
             super(GCNN,self).__init__()
             self.loss_fn = loss_fn
@@ -699,7 +683,7 @@ def get_GCNN(args):
                         
     gcnn = GCNN(k, input_channels, hidden_channels, patch_size, loss_fn)
 
-    return gcnn
+    return gcnn_light
 
 
 def get_ROI(args):

@@ -3,19 +3,20 @@ from datetime import datetime as dtm
 
 class Args:
     def __init__(self, dir_name, epochs, model,\
-                 device, loss_fn, lr=0.009032117010326078, amsgrad=True,\
+                 loss_fn, local_rank, local_world_size \
+                 lr=0.009032117010326078, amsgrad=True,\
                  out_name=None, scan=False, batch_size=256,\
                  load_path=None, warmup=None, threshold=3.5):
+        self.local_rank = local_rank
+        self.local_world_size = local_world_size
         self.crop_size = (32,32)
         self.crop_p = 0.99
-        self.dev_ids = None
 
         #argparser
         self.dataset_dir = dir_name
         self.epochs = epochs
         self.model = model
         self.warmup = warmup
-        self.device = device
         self.loss_fn = loss_fn
         self.scan = scan
         self.threshold = threshold
