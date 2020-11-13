@@ -3,6 +3,7 @@ import os
 import numpy as np
 
 import torch
+import torch.distributed as dist
 from torch import optim
 from torch import nn
 from torch.utils.data.distributed import DistributedSampler 
@@ -45,9 +46,9 @@ def test_epoch(test_data, model, args, warmup, dry_inference=True):
         torch.Tensor: denoised data, shape (batch,C,W,H)
         float: dry inference time
     """
-    test_sampler = DistributedSampler(dataset=test_data)
+    test_sampler = DistributedSampler(dataset=test_data, shuffle=False)
     test_loader = DataLoader(dataset=test_data, sampler=test_sampler,
-                              shuffle=True, batch_size=args.test_batch_size,
+                              batch_size=args.test_batch_size,
                               num_workers=args.num_workers)
     print('[+] Testing')
     model.eval()
@@ -55,49 +56,56 @@ def test_epoch(test_data, model, args, warmup, dry_inference=True):
     n = test_data.noisy.shape[0]
 
     start = tm()
-    output = []
+    outs = []
     for noisy in test_loader:
         noisy = noisy.to(args.dev_ids[0])
         out =  model(noisy, warmup=warmup).data
-        output.append(out)
+        outs.append(out)
+    outs = torch.cat(outs)
+    output = [torch.zeros_like(outs) for i in range(dist.get_world_size())]
+    dist.all_gather(output, outs)
     output = test_data.converter.tiles2planes( torch.cat(output) )
     if warmup == 'dn':
-        output = test_data.converter.invert_normalization( output )
+        output = test_data.converter.invert_normalization(output)
         output [output <= args.threshold] = 0
     end = tm()    
 
     if dry_inference:
         return output
-    target = test_data.clear.to(args.dev_ids[0])
+    idx = 0 if warmup=="dn" else 1
+    target = test_data.clear[:,idx:idx+1].to(args.dev_ids[0])
 
     def reduce(loss):
         """ Reduces losses keeping the batch size """
         return loss.reshape(n,-1).mean(-1)
+    def to_np(tensor):
+        """ Cast gpu torch tensor to numpy """
+        return tensor.cpu().numpy()
 
     loss_fn = eval(args.loss_fn)(args.a, size_average=False) if warmup=='dn' \
               else nn.BCELoss(reduction='none')
-    loss = reduce( loss_fn(target, output).cpu().data )
+    loss = to_np(reduce( loss_fn(target, output) ))
     if warmup == 'dn':
-        ssim = reduce( 1-loss_ssim(size_average=False)(target, output).data )
-        mse = reduce( nn.MSELoss(reduction='none')(output, target).data )
-        psnr = compute_psnr(target, output, reduction='none')
+        ssim = to_np(reduce( 1-loss_ssim(size_average=False)(target, output) ))
+        mse = to_np(reduce( nn.MSELoss(reduction='none')(output, target) ))
+        psnr = to_np(compute_psnr(target, output, reduction='none'))
 
-    if warmup == 'roi':
-        return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), output, \
-               end-start
-    elif warmup == 'dn':
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
                 np.mean(ssim), np.std(ssim)/np.sqrt(n),
                 np.mean(psnr), np.std(psnr)/np.sqrt(n),
                 np.mean(mse), np.std(mse)/np.sqrt(n)]), output, end-start
 
+    return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), output, \
+            end-start
+
 
 ########### main train function
-def train(args, train_loader, val_data, model):
+def train(args, train_data, val_data, model):
     warmup = args.warmup
     # check if load existing model
     model = freeze_weights(model, warmup)
-    model = MyDDP(model.to(args.dev_ids[0]), device_ids=args.dev_ids)
+    model = MyDDP(model.to(args.dev_ids[0]), device_ids=args.dev_ids,
+                  find_unused_parameters=True)
 
     if args.load:
         if args.load_path is None:
@@ -156,11 +164,17 @@ def train(args, train_loader, val_data, model):
     lr = args.lr_roi if (warmup=='roi') else args.lr_dn
     optimizer = optim.Adam(list(model.parameters()), lr=lr,
                            amsgrad=args.amsgrad)
-    
+
+    train_sampler = DistributedSampler(dataset=train_data, shuffle=True)
+    train_loader = DataLoader(dataset=train_data, sampler=train_sampler,
+                              batch_size=args.batch_size,
+                              num_workers=args.num_workers)
+
     # start main loop
     while epoch <= args.epochs:
         # train
         start = tm()
+        train_sampler.set_epoch(epoch)
         loss, t = train_epoch(args, epoch, train_loader, model,
                           optimizer,warmup=warmup)
         end = tm() - start

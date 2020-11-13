@@ -159,7 +159,7 @@ def get_GCNN(args):
         ROI finder must be the first child module
         """
         def __init__(self, k, input_channels, hidden_channels, patch_size, loss_fn):
-            super(GCNNv2, self).__init__()
+            super(GCNN, self).__init__()
             self.loss_fn = loss_fn
             self.patch_size = patch_size
             self.k = k
@@ -235,8 +235,7 @@ def get_GCNN(args):
                         'roi': warmup loss function for roi selection only
                         'dn': warmup loss function for dn only
             """
-            out = self.fit_image(noised_image, warmup)
-            return out.data
+            return  self.fit_image(noised_image, warmup)
 
     gcnn = GCNN(k, input_channels, hidden_channels, patch_size, loss_fn)
 
@@ -376,7 +375,7 @@ def get_CNN(args):
 
     class CNN(nn.Module):
         def __init__(self, input_channels, hidden_channels, patch_size, loss_fn):
-            super(CNNv2, self).__init__()
+            super(CNN, self).__init__()
             self.loss_fn = loss_fn
             self.patch_size = patch_size
 
@@ -436,8 +435,7 @@ def get_CNN(args):
             return self.act(self.GC_3(y) * x)
 
         def forward(self, noised_image, warmup='dn'):
-            out = self.fit_image(noised_image, warmup)
-            return out.data
+            return self.fit_image(noised_image, warmup)
 
     cnn = CNN(input_channels, hidden_channels, patch_size, loss_fn)
 

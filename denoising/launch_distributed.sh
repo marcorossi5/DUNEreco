@@ -19,8 +19,10 @@
 
 # config
 email="marco.rossi@cern.ch"
-logdir="/nfs/public/romarco/DUNEreco/denoising/logdir"
-directory="/nfs/public/romarco/DUNEreco/denoising"
+workdir="/nfs/public/romarco/DUNEreco"
+directory="${workdir}/denoising"
+logdir="${directory}/logdir"
+
 setenv="source /afs/cern.ch/user/r/romarco/setup_wmla"
 $setenv
 launch=$(python -c "import torch.distributed.launch as t; print(t.__file__)")
@@ -76,9 +78,10 @@ for gpu in ${gpus[*]}; do
     job_func $rank $gpu
     logfiles[$rank]=$($touchtmp)
     errfiles[$rank]=$($touchtmp)
-    echo -e "ibmminsky-$host" | tee ${logfiles[$rank]} ${errfiles[$rank]} >/dev/null
+    echo -e "ibmminsky-$host\nLogfile" | tee ${logfiles[$rank]} >/dev/null
+    echo -e "ibmminsky-$host\nErrfile" | tee ${errfiles[$rank]} >/dev/null
     if [ $rank -gt 0 ]; then
-        job="$setenv;$job"
+        job="$setenv;cd $workdir;$job"
         nohup ssh -K ibmminsky-$host $job 1>>${logfiles[$rank]} \
         2>>${errfiles[$rank]} &
     else

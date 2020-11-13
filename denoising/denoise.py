@@ -9,9 +9,6 @@ import torch
 import torch.distributed as dist
 from torch.utils.data.distributed import DistributedSampler 
 from torch.utils.data import DataLoader
-from torch.nn.parallel import DistributedDataParallel
-
-from run_hopt import load_yaml
 
 from distributed import set_random_seed
 
@@ -27,7 +24,7 @@ import train
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import get_freer_gpu
-
+from utils.utils import load_yaml
 
 def main(args):
     """This is the main function"""
@@ -38,23 +35,28 @@ def main(args):
     #load datasets
     set_random_seed(0)
     train_data = CropLoader(args,'train','collection')
-    train_sampler = DistributedSampler(dataset=train_data)
-    train_loader = DataLoader(dataset=train_data, sampler=train_sampler,
-                              shuffle=True, batch_size=args.batch_size,
-                              num_workers=args.num_workers)
     val_data = PlaneLoader(args,'val','collection')
 
     model = eval('get_' + args.model)(args)
 
     #train
-    return train.train(args, train_loader, val_data,
-                model)
+    return train.train(args, train_data, val_data, model)
 
 
-def spmd_main(args):
+def spmd_main(card, local_rank, local_world_size):
     """ Spawn distributed processes """
     dist.init_process_group(backend="nccl")
 
+    # load configuration
+    parameters = load_yaml(card)
+    parameters["local_rank"] = local_rank
+    parameters["local_world_size"] = local_world_size
+    parameters["rank"] = dist.get_rank()
+    args = Args(**parameters)
+    build = True if args.rank==0 else False
+    args.build_directories(build)
+    if args.rank == 0:
+        print_summary_file(args)
     main(args)
 
     dist.destroy_process_group()
@@ -63,24 +65,14 @@ def spmd_main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--card", type=str, help='yaml config file path',
-                        default="./denoising/configcards/default_config.yaml")
+                        default="/nfs/public/romarco/DUNEreco/denoising/configcards/default_config.yaml")
     parser.add_argument("--local_rank", default=0, type=int,
                     help="Distributed utility")
     parser.add_argument("--local_world_size", default=1, type=int,
                     help="Distributed utility")
-
     # load configuration
-    args = parser.parse_args()
-    parameters = load_yaml(args["card"])
-    parameters["local_rank"] = args.local_rank
-    parameters["local_world_size"] = args.local_world_size
-    parameters["rank"] = dist.get_rank()
-    args = Args(**parameters)
-    if args.rank == 0:
-        args.build_directories()
-        print_summary_file(args)
-
+    args = vars(parser.parse_args())
     # main
     START = tm.time()
-    spmd_main(args)
+    spmd_main(**args)
     print(f'[{os.getpid()}] Program done in {tm.time()-START}')

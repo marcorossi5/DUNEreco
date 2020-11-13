@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import torch
+import yaml
 
 def get_freer_gpu():
     os.system('nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp')
@@ -56,3 +57,12 @@ def moving_average(scalars, weight):
     for i in range(len(scalars)):
         smooth(smoothed, scalars[:i+1], weight)
     return smoothed
+
+def load_yaml(runcard_file):
+    """Loads yaml runcard"""
+    with open(runcard_file, 'r') as stream:
+        runcard = yaml.load(stream, Loader=yaml.FullLoader)
+    for key, value in runcard.items():
+        if ('hp.' in str(value)) or ( 'None'==str(value) ):
+            runcard[key] = eval(value)
+    return runcard

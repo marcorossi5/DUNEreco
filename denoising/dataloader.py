@@ -76,7 +76,7 @@ class PlaneLoader(torch.utils.data.Dataset):
 
         self.noisy = (noisy-self.norm[0])/(self.norm[1]-self.norm[0])
         self.converter = Converter(self.patch_size, self.norm)
-        self.splits = self.converter.images2tiles(self.noisy)
+        self.splits = self.converter.planes2tiles(self.noisy)
 
         # clear 
         fname = os.path.join(data_dir, 'planes', f'{channel}_clear.npy')

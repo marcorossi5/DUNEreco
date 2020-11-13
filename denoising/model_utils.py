@@ -131,17 +131,18 @@ def calculate_pad(shape1, shape2):
 
 class Converter:
     """ Groups image to tiles converter functions """
-    def __init__(self, patch_size):
+    def __init__(self, patch_size, norm):
         self.patch_size = patch_size
+        self.norm = norm
 
-    def images2tiles(self, image, patch_size):
+    def planes2tiles(self, image):
         """
         Parameters:
             image: shape (N,C,W,H)
         """
         p_x, p_y = self.patch_size
         N, C, _,_ = image.shape
-        self.pad = calculate_pad(image.shape, patch_size)
+        self.pad = calculate_pad(image.shape, self.patch_size)
         image = F.pad(image, self.pad,
                  mode='constant', value=image.mean())
 
@@ -150,11 +151,9 @@ class Converter:
 
         self.splits_shape = splits.shape #(N, split_x, split_y, C, p_x, p_y)
 
-        splits = splits.view(-1, C, p_x, p_y)
+        return splits.view(-1, C, p_x, p_y)
 
-        return splits
-
-    def tiles2images(self, splits):
+    def tiles2planes(self, splits):
         """
         Parameters:
             splits: image of shape (N*split_x*split_y,C,W,H)
@@ -165,7 +164,7 @@ class Converter:
         C = splits.shape[1]
         splits_shape = (b, a_x, a_y, C, p_x, p_y)
 
-        splits = splits.unsqueeze(1).reshape(splits_shape)
+        splits = splits.reshape(splits_shape)
         splits = splits.permute(0,1,4,3,2,5)
         img = splits.reshape(-1, a_x*p_x,C, a_y*p_y)
         img = img.permute(0,2,1,3)
@@ -184,7 +183,7 @@ class MyDataParallel(nn.DataParallel):
             return getattr(self.module, name)
 
 
-class MyDDP(nn.DistributedDataParallel):
+class MyDDP(nn.parallel.DistributedDataParallel):
     """Allow calling model's attributes"""
     def __getattr__(self, name):
         try:

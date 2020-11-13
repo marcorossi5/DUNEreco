@@ -8,8 +8,8 @@ class Args:
         self.crop_p = 0.99 # signal to noise crops percentage
 
         #argparser
-        self.val_batch_size = self.batch_size*4 if 'GCNN' in model else self.batch_size*8
-        self.test_batch_size = self.batch_size*2 if 'GCNN' in model else self.batch_size*4
+        self.val_batch_size = self.batch_size*4 if 'GCNN' in self.model else self.batch_size*8
+        self.test_batch_size = self.batch_size*2 if 'GCNN' in self.model else self.batch_size*4
         self.num_workers = 8
 
         #model parameters
@@ -24,7 +24,7 @@ class Args:
 
         self.epoch_log = 1
         self.epoch_test_start = 0
-        self.epoch_test = 5
+        self.epoch_test = 1
 
         self.t = 0.5
 
@@ -34,23 +34,21 @@ class Args:
         self.save = True
         #self.epoch_save = 5
 
-    def build_directories(self):
+    def build_directories(self, build=True):
         #build directories
-        if self.out_name is None:
-            t = dtm.now().strftime("%y%m%d_%H%M%S")
-            self.dir_output = f"./denoising/output/{t}"
-        else:
-            self.dir_output = f"./denoising/output/{self.out_name}"
+        t = dtm.now().strftime("%y%m%d_%H%M%S") if self.out_name is None \
+            else self.out_name
+        self.dir_output = f"./denoising/output/{t}"
 
-        def mkdir_fn(name):
+        def mkdir_fn(name, build):
             dirname = os.path.join(self.dir_output, name)
-            if not os.path.isdir(dirname):
+            if not os.path.isdir(dirname) and build:
                 os.makedirs(dirname)
             return dirname
-        mkdir_fn("")
-        self.dir_timings = mkdir_fn("timings")
-        self.dir_testing = mkdir_fn("testing")
-        self.dir_final_test = mkdir_fn("final_test")
-        self.dir_metrics = mkdir_fn("metrics")
-        self.dir_saved_models = mkdir_fn("model_save")
+        mkdir_fn("", build)
+        self.dir_timings = mkdir_fn("timings", build)
+        self.dir_testing = mkdir_fn("testing", build)
+        self.dir_final_test = mkdir_fn("final_test", build)
+        self.dir_metrics = mkdir_fn("metrics", build)
+        self.dir_saved_models = mkdir_fn("model_save", build)
 
