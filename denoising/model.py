@@ -4,8 +4,6 @@ import torch.nn as nn
 
 from model_utils import NonLocalAggregation
 from model_utils import get_graph
-from model_utils import split_img
-from model_utils import recombine_img
 from model_utils import local_mask
 import ssim
 
@@ -24,7 +22,7 @@ def get_GCNN(args):
 
     class GraphConv(nn.Module):
         def __init__(self, input_channels, out_channels, search_area=None):
-            super(GraphConv,self).__init__()
+            super(GraphConv, self).__init__()
             self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
             self.NLA = NonLocalAggregation(input_channels, out_channels)
 
@@ -34,7 +32,7 @@ def get_GCNN(args):
 
     class PreProcessBlock(nn.Module):
         def __init__(self, k, kernel_size, input_channels, out_channels):
-            super(PreProcessBlock,self).__init__()
+            super(PreProcessBlock, self).__init__()
             self.k = k
             self.activ = nn.LeakyReLU(0.05)
             self.convs = nn.Sequential(
@@ -64,7 +62,7 @@ def get_GCNN(args):
 
     class ROI_finder(nn.Module):
         def __init__(self, k, kernel_size, input_channels, hidden_channels):
-            super(ROI_finder,self).__init__()
+            super(ROI_finder, self).__init__()
             self.k = k
 
             self.P = PreProcessBlock(k,kernel_size,
@@ -105,7 +103,7 @@ def get_GCNN(args):
     class HPF(nn.Module):
         """High Pass Filter"""
         def __init__(self, k, input_channels, out_channels):
-            super(HPF,self).__init__()
+            super(HPF, self).__init__()
             self.k = k
 
             self.conv = nn.Sequential(
@@ -131,7 +129,7 @@ def get_GCNN(args):
     class LPF(nn.Module):
         """Low Pass Filter"""
         def __init__(self, k, input_channels, out_channels):
-            super(LPF,self).__init__()
+            super(LPF, self).__init__()
             self.k = k
             self.conv = nn.Sequential(
                 nn.Conv2d(input_channels, input_channels, 5, padding=2),
@@ -161,7 +159,7 @@ def get_GCNN(args):
         ROI finder must be the first child module
         """
         def __init__(self, k, input_channels, hidden_channels, patch_size, loss_fn):
-            super(GCNNv2,self).__init__()
+            super(GCNNv2, self).__init__()
             self.loss_fn = loss_fn
             self.patch_size = patch_size
             self.k = k
@@ -188,7 +186,6 @@ def get_GCNN(args):
             self.GC_3 = GraphConv(hidden_channels, input_channels)
 
             self.relu = nn.LeakyReLU(0.05)
-            #self.act = nn.Sigmoid()
             self.act = nn.Identity()
 
             self.a0 = nn.Parameter(torch.Tensor([0]), requires_grad=False)
@@ -247,7 +244,6 @@ def get_GCNN(args):
 
 
 def get_CNN(args):
-    k = args.k
     input_channels = args.in_channels
     hidden_channels = args.hidden_channels
     patch_size = args.crop_size
@@ -256,7 +252,7 @@ def get_CNN(args):
 
     class GraphConv(nn.Module):
         def __init__(self, input_channels, out_channels):
-            super(GraphConv,self).__init__()
+            super(GraphConv, self).__init__()
             
             self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
             self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
@@ -267,7 +263,7 @@ def get_CNN(args):
 
     class PreProcessBlock(nn.Module):
         def __init__(self, kernel_size, input_channels, out_channels):
-            super(PreProcessBlock,self).__init__()
+            super(PreProcessBlock, self).__init__()
             self.activ = nn.LeakyReLU(0.05)
             self.convs = nn.Sequential(
                 nn.Conv2d(input_channels, out_channels, kernel_size,
@@ -295,7 +291,7 @@ def get_CNN(args):
 
     class ROI_finder(nn.Module):
         def __init__(self, kernel_size,input_channels, hidden_channels):
-            super(ROI_finder,self).__init__()
+            super(ROI_finder, self).__init__()
 
             self.P = PreProcessBlock(kernel_size,
                                      input_channels, hidden_channels)
@@ -332,7 +328,7 @@ def get_CNN(args):
     class HPF(nn.Module):
         """High Pass Filter"""
         def __init__(self, input_channels, out_channels):
-            super(HPF,self).__init__()
+            super(HPF, self).__init__()
 
             self.conv = nn.Sequential(
                 nn.Conv2d(input_channels, input_channels, 3, padding=1),
@@ -356,7 +352,7 @@ def get_CNN(args):
     class LPF(nn.Module):
         """Low Pass Filter"""
         def __init__(self, input_channels, out_channels):
-            super(LPF,self).__init__()
+            super(LPF, self).__init__()
             self.conv = nn.Sequential(
                 nn.Conv2d(input_channels, input_channels, 5, padding=2),
                 nn.BatchNorm2d(input_channels),
@@ -380,7 +376,7 @@ def get_CNN(args):
 
     class CNN(nn.Module):
         def __init__(self, input_channels, hidden_channels, patch_size, loss_fn):
-            super(CNNv2,self).__init__()
+            super(CNNv2, self).__init__()
             self.loss_fn = loss_fn
             self.patch_size = patch_size
 
@@ -406,7 +402,6 @@ def get_CNN(args):
             self.GC_3 = GraphConv(hidden_channels, input_channels)
 
             self.relu = nn.LeakyReLU(0.05)            
-            #self.act = nn.Sigmoid()
             self.act = nn.Identity()
 
             self.a0 = nn.Parameter(torch.Tensor([0]), requires_grad=False)
@@ -479,7 +474,7 @@ def get_CNN_light(args):
 
     class GraphConv(nn.Module):
         def __init__(self, input_channels, out_channels, search_area=None):
-            super(GraphConv,self).__init__()
+            super(GraphConv, self).__init__()
             
             self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
             self.conv2 = nn.Conv2d(input_channels, out_channels, 5, padding=2)
@@ -493,7 +488,7 @@ def get_CNN_light(args):
 
     class PreProcessBlock(nn.Module):
         def __init__(self, kernel_size, input_channels, out_channels):
-            super(PreProcessBlock,self).__init__()
+            super(PreProcessBlock, self).__init__()
             self.conv = nn.Conv2d(input_channels, out_channels, kernel_size,
                                  padding=(kernel_size//2, kernel_size//2))
             self.activ = nn.LeakyReLU(0.05)
@@ -510,7 +505,7 @@ def get_CNN_light(args):
 
     class Residual(nn.Module):
         def __init__(self, input_channels, out_channels):
-            super(Residual,self).__init__()
+            super(Residual, self).__init__()
             self.pipeline = nn.Sequential(
                 GraphConv(input_channels, input_channels),
                 nn.BatchNorm2d(input_channels),
@@ -530,7 +525,7 @@ def get_CNN_light(args):
 
     class CNN_light(nn.Module):
         def __init__(self, input_channels, hidden_channels, patch_size, loss_fn):
-            super(CNN,self).__init__()
+            super(CNN, self).__init__()
             self.loss_fn = loss_fn
             self.patch_size = patch_size
             self.preprocessing_blocks = nn.ModuleList([
@@ -595,7 +590,7 @@ def get_GCNN_light(args):
 
     class PreProcessBlock(nn.Module):
         def __init__(self, k, kernel_size, input_channels, out_channels):
-            super(PreProcessBlock,self).__init__()
+            super(PreProcessBlock, self).__init__()
             self.k = k
             self.conv = nn.Conv2d(input_channels, out_channels, kernel_size,
                                   padding=(kernel_size//2, kernel_size//2))
@@ -614,7 +609,7 @@ def get_GCNN_light(args):
 
     class Residual(nn.Module):
         def __init__(self, k, input_channels, out_channels):
-            super(Residual,self).__init__()
+            super(Residual, self).__init__()
             self.k = k
             self.act = nn.LeakyReLU(0.05)
             self.GC_1 = GraphConv(input_channels, input_channels)
@@ -634,7 +629,7 @@ def get_GCNN_light(args):
 
     class GCNN_light(nn.Module):
         def __init__(self, k, input_channels, hidden_channels, patch_size, loss_fn):
-            super(GCNN,self).__init__()
+            super(GCNN, self).__init__()
             self.loss_fn = loss_fn
             self.patch_size = patch_size
             self.k = k
@@ -696,7 +691,7 @@ def get_ROI(args):
 
     class GraphConv(nn.Module):
         def __init__(self, input_channels, out_channels):
-            super(GraphConv,self).__init__()
+            super(GraphConv, self).__init__()
             
             self.conv1 = nn.Conv2d(input_channels, out_channels, 3, padding=1)
             self.NLA = NonLocalAggregation(input_channels, out_channels)
@@ -707,7 +702,7 @@ def get_ROI(args):
 
     class PreProcessBlock(nn.Module):
         def __init__(self,k, kernel_size, input_channels, out_channels):
-            super(PreProcessBlock,self).__init__()
+            super(PreProcessBlock, self).__init__()
             self.k = k
             self.activ = nn.LeakyReLU(0.05)
             self.convs = nn.Sequential(
@@ -736,7 +731,7 @@ def get_ROI(args):
 
     class ROI_finder(nn.Module):
         def __init__(self, k,kernel_size,input_channels, hidden_channels):
-            super(ROI_finder,self).__init__()
+            super(ROI_finder, self).__init__()
             self.k = k
             self.P = PreProcessBlock(k,kernel_size,
                                      input_channels, hidden_channels)
@@ -775,7 +770,7 @@ def get_ROI(args):
 
     class ROI(nn.Module):
         def __init__(self,k, input_channels, hidden_channels, patch_size, loss_fn):
-            super(ROI,self).__init__()
+            super(ROI, self).__init__()
             self.patch_size = patch_size            
             self.hit_block = ROI_finder(k,3,input_channels,hidden_channels)
 

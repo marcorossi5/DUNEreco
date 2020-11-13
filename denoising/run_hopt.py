@@ -34,9 +34,8 @@ def load_yaml(runcard_file):
     with open(runcard_file, 'r') as stream:
         runcard = yaml.load(stream, Loader=yaml.FullLoader)
     for key, value in runcard.items():
-        if ('hp.' in str(value)) or ('None' in str(value)):
+        if ('hp.' in str(value)) or ( 'None'==str(value) ):
             runcard[key] = eval(value)
-        
     return runcard
 
 def build_and_train_model(setup):

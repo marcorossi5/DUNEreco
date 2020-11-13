@@ -1,13 +1,15 @@
 import sys
 import os
+import numpy as np
+
 import torch
 from torch import optim
 from torch import nn
-import numpy as np
+from torch.utils.data.distributed import DistributedSampler 
+from torch.utils.data import DataLoader
 
 from model_utils import freeze_weights
 from model_utils import MyDDP
-from model_utils import split_img
 
 from losses import *
 
@@ -16,12 +18,12 @@ from time import time as tm
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import compute_psnr
 
-def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
+def train_epoch(args, epoch, train_loader, model, optimizer, warmup):
     print('\n[+] Training')
     start = tm()
     loss_fn = eval(args.loss_fn)(args.a) if warmup=='dn' else torch.nn.BCELoss()
     model.train()
-    for i, (clear, noised) in enumerate(train_data):
+    for i, (clear, noised) in enumerate(train_loader):
         clear = clear.to(args.dev_ids[0])
         noised = noised.to(args.dev_ids[0])
         optimizer.zero_grad()
@@ -33,47 +35,40 @@ def train_epoch(args, epoch, train_data, model, optimizer, warmup=False):
 
     return np.array([loss.item()]), tm() - start
 
-def test_epoch(test_set, model, args, dry_inference=True):
+def test_epoch(test_data, model, args, warmup, dry_inference=True):
     """
     Parameters:
-        labels: np.array, all the targets in memory,
-                shape (N,C,w,h)
         test_data: torch.utils.data.DataLoader, based on PlaneLoader
-        ana: bool, if inference test (True) or validation test (False)
         warmup: str, either roi or dn
-        labels: torch.Tensor, target tensor
     Outputs:
         np.array: n metrics, shape (2*n)
         torch.Tensor: denoised data, shape (batch,C,W,H)
         float: dry inference time
     """
-    warmup = args.warmup
-
-    test_sampler = DistributedSampler(dataset=test_set)
-    test_loader = DataLoader(dataset=test_set, sampler=test_sampler,
+    test_sampler = DistributedSampler(dataset=test_data)
+    test_loader = DataLoader(dataset=test_data, sampler=test_sampler,
                               shuffle=True, batch_size=args.test_batch_size,
                               num_workers=args.num_workers)
     print('[+] Testing')
     model.eval()
 
-    n = test_set.noisy.shape[0]
+    n = test_data.noisy.shape[0]
 
-    batch_size = args.test_batch_size if dry_inference else args.val_batch_size
     start = tm()
     output = []
     for noisy in test_loader:
         noisy = noisy.to(args.dev_ids[0])
         out =  model(noisy, warmup=warmup).data
         output.append(out)
-    output = test_set.converter.tiles2planes( torch.cat(output) )
+    output = test_data.converter.tiles2planes( torch.cat(output) )
     if warmup == 'dn':
-        output = test_set.converter.invert_normalization( output )
+        output = test_data.converter.invert_normalization( output )
         output [output <= args.threshold] = 0
     end = tm()    
 
     if dry_inference:
         return output
-    target = test_set.clear.to(args.dev_ids[0])
+    target = test_data.clear.to(args.dev_ids[0])
 
     def reduce(loss):
         """ Reduces losses keeping the batch size """
@@ -83,23 +78,23 @@ def test_epoch(test_set, model, args, dry_inference=True):
               else nn.BCELoss(reduction='none')
     loss = reduce( loss_fn(target, output).cpu().data )
     if warmup == 'dn':
-        ssim = reduce( 1-loss_ssim(size_average=False)(target, dn).data )
-        mse = reduce( nn.MSELoss(reduction='none')(dn, target).data )
+        ssim = reduce( 1-loss_ssim(size_average=False)(target, output).data )
+        mse = reduce( nn.MSELoss(reduction='none')(output, target).data )
         psnr = compute_psnr(target, output, reduction='none')
 
-    fname = os.path.join(args.dir_testing, f'test_{warmup}_{epoch}')
-
     if warmup == 'roi':
-        return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), res, end-start
+        return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), output, \
+               end-start
     elif warmup == 'dn':
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
                 np.mean(ssim), np.std(ssim)/np.sqrt(n),
                 np.mean(psnr), np.std(psnr)/np.sqrt(n),
-                np.mean(mse), np.std(mse)/np.sqrt(n)]), res, end-start
+                np.mean(mse), np.std(mse)/np.sqrt(n)]), output, end-start
 
 
 ########### main train function
-def train(args, train_data, test_data, model, warmup, labels):
+def train(args, train_loader, val_data, model):
+    warmup = args.warmup
     # check if load existing model
     model = freeze_weights(model, warmup)
     model = MyDDP(model.to(args.dev_ids[0]), device_ids=args.dev_ids)
@@ -166,7 +161,7 @@ def train(args, train_data, test_data, model, warmup, labels):
     while epoch <= args.epochs:
         # train
         start = tm()
-        loss, t = train_epoch(args, epoch, train_data, model,
+        loss, t = train_epoch(args, epoch, train_loader, model,
                           optimizer,warmup=warmup)
         end = tm() - start
         loss_sum.append(loss)
@@ -181,8 +176,8 @@ def train(args, train_data, test_data, model, warmup, labels):
             print('test start ...')
             test_epochs.append(epoch)
             start = tm()
-            x, _, t = test_epoch(args, epoch, test_data, model,
-                              warmup=warmup, labels=labels)
+            x, _, t = test_epoch(val_data, model, args, warmup,
+                              dry_inference=False)
             end = tm() - start
             test_metrics.append(x)
             time_test.append(t)

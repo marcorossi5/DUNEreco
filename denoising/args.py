@@ -2,28 +2,14 @@ import os
 from datetime import datetime as dtm
 
 class Args:
-    def __init__(self, dir_name, epochs, model,\
-                 loss_fn, local_rank, local_world_size \
-                 lr=0.009032117010326078, amsgrad=True,\
-                 out_name=None, scan=False, batch_size=256,\
-                 load_path=None, warmup=None, threshold=3.5):
-        self.local_rank = local_rank
-        self.local_world_size = local_world_size
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
         self.crop_size = (32,32)
-        self.crop_p = 0.99
+        self.crop_p = 0.99 # signal to noise crops percentage
 
         #argparser
-        self.dataset_dir = dir_name
-        self.epochs = epochs
-        self.model = model
-        self.warmup = warmup
-        self.loss_fn = loss_fn
-        self.scan = scan
-        self.threshold = threshold
-
-        self.batch_size = batch_size
-        self.val_batch_size = batch_size*4 if 'GCNN' in model else batch_size*8
-        self.test_batch_size = batch_size*2 if 'GCNN' in model else batch_size*4
+        self.val_batch_size = self.batch_size*4 if 'GCNN' in model else self.batch_size*8
+        self.test_batch_size = self.batch_size*2 if 'GCNN' in model else self.batch_size*4
         self.num_workers = 8
 
         #model parameters
@@ -32,10 +18,6 @@ class Args:
         self.in_channels = 1
         self.hidden_channels = 32
         
-        self.lr_dn = lr
-        self.lr_roi = 1e-3
-        self.amsgrad = amsgrad
-
         #logs
         self.plot_dataset = False
         self.plot_acts = True
@@ -46,34 +28,29 @@ class Args:
 
         self.t = 0.5
 
-        self.load = False if (load_path is None) else True
+        self.load = False if (self.load_path is None) else True
         self.load_epoch = 100
-        self.load_path = load_path
 
         self.save = True
         #self.epoch_save = 5
 
+    def build_directories(self):
         #build directories
-        if out_name is None:
+        if self.out_name is None:
             t = dtm.now().strftime("%y%m%d_%H%M%S")
-            self.dir_output = "./denoising/output/%s"%t
+            self.dir_output = f"./denoising/output/{t}"
         else:
-            self.dir_output = "./denoising/output/%s"%out_name
-        self.dir_timings = self.dir_output + "/timings"
-        self.dir_testing = self.dir_output + "/testing"
-        self.dir_final_test = self.dir_output + "/final_test"
-        self.dir_metrics = self.dir_output + "/metrics"
-        self.dir_saved_models = self.dir_output + "/model_save"
+            self.dir_output = f"./denoising/output/{self.out_name}"
 
-        if not os.path.isdir(self.dir_output):
-            os.makedirs(self.dir_output)
-        if not os.path.isdir(self.dir_testing):
-            os.mkdir(self.dir_testing)
-        if not os.path.isdir(self.dir_final_test):
-            os.mkdir(self.dir_final_test)
-        if not os.path.isdir(self.dir_metrics):
-            os.mkdir(self.dir_metrics)
-        if not os.path.isdir(self.dir_saved_models):
-            os.mkdir(self.dir_saved_models)
-        if not os.path.isdir(self.dir_timings):
-            os.mkdir(self.dir_timings)
+        def mkdir_fn(name):
+            dirname = os.path.join(self.dir_output, name)
+            if not os.path.isdir(dirname):
+                os.makedirs(dirname)
+            return dirname
+        mkdir_fn("")
+        self.dir_timings = mkdir_fn("timings")
+        self.dir_testing = mkdir_fn("testing")
+        self.dir_final_test = mkdir_fn("final_test")
+        self.dir_metrics = mkdir_fn("metrics")
+        self.dir_saved_models = mkdir_fn("model_save")
+
