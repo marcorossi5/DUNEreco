@@ -1,0 +1,25 @@
+dataset_dir: "../datasets/denoising"
+
+warmup: "roi" # roi | dn
+
+model: "GCNN" # CNN | GCNN
+
+epochs: 50 # number of training epochs
+
+loss_fn: "loss_ssim_l2" # mse | ssim | ssim_l1 | ssim_l2
+
+lr_dn: 0.009032117010326078
+
+lr_roi: 0.001
+
+out_name: None # output dirname in denoising/output folder
+
+load_path: None # torch .dat absolute filepath
+
+batch_size: 256
+
+threshold: 3.5
+
+amsgrad: True
+
+scan: False
