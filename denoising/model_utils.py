@@ -10,32 +10,35 @@ import matplotlib as mpl
 from sklearn.metrics import confusion_matrix
 
 
-def local_mask(crop_size):
+class GConv(nn.Module):
+    def __init__(self, ic, oc):
+        super(GConv, self).__init__()
+        self.conv1 = nn.Conv2d(ic, oc, 3, padding=1)
+        self.NLA = NonLocalAggregation(ic, oc)
 
-    x, y = crop_size
-    N = x*y
+    def forward(self, x, graph):
+        return torch.mean(torch.stack([self.conv1(x),
+                                       self.NLA(x, graph)]), dim=0)
 
-    local_mask = torch.ones([N, N])
-    for ii in range(N):
-        if ii==0:
-            local_mask[ii, (ii+1,ii+y, ii+y+1)] = 0 # top-left
-        elif ii==N-1:
-            local_mask[ii, (ii-1, ii-y, ii-y-1)] = 0 # bottom-right
-        elif ii==x-1:
-            local_mask[ii, (ii-1, ii+y, ii+y-1)] = 0 # top-right
-        elif ii==N-x:
-            local_mask[ii, (ii+1, ii-y, ii-y+1)] = 0 # bottom-left
-        elif ii<x-1 and ii>0:
-            local_mask[ii, (ii+1, ii-1, ii+y-1, ii+y, ii+y+1)] = 0 # first row
-        elif ii<N-1 and ii>N-x:
-            local_mask[ii, (ii+1, ii-1, ii-y-1, ii-y, ii-y+1)] = 0 # last row
-        elif ii%y==0:
-            local_mask[ii, (ii+1, ii-y, ii+y, ii-y+1, ii+y+1)] = 0 # first col
-        elif ii%y==y-1:
-            local_mask[ii, (ii-1, ii-y, ii+y, ii-y-1, ii+y-1)] = 0 # last col
-        else:
-            local_mask[ii, (ii+1, ii-1, ii-y, ii-y+1, ii-y-1, ii+y, ii+y+1, ii+y-1)] = 0
-    return local_mask.unsqueeze(0)
+
+class Conv(nn.Module):
+    def __init__(self, ic, oc):
+        super(Conv, self).__init__()
+            
+        self.conv1 = nn.Conv2d(ic, oc, 3, padding=1)
+        self.conv2 = nn.Conv2d(ic, oc, 5, padding=2)
+
+    def forward(self, x, graph):
+        return torch.mean(torch.stack([self.conv1(x),
+                                       self.conv2(x)]), dim=0)
+
+
+def choose(model, ic, oc):
+    if model=="gcnn":
+        return GConv(ic, oc)
+    elif model=="cnn":
+        return Conv(ic, oc) 
+
 
 class NonLocalAggregation(nn.Module):
     def __init__(self, input_channels, out_channels):
@@ -62,6 +65,7 @@ class NonLocalAggregation(nn.Module):
 
         return x_new.view(b, h, w, x_new.shape[-1]).permute(0, 3, 1, 2)
 
+
 def pairwise_dist(arr, k, local_mask):
     """
     arr: torch.Tensor with shape batch x h*w x features
@@ -84,25 +88,55 @@ def batched_index_select(t, dim, inds):
     dim: 1, dimension of the pixels
     inds: torch.Tensor with shape batch x h*w*K
     """
-    dummy = inds.unsqueeze(2).expand(inds.size(0), inds.size(1), t.size(2)) # b x h*w*K x f
+    dummy = inds.unsqueeze(2).expand(inds.size(0), inds.size(1), t.size(2))
+    # Now dummy shape is b x h*w*K x f
     out = t.gather(dim, dummy) # b x h*w*K x f
     #this gathers only the k-closest neighbours for each pixel
     return out
 
-def get_graph(arr, k, local_mask):
-    """
-    arr: torch.Tensor with shape batch x h * w x features
-    ------------------
-    Output: torch. Tensor with shape batch x h*w x K x f
-    """
-    arr = arr.permute(0, 2, 3, 1)
-    b, h, w, f = arr.shape
-    arr = arr.view(b, h*w, f)
-    hw = h*w
-    dists = pairwise_dist(arr.data, k, local_mask)
-    selected = batched_index_select(arr, 1, dists.view(dists.shape[0], -1)).view(b, hw, k, f)
-    diff = arr.unsqueeze(2) - selected
-    return diff
+
+def local_mask(crop_size):
+    x, y = crop_size
+    N = x*y
+
+    local_mask = torch.ones([N, N])
+    for ii in range(N):
+        if ii==0:
+            local_mask[ii, (ii+1,ii+y, ii+y+1)] = 0 # top-left
+        elif ii==N-1:
+            local_mask[ii, (ii-1, ii-y, ii-y-1)] = 0 # bottom-right
+        elif ii==x-1:
+            local_mask[ii, (ii-1, ii+y, ii+y-1)] = 0 # top-right
+        elif ii==N-x:
+            local_mask[ii, (ii+1, ii-y, ii-y+1)] = 0 # bottom-left
+        elif ii<x-1 and ii>0:
+            local_mask[ii, (ii+1, ii-1, ii+y-1, ii+y, ii+y+1)] = 0 # first row
+        elif ii<N-1 and ii>N-x:
+            local_mask[ii, (ii+1, ii-1, ii-y-1, ii-y, ii-y+1)] = 0 # last row
+        elif ii%y==0:
+            local_mask[ii, (ii+1, ii-y, ii+y, ii-y+1, ii+y+1)] = 0 # first col
+        elif ii%y==y-1:
+            local_mask[ii, (ii-1, ii-y, ii+y, ii-y-1, ii+y-1)] = 0 # last col
+        else:
+            local_mask[ii, (ii+1, ii-1, ii-y, ii-y+1, ii-y-1, ii+y, ii+y+1, ii+y-1)] = 0
+    return local_mask.unsqueeze(0)
+
+
+class NonLocalGraph:
+    def __init__(self, k, patch_size):
+        self.k = k
+        self.local_mask = local_mask(patch_size)
+    def __call__(self, arr):
+        arr = arr.data.permute(0, 2, 3, 1)
+        b, h, w, f = arr.shape
+        arr = arr.view(b, h*w, f)
+        hw = h*w
+        dists = pairwise_dist(arr, self.k, self.local_mask)
+        selected = batched_index_select(
+                       arr, 1, dists.view(dists.shape[0], -1)).view(b, hw, k, f)
+        diff = arr.unsqueeze(2) - selected
+        return diff
+
 
 def calculate_pad(shape1, shape2):
     """

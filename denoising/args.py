@@ -15,7 +15,7 @@ class Args:
         #model parameters
         self.a = 0.84
         self.k = 8
-        self.in_channels = 1
+        self.input_channels = 1
         self.hidden_channels = 32
         
         #logs

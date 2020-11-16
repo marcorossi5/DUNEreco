@@ -2,12 +2,214 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
+from model_utils import choose
 from model_utils import NonLocalAggregation
+from model_utils import NonLocalGraph
 from model_utils import get_graph
 from model_utils import local_mask
-import ssim
 
-from losses import *
+class PreProcessBlock(nn.Module):
+    def __init__(self, kernel_size, ic, oc, getgraph_fn, model):
+        ks = kernel_size
+        kso2 = kernel_size // 2
+        super(PreProcessBlock, self).__init__()
+        self.getgraph_fn = getgraph_fn
+        self.k = k
+        self.activ = nn.LeakyReLU(0.05)
+        self.convs = nn.Sequential(
+            nn.Conv2d(ic, oc, ks, padding=(kso2, kso2)),
+            self.activ,
+            nn.Conv2d(oc, oc, ks, padding=(kso2, kso2)),
+            self.activ,
+            nn.Conv2d(oc, oc, ks, padding=(kso2, kso2)),
+            self.activ,
+            )
+        self.bn = nn.BatchNorm2d(oc)
+        self.GC = choose(model, oc, oc)
+
+    def forward(self, x):
+        x = self.convs(x)
+        graph = self.getgraph_fn(x)
+        return self.activ( self.GC(x, graph) )
+
+
+class ROI(nn.Module):
+    def __init__(self, kernel_size, ic, hc, getgraph_fn, model):
+        super(ROI_finder, self).__init__()
+        self.PreProcessBlock = PreProcessBlock(k,kernel_size, ic, hc, model)
+        self.getgraph_fn = getgraph_fn
+        self.GCs = [choose(model, hc, hc) for i in range(8)]
+        self.GC_final = choose(model, hc, 1)
+        self.activ = nn.LeakyReLU(0.05)
+
+    def forward(self, x):
+        x = self.PreProcessBlock(x)
+        for i, GC in enumerate(self.GCs):
+            if i%3==0:
+                graph = self.getgraph_fn(x)
+            x = self.activ( GC(x, graph) )
+        return nn.Sigmoid( self.GC_final(x,graph) )
+
+
+class HPF(nn.Module):
+    """High Pass Filter"""
+    def __init__(self, ic, oc, getgraph_fn, model):
+        super(HPF, self).__init__()
+        self.getgraph_fn = getgraph_fn
+        self.conv = nn.Sequential(
+                nn.Conv2d(ic, ic, 3, padding=1),
+                nn.BatchNorm2d(ic),
+                nn.LeakyReLU(0.05))
+        self.GCs = [choose(model, ic, ic),
+                    choose(model, ic, oc),
+                    choose(model, oc, oc)]
+        self.act = nn.LeakyReLU(0.05)
+            
+    def forward(self, x):
+        x = self.conv(x)
+        graph = self.getgraph_fn(x)
+        for GC in self.GCs:
+            x = self.act( GC(x, graph) )
+        return x
+
+
+class LPF(nn.Module):
+    """Low Pass Filter"""
+    def __init__(self, ic, oc, getgraph_fn, model):
+        super(LPF, self).__init__()
+        self.getgraph_fn = getgraph_fn
+        self.conv = nn.Sequential(
+                nn.Conv2d(ic, ic, 5, padding=2),
+                nn.BatchNorm2d(ic),
+                nn.LeakyReLU(0.05))
+        self.GCs = [choose(model, ic, ic),
+                    choose(model, ic, oc),
+                    choose(model, oc, oc)]
+        self.BNs = [nn.BatchNorm2d(ic),
+                    nn.BatchNorm2d(oc)
+                    nn.BatchNorm2d(oc)]
+        self.act = nn.LeakyReLU(0.05)
+
+    def forward(self, x):
+        y = self.conv(x)
+        graph = self.getgraph_fn(y)
+        for BN, GC in zip(self.BNs, self.GCs):
+            y = self.act( BN( GC(y, graph) ) )
+        return x + y
+
+
+class PostProcessBlock(nn.Module):
+    def __init_(self, ic, hc, getgraph_fn, model):
+        super(PostProcessBlock, self).__init__()
+        self.getgraph_fn = getgraph_fn
+        self.GCs = [choose(model, hc*3+1, hc*2),
+                    choose(model, hc*2, hc),
+                    choose(model, hc, ic)]
+        self.BNs = [nn.BatchNorm2d(hc*2),
+                    nn.Identity(),
+                    nn.BatchNorm2d(hc)]
+        self.acts = [nn.LeakyReLU(0.05),
+                     nn.LeakyReLU(0.05),
+                     nn.Identity()]
+
+    def forward(self, x):
+        for act, BN, GC in zip(self.acts, self.BNs, self.GCs):
+            graph = self.getgraph_fn(y)
+            x = act( BN( GC(x, graph) ) )
+        return x
+
+
+class NN(nn.Module):
+    """
+    Generic neural network: based on args passed when running __init__, it
+    switches between cnn and gcnn
+    """
+    def __init__(self, args):
+        super(GCNN, self).__init__()
+        self.patch_size = args.crops_size
+        self.model = args.model # TODO: change config into cnn and gcnn
+        # TODO: change all crop_size into patch_size
+        ic = args.input_channels
+        hc = args.hidden_channels
+        self.getgraph_fn = NonLocalGraph(args.k, self.patch_size) if \
+                           self.model=="gcnn" else lambda x: None
+        self.ROI = ROI(self.k, 7, ic, hc, self.getgraph_fn)
+        self.PreProcessBlocks = nn.ModuleList([
+            PreProcessBlock(k, 5, ic, hc, self.getgraph_fn, model),
+            PreProcessBlock(k, 7, ic, hc, self.getgraph_fn, model),
+            PreProcessBlock(k, 9, ic, hc, self.getgraph_fn, model),
+        ])
+        self.LPFs = [LPF(k, hc*3+1, hc*3+1, self.getgraph_fn, model) for i in
+                     range(4)]
+        self.HPF = HPF(k, hc*3+1, hc*3+1, self.getgraph_fn, model)
+        self.PostProcessBlock = PostProcessBlock(ic, hc, self.getgraph_fn, model)
+        self.aa = torch.Tensor([0])
+        self.bb = torch.Tensor([1])
+        def combine(x, y):
+            return (1-self.aa)*x + self.bb*y
+        self.combine = combine
+
+    def forward(self, x, warmup='dn'):
+        hits = self.ROI(x)
+        if warmup == 'roi':
+            return hits
+        y = torch.cat([Block(x) for Block in self.PreProcessBlocks], dim=1)
+        y = torch.cat([y,hits],1)
+        y_hpf = self.HPF(y)
+        y = self.combine(y, y_hpf)
+        for LPF in self.LPFs:
+            y = self.combine( LPF(y, y_hpf) )
+        return self.PostProcessBlock(y) * x
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -16,7 +218,7 @@ def get_GCNN(args):
     input_channels = args.in_channels
     hidden_channels = args.hidden_channels
     patch_size = args.crop_size
-    loss_fn = eval(args.loss_fn)(args.a)
+    loss_fn = eval(".".join(["losses", args.loss_fn]))(args.a)
     #a
     l_mask = local_mask(patch_size)
 
@@ -222,7 +424,7 @@ def get_GCNN(args):
             graph = get_graph(y, self.k, l_mask)
             y = self.relu(self.bn_1(self.GC_1(y, graph)))
 
-            graph = get_graph(y, self.k, l_mask)
+            """"graph = get_graph(y, self.k, l_mask)""""
             y = self.relu(self.bn_2(self.GC_2(y, graph)))
 
             graph = get_graph(y, self.k, l_mask)

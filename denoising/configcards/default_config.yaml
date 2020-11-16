@@ -6,7 +6,7 @@ model: "GCNN" # CNN | GCNN
 
 epochs: 1 # number of training epochs
 
-loss_fn: "loss_ssim_l2" # mse | ssim | ssim_l1 | ssim_l2
+loss_fn: "ssim_l2" # mse | ssim | ssim_l1 | ssim_l2
 
 lr_dn: 0.009032117010326078
 

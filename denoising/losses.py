@@ -40,3 +40,15 @@ class loss_ssim_l1(loss):
                              size_average=self.size_average)
         loss2 = (args[0]-args[1]).abs().mean()
         return self.a*loss1 + (1-self.a)*loss2
+
+def get_loss(loss):
+    if loss == "mse":
+        return loss_mse
+    elif loss == "ssim":
+        return loss_ssim
+    elif loss == "ssim_l2":
+        return loss_ssim_l2
+    elif loss == "ssim_l1":
+        return loss_ssim_l1
+    else:
+        raise NotImplementedError("Loss function not implemented")    

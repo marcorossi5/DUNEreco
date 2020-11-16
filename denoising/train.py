@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 from model_utils import freeze_weights
 from model_utils import MyDDP
 
-from losses import *
+from losses import get_loss
 
 from time import time as tm
 
@@ -22,7 +22,8 @@ from utils.utils import compute_psnr
 def train_epoch(args, epoch, train_loader, model, optimizer, warmup):
     print('\n[+] Training')
     start = tm()
-    loss_fn = eval(args.loss_fn)(args.a) if warmup=='dn' else torch.nn.BCELoss()
+    loss_fn = get_loss(args.loss_fn)(args.a) if warmup=='dn' else \
+              torch.nn.BCELoss()
     model.train()
     for i, (clear, noised) in enumerate(train_loader):
         clear = clear.to(args.dev_ids[0])
@@ -82,8 +83,8 @@ def test_epoch(test_data, model, args, warmup, dry_inference=True):
         """ Cast gpu torch tensor to numpy """
         return tensor.cpu().numpy()
 
-    loss_fn = eval(args.loss_fn)(args.a, size_average=False) if warmup=='dn' \
-              else nn.BCELoss(reduction='none')
+    loss_fn = get_loss(args.loss_fn)(args.a, size_average=False) if \
+              warmup=='dn' else nn.BCELoss(reduction='none')
     loss = to_np(reduce( loss_fn(target, output) ))
     if warmup == 'dn':
         ssim = to_np(reduce( 1-loss_ssim(size_average=False)(target, output) ))

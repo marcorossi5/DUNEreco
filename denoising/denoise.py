@@ -14,7 +14,7 @@ from distributed import set_random_seed
 
 from dataloader import CropLoader
 from dataloader import PlaneLoader
-from model import  *
+from model import  NN
 from args import Args
 
 from model_utils import print_summary_file
@@ -37,7 +37,7 @@ def main(args):
     train_data = CropLoader(args,'train','collection')
     val_data = PlaneLoader(args,'val','collection')
 
-    model = eval('get_' + args.model)(args)
+    model = NN(args)
 
     #train
     return train.train(args, train_data, val_data, model)
