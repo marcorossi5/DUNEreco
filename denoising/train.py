@@ -29,7 +29,7 @@ def train_epoch(args, epoch, train_loader, model, optimizer, warmup):
         clear = clear.to(args.dev_ids[0])
         noised = noised.to(args.dev_ids[0])
         optimizer.zero_grad()
-        out = model(noised, warmup=warmup)
+        out = model(noised)
         idx = 0 if warmup=='dn' else 1 # label idx
         loss = loss_fn(out, clear[:,idx:idx+1])
         loss.backward()
@@ -60,7 +60,7 @@ def test_epoch(test_data, model, args, warmup, dry_inference=True):
     outs = []
     for noisy in test_loader:
         noisy = noisy.to(args.dev_ids[0])
-        out =  model(noisy, warmup=warmup).data
+        out =  model(noisy).data
         outs.append(out)
     outs = torch.cat(outs)
     output = [torch.zeros_like(outs) for i in range(dist.get_world_size())]

@@ -14,7 +14,7 @@ class GConv(nn.Module):
     def __init__(self, ic, oc):
         super(GConv, self).__init__()
         self.conv1 = nn.Conv2d(ic, oc, 3, padding=1)
-        self.NLA = NonLocalAggregation(ic, oc)
+        self.NLA = NonLocalAggregator(ic, oc)
 
     def forward(self, x, graph):
         return torch.mean(torch.stack([self.conv1(x),
@@ -38,11 +38,13 @@ def choose(model, ic, oc):
         return GConv(ic, oc)
     elif model=="cnn":
         return Conv(ic, oc) 
+    else:
+        raise NotImplementedError("Operation not implemented")
 
 
-class NonLocalAggregation(nn.Module):
+class NonLocalAggregator(nn.Module):
     def __init__(self, input_channels, out_channels):
-        super(NonLocalAggregation,self).__init__()
+        super(NonLocalAggregator,self).__init__()
         self.diff_fc = nn.Linear(input_channels, out_channels)
         self.w_self = nn.Linear(input_channels, out_channels)
         #self.bias = nn.Parameter(torch.randn(out_channels), requires_grad=True)

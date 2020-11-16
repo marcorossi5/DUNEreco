@@ -4,7 +4,7 @@ from datetime import datetime as dtm
 class Args:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
-        self.crop_size = (32,32)
+        self.patch_size = (32,32)
         self.crop_p = 0.99 # signal to noise crops percentage
 
         #argparser
@@ -51,4 +51,3 @@ class Args:
         self.dir_final_test = mkdir_fn("final_test", build)
         self.dir_metrics = mkdir_fn("metrics", build)
         self.dir_saved_models = mkdir_fn("model_save", build)
-

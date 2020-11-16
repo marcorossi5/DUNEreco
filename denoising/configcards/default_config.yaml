@@ -2,7 +2,7 @@ dataset_dir: "../datasets/denoising"
 
 warmup: "roi" # roi | dn
 
-model: "GCNN" # CNN | GCNN
+model: "cnn" # cnn | gcnn
 
 epochs: 1 # number of training epochs
 

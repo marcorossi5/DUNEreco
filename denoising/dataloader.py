@@ -22,7 +22,7 @@ class CropLoader(torch.utils.data.Dataset):
             channel: str, one of ['readout','collection']
         """
         data_dir = args.dataset_dir
-        patch_size = args.crop_size[0]
+        patch_size = args.patch_size[0]
         p = args.crop_p
 
         fname = os.path.join(data_dir,'train','crops',
@@ -63,7 +63,7 @@ class PlaneLoader(torch.utils.data.Dataset):
             channel: str, one of ['readout','collection']
             t: float, threshold to be put on labels
         """
-        self.patch_size = args.crop_size
+        self.patch_size = args.patch_size
         data_dir = os.path.join(args.dataset_dir, folder)
 
         # noisy        
