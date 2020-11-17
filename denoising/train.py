@@ -20,7 +20,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import compute_psnr
 
 def train_epoch(args, epoch, train_loader, model, optimizer, warmup):
-    print('\n[+] Training')
+    if args.rank == 0:
+        print('\n[+] Training')
     start = tm()
     loss_fn = get_loss(args.loss_fn)(args.a) if warmup=='dn' else \
               torch.nn.BCELoss()
@@ -51,7 +52,8 @@ def test_epoch(test_data, model, args, warmup, dry_inference=True):
     test_loader = DataLoader(dataset=test_data, sampler=test_sampler,
                               batch_size=args.test_batch_size,
                               num_workers=args.num_workers)
-    print('[+] Testing')
+    if args.rank == 0:
+        print('[+] Testing')
     model.eval()
 
     n = test_data.noisy.shape[0]
@@ -145,7 +147,8 @@ def train(args, train_data, val_data, model):
             time_train = []
             time_test = []
 
-        print(f'Loading model at {fname}')
+        if args.rank == 0:
+            print(f'Loading model at {fname}')
         map_location = {'cuda:%d' % 0: 'cuda:%d' % args.rank}
         model.load_state_dict(torch.load(fname, map_location=map_location))
     else:
@@ -188,7 +191,8 @@ def train(args, train_data, val_data, model):
                                                       end))
         # test
         if epoch % args.epoch_test == 0 and epoch>=args.epoch_test_start:
-            print('test start ...')
+            if args.rank == 0:
+                print('test start ...')
             test_epochs.append(epoch)
             start = tm()
             x, _, t = test_epoch(val_data, model, args, warmup,
@@ -222,7 +226,7 @@ def train(args, train_data, val_data, model):
                 with open(bname, 'w') as f:
                     f.write(fname)
                     f.close()
-                if not args.scan:
+                if (not args.scan) and args.rank==0:
                     print('updated best model at: ',bname)
             if args.save and args.rank==0:
                 fname = os.path.join(args.dir_saved_models,

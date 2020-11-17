@@ -377,5 +377,5 @@ def freeze_weights(model, warmup):
     params = sum([np.prod(p.size()) for p in model_parameters])
 
     net = 'roi' if ROI==0 else 'dn'
-    print('Trainable parameters in %s: %d'% (net, params))
+    # print('Trainable parameters in %s: %d'% (net, params))
     return model

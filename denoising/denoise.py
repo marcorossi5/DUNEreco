@@ -75,4 +75,4 @@ if __name__ == '__main__':
     # main
     START = tm.time()
     spmd_main(**args)
-    print(f'[{os.getpid()}] Program done in {tm.time()-START}')
+    print(f'[{os.getpid()}] Process done in {tm.time()-START}')
