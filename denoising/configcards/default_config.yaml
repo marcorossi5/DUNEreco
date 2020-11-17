@@ -4,7 +4,7 @@ warmup: "roi" # roi | dn
 
 model: "cnn" # cnn | gcnn
 
-epochs: 1 # number of training epochs
+epochs: 100 # number of training epochs
 
 loss_fn: "ssim_l2" # mse | ssim | ssim_l1 | ssim_l2
 
@@ -12,7 +12,7 @@ lr_dn: 0.009032117010326078
 
 lr_roi: 0.001
 
-out_name: None # output dirname in denoising/output folder
+out_name: "2011_cnn_roi" # output dirname in denoising/output folder
 
 load_path: None # torch .dat absolute filepath
 

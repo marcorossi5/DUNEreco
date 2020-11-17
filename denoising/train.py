@@ -63,7 +63,7 @@ def test_epoch(test_data, model, args, warmup, dry_inference=True):
     outs = []
     for noisy in test_loader:
         noisy = noisy.to(args.dev_ids[0])
-        out =  model(noisy, identity=True).data
+        out =  model(noisy).data
         outs.append(out)
     outs = torch.cat(outs)
     ws = dist.get_world_size() # world size

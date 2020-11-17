@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-import torch.nn as nn
+from torch import nn
 
 from model_utils import choose
 from model_utils import NonLocalAggregator
