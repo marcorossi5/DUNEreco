@@ -8,7 +8,13 @@ class Args:
         self.crop_p = 0.99 # signal to noise crops percentage
 
         #argparser
-        self.test_batch_size = self.batch_size*2 # if 'gcnn' in self.model else self.batch_size*4
+        self.test_batch_size = 2 * self.batch_size
+        if self.model=='gcnn' and self.warmup=='dn':
+            self.batch_size = int( self.batch_size / 2 )
+            self.test_batch_size = int( self.batch_size / 4 )
+        if self.model=='cnn' and self.warmup=='roi':
+            self.batch_size *= 9
+            self.test_batch_size *= 9 
         self.num_workers = 8
 
         #model parameters
@@ -23,7 +29,7 @@ class Args:
 
         self.epoch_log = 1
         self.epoch_test_start = 0
-        self.epoch_test = 5
+        self.epoch_test = 1
 
         self.t = 0.5
 

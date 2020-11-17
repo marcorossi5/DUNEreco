@@ -63,7 +63,7 @@ def spmd_main(card, local_rank, local_world_size):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--card", type=str, help='yaml config file path',
-                        default="/nfs/public/romarco/DUNEreco/denoising/configcards/default_config.yaml")
+                        default="/nfs/public/romarco/DUNEreco/denoising/configcards/config.yaml")
     parser.add_argument("--local_rank", default=0, type=int,
                     help="Distributed utility")
     parser.add_argument("--local_world_size", default=1, type=int,
