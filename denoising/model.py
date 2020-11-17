@@ -114,8 +114,8 @@ class PostProcessBlock(nn.Module):
                    ])
         self.BNs = nn.ModuleList([
                        nn.BatchNorm2d(hc*2),
-                       nn.Identity(),
-                       nn.BatchNorm2d(hc)
+                       nn.BatchNorm2d(hc),
+                       nn.Identity()
                    ])
         self.acts = nn.ModuleList([
                         nn.LeakyReLU(0.05),
@@ -125,7 +125,7 @@ class PostProcessBlock(nn.Module):
 
     def forward(self, x):
         for act, BN, GC in zip(self.acts, self.BNs, self.GCs):
-            graph = self.getgraph_fn(y)
+            graph = self.getgraph_fn(x)
             x = act( BN( GC(x, graph) ) )
         return x
 
@@ -163,7 +163,9 @@ class DenoisingModel(nn.Module):
             return (1-self.aa)*x + self.bb*y
         self.combine = combine
 
-    def forward(self, x):
+    def forward(self, x, identity=False):
+        if identity:
+            return nn.Identity()(x)
         hits = self.ROI(x)
         if self.task == 'roi':
             return hits
@@ -172,8 +174,8 @@ class DenoisingModel(nn.Module):
         y_hpf = self.HPF(y)
         y = self.combine(y, y_hpf)
         for LPF in self.LPFs:
-            y = self.combine( LPF(y, y_hpf) )
-        return self.PostProcessBlock(y) * x
+            y = self.combine( LPF(y), y_hpf )
+        return self.PostProcessBlock(y) + x
 
 # TODO: think about implementing utils function that select correct branch
 # 'roi'\'dn and raise NotImplementedError otherwise

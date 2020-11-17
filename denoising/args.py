@@ -8,8 +8,7 @@ class Args:
         self.crop_p = 0.99 # signal to noise crops percentage
 
         #argparser
-        self.val_batch_size = self.batch_size*4 if 'GCNN' in self.model else self.batch_size*8
-        self.test_batch_size = self.batch_size*2 if 'GCNN' in self.model else self.batch_size*4
+        self.test_batch_size = self.batch_size*2 # if 'gcnn' in self.model else self.batch_size*4
         self.num_workers = 8
 
         #model parameters

@@ -13,6 +13,7 @@ from model_utils import freeze_weights
 from model_utils import MyDDP
 
 from losses import get_loss
+from losses import loss_ssim
 
 from time import time as tm
 
@@ -62,12 +63,17 @@ def test_epoch(test_data, model, args, warmup, dry_inference=True):
     outs = []
     for noisy in test_loader:
         noisy = noisy.to(args.dev_ids[0])
-        out =  model(noisy).data
+        out =  model(noisy, identity=True).data
         outs.append(out)
     outs = torch.cat(outs)
-    output = [torch.zeros_like(outs) for i in range(dist.get_world_size())]
+    ws = dist.get_world_size() # world size
+    output = [torch.zeros_like(outs) for i in range(ws)]
     dist.all_gather(output, outs)
-    output = test_data.converter.tiles2planes( torch.cat(output) )
+    h, w = args.patch_size # height, weight
+    c = args.input_channels # channels
+    output = torch.cat( output )
+    output = output.reshape(ws,-1,c,h,w).transpose(0,1).reshape(-1,c,h,w)
+    output = test_data.converter.tiles2planes( output )
     if warmup == 'dn':
         output = test_data.converter.invert_normalization(output)
         output [output <= args.threshold] = 0
@@ -85,13 +91,19 @@ def test_epoch(test_data, model, args, warmup, dry_inference=True):
         """ Cast gpu torch tensor to numpy """
         return tensor.cpu().numpy()
 
+    if args.rank==0:
+        fname = "labels"
+        torch.save(target.cpu(), fname)
+        fname = "results"
+        torch.save(output.cpu(), fname)
+
     loss_fn = get_loss(args.loss_fn)(args.a, size_average=False) if \
               warmup=='dn' else nn.BCELoss(reduction='none')
     loss = to_np(reduce( loss_fn(target, output) ))
     if warmup == 'dn':
         ssim = to_np(reduce( 1-loss_ssim(size_average=False)(target, output) ))
         mse = to_np(reduce( nn.MSELoss(reduction='none')(output, target) ))
-        psnr = to_np(compute_psnr(target, output, reduction='none'))
+        psnr = to_np(compute_psnr(target.cpu(), output.cpu(), reduction='none'))
 
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
                 np.mean(ssim), np.std(ssim)/np.sqrt(n),
@@ -149,7 +161,7 @@ def train(args, train_data, val_data, model):
 
         if args.rank == 0:
             print(f'Loading model at {fname}')
-        map_location = {'cuda:%d' % 0: 'cuda:%d' % args.rank}
+        map_location = {'cuda:%d' % 0: 'cuda:%d' % args.local_rank}
         model.load_state_dict(torch.load(fname, map_location=map_location))
     else:
         epoch = 1

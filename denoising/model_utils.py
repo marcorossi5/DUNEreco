@@ -135,7 +135,8 @@ class NonLocalGraph:
         hw = h*w
         dists = pairwise_dist(arr, self.k, self.local_mask)
         selected = batched_index_select(
-                       arr, 1, dists.view(dists.shape[0], -1)).view(b, hw, k, f)
+                       arr, 1, dists.view(dists.shape[0], -1)
+                                       ).view(b, hw, self.k, f)
         diff = arr.unsqueeze(2) - selected
         return diff
 

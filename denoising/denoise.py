@@ -3,7 +3,6 @@
 import os
 import sys
 import argparse
-import shutil
 import time as tm
 
 import torch
@@ -48,7 +47,6 @@ def spmd_main(card, local_rank, local_world_size):
     """ Spawn distributed processes """
     dist.init_process_group(backend="nccl")
 
-    # load configuration
     parameters = load_yaml(card)
     parameters["local_rank"] = local_rank
     parameters["local_world_size"] = local_world_size
@@ -58,9 +56,7 @@ def spmd_main(card, local_rank, local_world_size):
     if args.rank == 0:
         print_summary_file(args)
     main(args)
-    if args.rank==0:
-        src = "/nfs/public/romarco/DUNEreco/denoising/logdir"
-        shutil.copytree(src, os.path.join(args.dir_output, "logdir"))
+
     dist.destroy_process_group()
 
 
@@ -78,4 +74,6 @@ if __name__ == '__main__':
     START = tm.time()
     spmd_main(**args)
     print(f'[{os.getpid()}] Process done in {tm.time()-START}')
-        
+
+# TODO: use sys.stdout to redirect print statements to file instead of
+# command line redirection

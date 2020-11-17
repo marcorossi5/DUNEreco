@@ -33,10 +33,9 @@ def compute_psnr(image, noisy, reduction='mean'):
         nimages = image.shape[0]
         x1 = image.reshape(nimages, -1)
         x2 = noisy.reshape(nimages, -1)
-        mse = torch.nn.MSELoss(reduction='none')(x1,x2).data
-        mse = mse.reshape(nimages,-1).mean(-1)
-        m2 = image.max(-1).values**2
-        psnr = torch.where(m2 == 0, torch.Tensor(0.), torch.log10(m2/mse))
+        mse = torch.nn.MSELoss(reduction='none')(x1,x2).data.mean(-1)
+        m2 = x1.max(-1).values**2
+        psnr = torch.where(m2 == 0, torch.Tensor([0.]), torch.log10(m2/mse))
         if reduction == 'none':
             return psnr
         elif reduction == 'mean':

@@ -66,7 +66,6 @@ class PlaneLoader(torch.utils.data.Dataset):
         self.patch_size = args.patch_size
         data_dir = os.path.join(args.dataset_dir, folder)
 
-        # noisy        
         fname = os.path.join(data_dir, 'planes', f'{channel}_noisy.npy')
         noisy = torch.Tensor(np.load(fname))
         
@@ -78,7 +77,6 @@ class PlaneLoader(torch.utils.data.Dataset):
         self.converter = Converter(self.patch_size, self.norm)
         self.splits = self.converter.planes2tiles(self.noisy)
 
-        # clear 
         fname = os.path.join(data_dir, 'planes', f'{channel}_clear.npy')
         clear = torch.Tensor(np.load(fname))
 
@@ -91,3 +89,6 @@ class PlaneLoader(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         return self.splits[index]
+
+# TODO: is the label generation in the PlaneLoader correct according to the
+# threshold considerations?
