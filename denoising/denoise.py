@@ -3,6 +3,7 @@
 import os
 import sys
 import argparse
+import shutil
 import time as tm
 
 import torch
@@ -53,12 +54,13 @@ def spmd_main(card, local_rank, local_world_size):
     parameters["local_world_size"] = local_world_size
     parameters["rank"] = dist.get_rank()
     args = Args(**parameters)
-    build = True if args.rank==0 else False
-    args.build_directories(build)
+    args.build_directories(build=( args.rank==0 ))
     if args.rank == 0:
         print_summary_file(args)
     main(args)
-
+    if args.rank==0:
+        src = "/nfs/public/romarco/DUNEreco/denoising/logdir"
+        shutil.copytree(src, os.path.join(args.dir_output, "logdir"))
     dist.destroy_process_group()
 
 
@@ -76,3 +78,4 @@ if __name__ == '__main__':
     START = tm.time()
     spmd_main(**args)
     print(f'[{os.getpid()}] Process done in {tm.time()-START}')
+        
