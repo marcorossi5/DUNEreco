@@ -20,11 +20,11 @@ from time import time as tm
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import compute_psnr
 
-def train_epoch(args, epoch, train_loader, model, optimizer, warmup):
+def train_epoch(args, epoch, train_loader, model, optimizer, task):
     if args.rank == 0:
         print('\n[+] Training')
     start = tm()
-    loss_fn = get_loss(args.loss_fn)(args.a) if warmup=='dn' else \
+    loss_fn = get_loss(args.loss_fn)(args.a) if task=='dn' else \
               torch.nn.BCELoss()
     model.train()
     for i, (clear, noised) in enumerate(train_loader):
@@ -32,18 +32,18 @@ def train_epoch(args, epoch, train_loader, model, optimizer, warmup):
         noised = noised.to(args.dev_ids[0])
         optimizer.zero_grad()
         out = model(noised)
-        idx = 0 if warmup=='dn' else 1 # label idx
+        idx = 0 if task=='dn' else 1 # label idx
         loss = loss_fn(out, clear[:,idx:idx+1])
         loss.backward()
         optimizer.step()
 
     return np.array([loss.item()]), tm() - start
 
-def test_epoch(test_data, model, args, warmup, dry_inference=True):
+def test_epoch(test_data, model, args, task, dry_inference=True):
     """
     Parameters:
         test_data: torch.utils.data.DataLoader, based on PlaneLoader
-        warmup: str, either roi or dn
+        task: str, either roi or dn
     Outputs:
         np.array: n metrics, shape (2*n)
         torch.Tensor: denoised data, shape (batch,C,W,H)
@@ -74,14 +74,14 @@ def test_epoch(test_data, model, args, warmup, dry_inference=True):
     output = torch.cat( output )
     output = output.reshape(ws,-1,c,h,w).transpose(0,1).reshape(-1,c,h,w)
     output = test_data.converter.tiles2planes( output )
-    if warmup == 'dn':
+    if task == 'dn':
         output = test_data.converter.invert_normalization(output)
         output [output <= args.threshold] = 0
     end = tm()    
 
     if dry_inference:
         return output
-    idx = 0 if warmup=="dn" else 1
+    idx = 0 if task=="dn" else 1
     target = test_data.clear[:,idx:idx+1].to(args.dev_ids[0])
 
     def reduce(loss):
@@ -98,9 +98,9 @@ def test_epoch(test_data, model, args, warmup, dry_inference=True):
         torch.save(output.cpu(), fname)
 
     loss_fn = get_loss(args.loss_fn)(args.a, size_average=False) if \
-              warmup=='dn' else nn.BCELoss(reduction='none')
+              task=='dn' else nn.BCELoss(reduction='none')
     loss = to_np(reduce( loss_fn(target, output) ))
-    if warmup == 'dn':
+    if task == 'dn':
         ssim = to_np(reduce( 1-loss_ssim(size_average=False)(target, output) ))
         mse = to_np(reduce( nn.MSELoss(reduction='none')(output, target) ))
         psnr = to_np(compute_psnr(target.cpu(), output.cpu(), reduction='none'))
@@ -116,9 +116,9 @@ def test_epoch(test_data, model, args, warmup, dry_inference=True):
 
 ########### main train function
 def train(args, train_data, val_data, model):
-    warmup = args.warmup
+    task = args.task
     # check if load existing model
-    model = freeze_weights(model, warmup)
+    model = freeze_weights(model, task)
     model = MyDDP(model.to(args.dev_ids[0]), device_ids=args.dev_ids,
                   find_unused_parameters=True)
 
@@ -146,7 +146,7 @@ def train(args, train_data, val_data, model):
             test_metrics = list(np.load(fname).T)
 
             fname = os.path.join(args.dir_saved_models,
-                                 f'{args.model}_{warmup}_{args.load_epoch}.dat')
+                                 f'{args.model}_{task}_{args.load_epoch}.dat')
             epoch = args.load_epoch + 1
        
         else:
@@ -177,7 +177,7 @@ def train(args, train_data, val_data, model):
                              f'{args.model}_-1.dat')
         
     # initialize optimizer
-    lr = args.lr_roi if (warmup=='roi') else args.lr_dn
+    lr = args.lr_roi if (task=='roi') else args.lr_dn
     optimizer = optim.Adam(list(model.parameters()), lr=lr,
                            amsgrad=args.amsgrad)
 
@@ -192,7 +192,7 @@ def train(args, train_data, val_data, model):
         start = tm()
         train_sampler.set_epoch(epoch)
         loss, t = train_epoch(args, epoch, train_loader, model,
-                          optimizer,warmup=warmup)
+                          optimizer,task=task)
         end = tm() - start
         loss_sum.append(loss)
         time_train.append(t)
@@ -207,15 +207,15 @@ def train(args, train_data, val_data, model):
                 print('test start ...')
             test_epochs.append(epoch)
             start = tm()
-            x, _, t = test_epoch(val_data, model, args, warmup,
+            x, _, t = test_epoch(val_data, model, args, task,
                               dry_inference=False)
             end = tm() - start
             test_metrics.append(x)
             time_test.append(t)
             if not args.scan and args.rank==0:
-                if warmup == 'roi':
+                if task == 'roi':
                     print('Test loss: %.5f +- %.5f'%(x[0], x[1]))
-                if warmup == 'dn':
+                if task == 'dn':
                     print('Test loss: %.5f +- %.5f,\
                            ssim: %.5f +- %.5f,\
                            psnr: %.5f +- %.5f,\
@@ -232,7 +232,7 @@ def train(args, train_data, val_data, model):
                 #switch to keep all the history of saved models 
                 #or just the best one
                 fname = os.path.join(args.dir_saved_models,
-                         f'{args.model}_{warmup}_{epoch}.dat')
+                         f'{args.model}_{task}_{epoch}.dat')
                 best_model_name = fname
                 bname = os.path.join(args.dir_final_test, 'best_model.txt')
                 with open(bname, 'w') as f:
@@ -242,7 +242,7 @@ def train(args, train_data, val_data, model):
                     print('updated best model at: ',bname)
             if args.save and args.rank==0:
                 fname = os.path.join(args.dir_saved_models,
-                         f'{args.model}_{warmup}_{epoch}.dat')
+                         f'{args.model}_{task}_{epoch}.dat')
                 if not args.scan:
                     print('saved model at: %s'%fname)
             if args.rank==0:

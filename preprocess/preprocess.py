@@ -12,7 +12,7 @@ parser.add_argument("--dir_name", "-p", default="../datasets/denoising",
 parser.add_argument("--n_crops", "-n", default=5000, type=int,
                     help="number of crops for each plane")
 parser.add_argument("--crop_edge", "-c", default=32, type=int,
-                    help="crop shape")
+                    help="crop edge")
 parser.add_argument("--percentage", "-x", default=0.5, type=float,
                     help="percentage of signal")
 
@@ -22,7 +22,7 @@ import putils
 from utils.utils import get_freer_gpu
 from denoising.ssim import _fspecial_gauss_1d, stat_gaussian_filter
 
-#crop_shape = (32,32)
+#patch_size = (32,32)
 APAs = 6
 r_step = 800
 c_step = 960
@@ -74,7 +74,7 @@ def get_planes_and_dump(dname):
     np.save(fname,
             np.stack(collection_noisy,0))
 
-def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
+def crop_planes_and_dump(dir_name, n_crops, patch_size, p):
     for s in ['readout', 'collection']:
         fname = os.path.join(dir_name,'planes',f'{s}_clear.npy')
         clear_planes = np.load(fname)[:,0]
@@ -87,7 +87,7 @@ def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
         for clear_plane, noisy_plane in zip(clear_planes,noisy_planes):
             idx = putils.get_crop(clear_plane,
                                   n_crops = n_crops,
-                                  crop_shape = crop_shape,
+                                  patch_size = patch_size,
                                   p = p)
             clear_crops.append(clear_plane[idx])
             noisy_crops.append(noisy_plane[idx])
@@ -99,15 +99,15 @@ def crop_planes_and_dump(dir_name, n_crops, crop_shape, p):
         print(f'{s} noisy crops:', noisy_crops.shape)
 
         fname = os.path.join(dir_name,'crops',
-                             f'{s}_clear_{crop_shape[0]}_{p}')
+                             f'{s}_clear_{patch_size[0]}_{p}')
         np.save(fname, clear_crops)
 
         fname = os.path.join(dir_name,'crops',
-                             f'{s}_noisy_{crop_shape[0]}_{p}')
+                             f'{s}_noisy_{patch_size[0]}_{p}')
         np.save(fname,noisy_crops)
             
 def main(dir_name, n_crops, crop_edge, percentage):
-    crop_shape = (crop_edge, crop_edge)
+    patch_size = (crop_edge, crop_edge)
     for i in ['train/crops', 'train/planes', 'val/planes', 'test/planes']:
         if not os.path.isdir(os.path.join(dir_name,i)):
             os.mkdir(os.path.join(dir_name,i))
@@ -132,7 +132,7 @@ def main(dir_name, n_crops, crop_edge, percentage):
         np.save(fname,[m,M])
 
     dname = os.path.join(dir_name, 'train')
-    crop_planes_and_dump(dname, n_crops, crop_shape, percentage)
+    crop_planes_and_dump(dname, n_crops, patch_size, percentage)
     
 if __name__ == '__main__':
     args = vars(parser.parse_args())

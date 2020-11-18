@@ -139,8 +139,8 @@ class DenoisingModel(nn.Module):
     def __init__(self, args):
         super(DenoisingModel, self).__init__()
         self.patch_size = args.patch_size
-        self.model = args.model # TODO: change config into cnn and gcnn
-        self.task = args.warmup # TODO: change warmup -> task
+        self.model = args.model # TODO: change into cnn and gcnn (lowercase)
+        self.task = args.task
         # TODO: change all crop_size into patch_size
         ic = args.input_channels
         hc = args.hidden_channels

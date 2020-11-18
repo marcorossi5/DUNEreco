@@ -91,7 +91,7 @@ def get_planes(clear_file, noised_file):
     return stack_planes(clear_file, noised_file, r_idx, c_idx)
 
 def get_crop(clear_plane, n_crops=1000,
-            crop_shape=(32,32), p=0.5):
+            patch_size=(32,32), p=0.5):
     """
     This functions finds crops centers indeces
     Input:
@@ -101,7 +101,7 @@ def get_crop(clear_plane, n_crops=1000,
         numpy array of shape (N,C,H,W)
     """
     x, y = clear_plane.shape
-    c_x, c_y = crop_shape[0]//2, crop_shape[1]//2
+    c_x, c_y = patch_size[0]//2, patch_size[1]//2
 
     im = np.copy(clear_plane)
     im[im!=0] = 1

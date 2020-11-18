@@ -80,7 +80,7 @@ def pairwise_dist(arr, k, local_mask):
     D = D*local_mask - (1-local_mask)
     del mul, r_arr
     #this is the euclidean distance wrt the feature vector of the current pixel
-    #then the matrix has to be of shape (B,N,N), where N=prod(crop_shape)
+    #then the matrix has to be of shape (B,N,N), where N=prod(patch_size)
     return D.topk(k=k, dim=-1)[1] # (B,N,K)
 
 
@@ -97,8 +97,8 @@ def batched_index_select(t, dim, inds):
     return out
 
 
-def local_mask(crop_size):
-    x, y = crop_size
+def local_mask(patch_size):
+    x, y = patch_size
     N = x*y
 
     local_mask = torch.ones([N, N])
@@ -358,17 +358,14 @@ def weight_scan(module):
     
     return norm, (edges[:-1]+edges[1:])/2, hist
 
-def freeze_weights(model, warmup):
+def freeze_weights(model, task):
     """
     Freezes weights of ROI either finder or GCNN denoiser
     Parameters:
         model: torch.nn.Module, first childred should be ROI
-        warmup: str, mode of the training ('roi'/'dn')
+        task: str, mode of the training ('roi'/'dn')
     """
-    if warmup == 'roi':
-        ROI = 0
-    if warmup == 'dn':
-        ROI = 1
+    ROI = 0 if task=="roi" else 1
     for i, child in enumerate(model.children()):
         if ((i == 0)%2 + ROI + 1)%2:
             for param in child.parameters():

@@ -1,6 +1,6 @@
 dataset_dir: "../datasets/denoising"
 
-warmup: "roi" # roi | dn
+task: "roi" # roi | dn
 
 model: "cnn" # cnn | gcnn
 
@@ -17,6 +17,8 @@ out_name: "2011_cnn_roi" # output dirname in denoising/output folder
 load_path: None # torch .dat absolute filepath
 
 batch_size: 256
+
+test_batch_size: 256
 
 threshold: 3.5
 
