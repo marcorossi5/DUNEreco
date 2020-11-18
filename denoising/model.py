@@ -133,15 +133,13 @@ class PostProcessBlock(nn.Module):
 class DenoisingModel(nn.Module):
     """
     Generic neural network: based on args passed when running __init__, it
-    switches between cnn and gcnn
-    args switches between dn and roi: TODO: change forward to automate this
+    switches between cnn|gcnn and roi|dn as well
     """
     def __init__(self, args):
         super(DenoisingModel, self).__init__()
         self.patch_size = args.patch_size
-        self.model = args.model # TODO: change into cnn and gcnn (lowercase)
+        self.model = args.model
         self.task = args.task
-        # TODO: change all crop_size into patch_size
         ic = args.input_channels
         hc = args.hidden_channels
         self.getgraph_fn = NonLocalGraph(args.k, self.patch_size) if \
@@ -176,8 +174,3 @@ class DenoisingModel(nn.Module):
         for LPF in self.LPFs:
             y = self.combine( LPF(y), y_hpf )
         return self.PostProcessBlock(y) + x
-
-# TODO: think about implementing utils function that select correct branch
-# 'roi'\'dn and raise NotImplementedError otherwise
-# is it useful or not ?  Maybe impose a check at the beginning of the
-# program and stick with "if 'roi' \ else" conditions elsewhere.
