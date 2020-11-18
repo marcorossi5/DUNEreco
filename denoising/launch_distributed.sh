@@ -60,6 +60,11 @@ for idx in ${!hosts[*]}; do
     hosts[$idx]=$((${hosts[$idx]}+1))
 done
 
+if [ ! -d $logdir ]; then
+    mkdir $logdir
+fi
+touchtmp="mktemp -p $logdir"
+
 function job_func(){
     job="python $launch --nproc_per_node=$2 --nnodes=$nnodes --node_rank=$1 \
          --master_addr=$master_addr $main --local_world_size=$2 --card=$card"
@@ -72,20 +77,39 @@ rank_h=0
 for gpu in ${gpus[*]}; do
     host=${hosts[$rank_h]}
     job_func $rank $gpu
+    logfiles[$rank]=$($touchtmp)
+    errfiles[$rank]=$($touchtmp)
+    echo -e "ibmminsky-$host\nLogfile" | tee ${logfiles[$rank]} >/dev/null
+    echo -e "ibmminsky-$host\nErrfile" | tee ${errfiles[$rank]} >/dev/null
     if [ $rank -gt 0 ]; then
         job="$setenv;cd $workdir;$job"
-        nohup ssh -K ibmminsky-$host $job &
+        nohup ssh -K ibmminsky-$host $job 1>>${logfiles[$rank]} \
+        2>>${errfiles[$rank]} &
     else
-        $job
+        $job 1>>${logfiles[$rank]} 2>>${errfiles[$rank]}
         returncode=$?
     fi
     rank=$(( $rank - 1 ))
     rank_h=$(( $rank_h + 1 ))
 done
 
+log=${logdir}/log.txt
+err=${logdir}/err.txt
+if [[ -f $log && -f $err ]]; then
+    rm $log $err
+fi
+
+for idx in ${!logfiles[*]}; do
+    cat ${logfiles[$idx]} <(echo -e $separator) >> $log
+    cat ${errfiles[$idx]} <(echo -e $separator) >> $err
+done
+
 # send logs to email
 if [[ 0 -ne "$returncode" ]]; then
     echo FAIL
+    cat "$err" | mailx -s "Job failed with exit code $returncode" \
+    -a "$log" "$email"
 else
     echo SUCCESS;
+    cat "$log" | mailx -s "Job succeeded" "$email"
 fi

@@ -54,18 +54,9 @@ def spmd_main(card, local_rank, local_world_size):
     parameters["rank"] = dist.get_rank()
     args = Args(**parameters)
     args.build_directories(build=( args.rank==0 ))
-    fname = os.path.join(args.dir_output, "err.txt")
-    errfile = open(fname, "w")
-    sys.stderr = errfile
     if args.rank == 0:
-        fname = os.path.join(args.dir_output, "log.txt")
-        logfile = open(fname, "w")
-        sys.stdout = logfile
         print_summary_file(args)
     main(args)
-    errfile.close()
-    if args.rank == 0:
-        logfile.close()
 
     dist.destroy_process_group()
 
@@ -84,4 +75,6 @@ if __name__ == '__main__':
     START = tm.time()
     spmd_main(**args)
     print(f'[{os.getpid()}] Process done in {tm.time()-START}')
-    
+
+# TODO: use sys.stdout to redirect print statements to file instead of
+# command line redirection
