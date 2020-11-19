@@ -34,8 +34,9 @@ def main(args):
 
     #load datasets
     set_random_seed(0)
-    train_data = CropLoader(args,'train','collection')
-    val_data = PlaneLoader(args,'val','collection')
+    train_data = CropLoader(args)
+    val_data = [PlaneLoader(args,'val','readout'),
+                PlaneLoader(args,'val','collection')]
 
     model = DenoisingModel(args)
 
@@ -77,5 +78,4 @@ if __name__ == '__main__':
     # main
     spmd_main(**args)
 
-# TODO: use sys.stdout to redirect print statements to file instead of
-# command line redirection
+# TODO: replace readout by induction everywhere

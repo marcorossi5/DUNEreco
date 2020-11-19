@@ -26,4 +26,6 @@ amsgrad: True
 
 scan: False
 
-normalization: "standardization" # standardization | minmax
+normalization: "zscore" # zscore | minmax | mednnorm
+
+channel: "both" # induction | collection | both

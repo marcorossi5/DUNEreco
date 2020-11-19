@@ -11,27 +11,37 @@ from ssim import _fspecial_gauss_1d, stat_gaussian_filter
 
 
 class CropLoader(torch.utils.data.Dataset):
-    def __init__(self, args, folder, channel):
+    def __init__(self, args):
         """
         This function loads the crops for training.
         Crops are normalized in the [0,1] range with the minmax
         normalization\.
         Parameters:
             args: Args object
-            folder: str, one of ['train','val','test']
-            channel: str, one of ['readout','collection']
         """
         data_dir = args.dataset_dir
         edge_patch = args.patch_size[0]
         p = args.crop_p
-        
-        fname = os.path.join(data_dir,'train','crops',
-                             f'{channel}_noisy_{edge_patch}_{p}.npy')
-        self.noisy = torch.Tensor(np.load(fname))
 
-        fname = os.path.join(data_dir,'train','crops',
+        if args.channel == 'both':
+            channels = ['readout', 'collection']
+        elif args.channel in ['readout', 'collection']:
+            channels = [args.channel]
+        else:
+            raise NotImplementedError(f"Channel {args.channel} not present")
+        
+        noisy = []
+        clear = []
+        for channel in channels:
+            fname = os.path.join(data_dir,'train/crops',
+                                 f"{channel}_noisy_{edge_patch}_{p}.npy")
+            noisy.append( np.load(fname) )
+
+            fname = os.path.join(data_dir,'train/crops',
                              f'{channel}_clear_{edge_patch}_{p}.npy')
-        clear = torch.Tensor(np.load(fname))
+            clear.append( np.load(fname) )
+        self.noisy = torch.Tensor( np.concatenate(noisy) )
+        clear = torch.Tensor( np.concatenate(clear) )
         hits = torch.clone(clear)
         hits[hits!=0] = 1
         self.clear = torch.cat([clear, hits],1)

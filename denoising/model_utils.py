@@ -30,14 +30,14 @@ class MinMax(nn.Module):
         return (x-self.Min)/(self.Max-self.Min)
 
 
-class Standardization(nn.Module):
+class ZScore(nn.Module):
     def __init__(self, mu, var):
         """
         Standardization layer with scale factors mu and var
         Parameters:
             mu, var: float, scaling factors
         """
-        super(Standardization, self).__init__()
+        super(ZScore, self).__init__()
         self.mu = nn.Parameter(torch.Tensor([mu]), requires_grad=False)
         self.var = nn.Parameter(torch.Tensor([var]), requires_grad=False)
         if self.var==0:
@@ -49,13 +49,36 @@ class Standardization(nn.Module):
         return (x-self.mu)/self.var
 
 
+class MedianNorm(nn.Module):
+    def __init__(self, med, Min, Max):
+        """
+        Median normalization layer with scale factors Min and Max
+        Parameters:
+            med, Min, Max: float, scaling factors
+        """
+        super(MedianNorm, self).__init__()
+        self.med = nn.Parameter(torch.Tensor([med]), requires_grad=False)
+        self.Min = nn.Parameter(torch.Tensor([Min]), requires_grad=False)
+        self.Max = nn.Parameter(torch.Tensor([Max]), requires_grad=False)
+        if  self.Max-self.Min <= 0:
+            raise ValueError("MinMax normalization requires different and \
+                              ascending ordered scale factors")
+
+    def forward(self, x, invert=False):
+        if invert:
+            return x*(self.Max-self.Min) + self.med
+        return (x-self.med)/(self.Max-self.Min)
+
+
 def choose_norm(dataset_dir, op):
     fname = os.path.join(dataset_dir, f"{op}.npy")
     params = np.load(fname)
-    if op == "standardization":
-        return Standardization(*params)
+    if op == "zscore":
+        return ZScore(*params)
     elif op == "minmax":
         return MinMax(*params)
+    elif op == "mednorm":
+        return MedianNorm(*params)
     else:
         raise NotImplementedError("Normalization operation not implemented")
 

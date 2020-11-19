@@ -128,9 +128,13 @@ def main(dir_name, n_crops, crop_edge, percentage):
     fname = os.path.join(dir_name, 'minmax')
     np.save(fname,[n.min(),n.max()])
 
-    # standardization
-    fname = os.path.join(dir_name, 'standardization')
+    # zscore
+    fname = os.path.join(dir_name, 'zscore')
     np.save(fname,[n.mean(),n.std()])
+
+    # median normalization
+    fname = os.path.join(dir_name, 'mednorm')
+    np.save(fname,[n.median(),n.min(), n.max()])
 
     dname = os.path.join(dir_name, 'train')
     crop_planes_and_dump(dname, n_crops, patch_size, percentage)
