@@ -17,8 +17,9 @@ class MinMax(nn.Module):
         Parameters:
             Min, Max: float, scaling factors
         """
-        self.Min = nn.Parameter(torch.Tensor(Min), requires_grad=False)
-        self.Max = nn.Parameter(torch.Tensor(Max), requires_grad=False)
+        super(MinMax, self).__init__()
+        self.Min = nn.Parameter(torch.Tensor([Min]), requires_grad=False)
+        self.Max = nn.Parameter(torch.Tensor([Max]), requires_grad=False)
         if  self.Max-self.Min <= 0:
             raise ValueError("MinMax normalization requires different and \
                               ascending ordered scale factors")
@@ -36,8 +37,9 @@ class Standardization(nn.Module):
         Parameters:
             mu, var: float, scaling factors
         """
-        self.mu = nn.Parameter(torch.Tensor(mu), requires_grad=False)
-        self.var = nn.Parameter(torch.Tensor(var), requires_grad=False)
+        super(Standardization, self).__init__()
+        self.mu = nn.Parameter(torch.Tensor([mu]), requires_grad=False)
+        self.var = nn.Parameter(torch.Tensor([var]), requires_grad=False)
         if self.var==0:
             raise ValueError("Standardization requires non-zero variance")
 

@@ -9,8 +9,8 @@ class Args:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
         
-        check_model(self.model, ["cnn", "gcnn"])
-        check_task(self.task, ["roi", "dn"])
+        check(self.model, ["cnn", "gcnn"])
+        check(self.task, ["roi", "dn"])
         
         self.patch_size = (32,32)
         self.crop_p = 0.99 # signal to noise crops percentage
@@ -29,7 +29,7 @@ class Args:
 
         self.epoch_log = 1
         self.epoch_test_start = 0
-        self.epoch_test = 1
+        self.epoch_test = 5
 
         self.t = 0.5
 

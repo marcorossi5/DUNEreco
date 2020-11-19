@@ -208,12 +208,9 @@ def train(args, train_data, val_data, model):
         time_train.append(t)
 
         if epoch % args.epoch_log == 0 and (not args.scan) and args.rank==0:
-            print(f"Epoch: {epoch:3}, Loss: {loss_sum[-1][0]:6.5}, epoch time: \
-                    {end:6.1}s")
+            print(f"Epoch: {epoch:3}, Loss: {loss_sum[-1][0]:6.5}, epoch time: {end:.4}s")
         # test
         if epoch % args.epoch_test == 0 and epoch>=args.epoch_test_start:
-            if args.rank == 0:
-                print('test start ...')
             test_epochs.append(epoch)
             start = tm()
             x, _, t = test_epoch(val_data, model, args, task,
@@ -223,14 +220,12 @@ def train(args, train_data, val_data, model):
             time_test.append(t)
             if not args.scan and args.rank==0:
                 if task == 'roi':
-                    print(f"Test loss on collection APAs: \
-                            {x[0]:.5} +- {x[1]:.5}")
+                    print(f"Test loss on collection APAs: {x[0]:.5} +- {x[1]:.5}")
                 if task == 'dn':
-                    print(f"Test on collection APAs:\n \
-                           {'loss:':7} {x[0]:.5} +- {x[1]:.5}\n \
-                           {'ssim:':7} {x[2]:.5} +- {x[3]:.5}\n \
-                           {'psnr:':7} {x[4]:.5} +- {x[5]:.5}\n \
-                           {'mse:':7} {x[6]:.5} +- {x[7]:.5}")
+                    print(f"Test on collection APAs: {'loss:':7} {x[0]:.5} +- {x[1]:.5}\n \
+                         {'ssim:':7} {x[2]:.5} +- {x[3]:.5}\n \
+                         {'psnr:':7} {x[4]:.5} +- {x[5]:.5}\n \
+                         {'mse:':7} {x[6]:.5} +- {x[7]:.5}")
                 print(f'Test epoch time: {end:.4}')
 
             #save the model if it is the best one

@@ -158,7 +158,6 @@ class DenoisingModel(nn.Module):
         self.HPF = HPF(hc*3+1, hc*3+1, self.getgraph_fn, self.model)
         self.PostProcessBlock = PostProcessBlock(ic, hc, self.getgraph_fn,
                                                  self.model)
-        self.invert_normalization = Normalization()
         self.aa = nn.Parameter(torch.Tensor([0]), requires_grad=False)
         self.bb = nn.Parameter(torch.Tensor([1]), requires_grad=False)
         def combine(x, y):

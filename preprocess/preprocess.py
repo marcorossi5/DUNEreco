@@ -122,7 +122,7 @@ def main(dir_name, n_crops, crop_edge, percentage):
     for s in ['readout', 'collection']:
         fname = os.path.join(dir_name, f"train/planes/{s}_noisy.npy")
         n.append(np.load(fname).flatten())
-    n = np.concat(n)
+    n = np.concatenate(n)
 
     # MinMax
     fname = os.path.join(dir_name, 'minmax')

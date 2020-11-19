@@ -56,7 +56,10 @@ def spmd_main(card, local_rank, local_world_size):
     args.build_directories(build=( args.rank==0 ))
     if args.rank == 0:
         print_summary_file(args)
+    START = tm.time()
     main(args)
+    if args.rank == 0:
+        print(f'[{os.getpid()}] Process done in {tm.time()-START}')
 
     dist.destroy_process_group()
 
@@ -72,9 +75,7 @@ if __name__ == '__main__':
     # load configuration
     args = vars(parser.parse_args())
     # main
-    START = tm.time()
     spmd_main(**args)
-    print(f'[{os.getpid()}] Process done in {tm.time()-START}')
 
 # TODO: use sys.stdout to redirect print statements to file instead of
 # command line redirection
