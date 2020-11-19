@@ -100,7 +100,7 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
               task=='dn' else nn.BCELoss(reduction='none')
     loss = to_np(reduce( loss_fn(target, output) ))
     if task == 'dn':
-        ssim = to_np(reduce( 1-get_loss('loss_ssim')(reduction='none')(target, output) ))
+        ssim = to_np(reduce( 1-get_loss('ssim')(reduction='none')(target, output) ))
         mse = to_np(reduce( get_loss('mse')(reduction='none')(output, target) ))
         psnr = to_np(compute_psnr(target.cpu(), output.cpu(), reduction='none'))
 

@@ -37,6 +37,9 @@ class loss_ssim_l2(loss):
                              data_range=self.data_range,
                              reduction=self.reduction)
         loss2 = nn.MSELoss(reduction=self.reduction)(*args)
+        if self.reduction == 'none':
+            n = loss2.shape[0]
+            loss2 = loss2.reshape([n,-1]).mean(-1)
         return self.a*loss1 + 1e3 * (1-self.a)*loss2
 
 class loss_ssim_l1(loss):
@@ -49,6 +52,9 @@ class loss_ssim_l1(loss):
         loss2 = (args[0]-args[1]).abs()
         if self.reduction == 'mean':
             loss2 = loss2.mean()
+        elif self.reduction == 'none':
+            n = loss2.shape[0]
+            loss2 = loss2.reshape([n,-1]).mean(-1)
         return self.a*loss1 + (1-self.a)*loss2
 
 def get_loss(loss):
