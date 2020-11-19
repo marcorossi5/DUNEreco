@@ -25,3 +25,5 @@ threshold: 3.5
 amsgrad: True
 
 scan: False
+
+normalization: "standardization" # standardization | minmax

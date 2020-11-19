@@ -2,9 +2,11 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from model_utils import choose_norm
 from model_utils import choose
 from model_utils import NonLocalAggregator
 from model_utils import NonLocalGraph
+
 
 class PreProcessBlock(nn.Module):
     def __init__(self, kernel_size, ic, oc, getgraph_fn, model):
@@ -144,6 +146,7 @@ class DenoisingModel(nn.Module):
         hc = args.hidden_channels
         self.getgraph_fn = NonLocalGraph(args.k, self.patch_size) if \
                            self.model=="gcnn" else lambda x: None
+        self.norm_fn = choose_norm(args.dataset_dir, args.normalization)
         self.ROI = ROI(7, ic, hc, self.getgraph_fn, self.model)
         self.PreProcessBlocks = nn.ModuleList([
              PreProcessBlock(5, ic, hc, self.getgraph_fn, self.model),
@@ -155,15 +158,15 @@ class DenoisingModel(nn.Module):
         self.HPF = HPF(hc*3+1, hc*3+1, self.getgraph_fn, self.model)
         self.PostProcessBlock = PostProcessBlock(ic, hc, self.getgraph_fn,
                                                  self.model)
+        self.invert_normalization = Normalization()
         self.aa = nn.Parameter(torch.Tensor([0]), requires_grad=False)
         self.bb = nn.Parameter(torch.Tensor([1]), requires_grad=False)
         def combine(x, y):
             return (1-self.aa)*x + self.bb*y
         self.combine = combine
 
-    def forward(self, x, identity=False):
-        if identity:
-            return nn.Identity()(x)
+    def forward(self, x):
+        x = self.norm_fn(x)
         hits = self.ROI(x)
         if self.task == 'roi':
             return hits
@@ -173,4 +176,5 @@ class DenoisingModel(nn.Module):
         y = self.combine(y, y_hpf)
         for LPF in self.LPFs:
             y = self.combine( LPF(y), y_hpf )
-        return self.PostProcessBlock(y) + x
+        x = self.PostProcessBlock(y) + x
+        return self.norm_fn(x, invert=True)

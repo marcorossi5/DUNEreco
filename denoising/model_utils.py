@@ -10,6 +10,54 @@ import matplotlib as mpl
 from sklearn.metrics import confusion_matrix
 
 
+class MinMax(nn.Module):
+    def __init__(self, Min, Max):
+        """
+        MinMax normalization layer with scale factors Min and Max
+        Parameters:
+            Min, Max: float, scaling factors
+        """
+        self.Min = nn.Parameter(torch.Tensor(Min), requires_grad=False)
+        self.Max = nn.Parameter(torch.Tensor(Max), requires_grad=False)
+        if  self.Max-self.Min <= 0:
+            raise ValueError("MinMax normalization requires different and \
+                              ascending ordered scale factors")
+
+    def forward(self, x, invert=True):
+        if invert:
+            x*(self.Max-self.Min) + self.Min
+        return (x-self.Min)/(self.Max-self.Min)
+
+
+class Standardization(nn.Module):
+    def __init__(self, mu, var):
+        """
+        Standardization layer with scale factors mu and var
+        Parameters:
+            mu, var: float, scaling factors
+        """
+        self.mu = nn.Parameter(torch.Tensor(mu), requires_grad=False)
+        self.var = nn.Parameter(torch.Tensor(var), requires_grad=False)
+        if self.var==0:
+            raise ValueError("Standardization requires non-zero variance")
+
+    def forward(self, x, invert=True):
+        if invert:
+            return x*self.var + self.mu
+        return (x-self.mu)/self.var
+
+
+def choose_norm(dataset_dir, op):
+    fname = os.path.join(dataset_dir, f"{op}.npy")
+    params = np.load(fname)
+    if op == "standardization":
+        return Standardization(*params)
+    elif op == "minmax":
+        return MinMax(*params)
+    else:
+        raise NotImplementedError("Normalization operation not implemented")
+
+
 class GConv(nn.Module):
     def __init__(self, ic, oc):
         super(GConv, self).__init__()
@@ -168,9 +216,8 @@ def calculate_pad(shape1, shape2):
 
 class Converter:
     """ Groups image to tiles converter functions """
-    def __init__(self, patch_size, norm):
+    def __init__(self, patch_size):
         self.patch_size = patch_size
-        self.norm = norm
 
     def planes2tiles(self, image):
         """
@@ -207,9 +254,6 @@ class Converter:
         img = img.permute(0,2,1,3)
 
         return img[:,:, self.pad[-2]:-self.pad[-1], self.pad[0]:-self.pad[1]]
-    
-    def invert_normalization(self, planes):
-        return planes * (self.norm[1] - self.norm[0]) + self.norm[0]
 
 class MyDataParallel(nn.DataParallel):
     """Allow calling model's attributes"""

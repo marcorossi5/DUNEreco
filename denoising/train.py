@@ -75,8 +75,8 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
     output = output.reshape(ws,-1,c,h,w).transpose(0,1).reshape(-1,c,h,w)
     output = test_data.converter.tiles2planes( output )
     if task == 'dn':
-        output = test_data.converter.invert_normalization(output)
-        output [output <= args.threshold] = 0
+        mask = (output <= args.threshold) & (output >= -args.threshold)
+        output[mask] = 0
     end = tm()    
 
     if dry_inference:
@@ -161,7 +161,7 @@ def train(args, train_data, val_data, model):
 
         if args.rank == 0:
             print(f'Loading model at {fname}')
-        map_location = {'cuda:%d' % 0: 'cuda:%d' % args.local_rank}
+        map_location = {"cuda:{0:d}": f"cuda:{args.local_rank:d}"}
         model.load_state_dict(torch.load(fname, map_location=map_location))
     else:
         epoch = 1
@@ -173,8 +173,7 @@ def train(args, train_data, val_data, model):
 
     best_loss = 1e10
     best_loss_std = 0
-    best_model_name = os.path.join(args.dir_saved_models,
-                             f'{args.model}_-1.dat')
+    best_model_name = os.path.join(args.dir_saved_models,f"{args.model}_-1.dat")
         
     # initialize optimizer
     lr = args.lr_roi if (task=='roi') else args.lr_dn
@@ -198,9 +197,8 @@ def train(args, train_data, val_data, model):
         time_train.append(t)
 
         if epoch % args.epoch_log == 0 and (not args.scan) and args.rank==0:
-            print("Epoch: %d, Loss: %.5f, epoch time: %.5f"%(epoch,
-                                                      loss_sum[-1][0],
-                                                      end))
+            print(f"Epoch: {epoch:3}, Loss: {loss_sum[-1][0]:6.5}, epoch time: \
+                    {end:6.1}s")
         # test
         if epoch % args.epoch_test == 0 and epoch>=args.epoch_test_start:
             if args.rank == 0:
@@ -214,14 +212,15 @@ def train(args, train_data, val_data, model):
             time_test.append(t)
             if not args.scan and args.rank==0:
                 if task == 'roi':
-                    print('Test loss: %.5f +- %.5f'%(x[0], x[1]))
+                    print(f"Test loss on collection APAs: \
+                            {x[0]:.5} +- {x[1]:.5}")
                 if task == 'dn':
-                    print('Test loss: %.5f +- %.5f,\
-                           ssim: %.5f +- %.5f,\
-                           psnr: %.5f +- %.5f,\
-                           mse: %.5e +- %.5e'%(x[0], x[1], x[2], x[3],
-                                           x[4], x[5], x[6], x[7]))
-                print('Test epoch time: %.4f\n'% end)            
+                    print(f"Test on collection APAs:\n \
+                           {'loss:':7} {x[0]:.5} +- {x[1]:.5}\n \
+                           {'ssim:':7} {x[2]:.5} +- {x[3]:.5}\n \
+                           {'psnr:':7} {x[4]:.5} +- {x[5]:.5}\n \
+                           {'mse:':7} {x[6]:.5} +- {x[7]:.5}")
+                print(f'Test epoch time: {end:.4}')
 
             #save the model if it is the best one
             if test_metrics[-1][0] + test_metrics[-1][1] < best_loss \
