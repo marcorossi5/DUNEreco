@@ -117,13 +117,10 @@ def main(dir_name, n_crops, crop_edge, percentage):
         dname = os.path.join(dir_name, s)
         get_planes_and_dump(dname)
 
-    dname = os.path.join(dir_name, 'train')
-    crop_planes_and_dump(dname, n_crops, patch_size, percentage)
-
     # save the normalization (this contain info from all the APAs)
     n = []
     for s in ['readout', 'collection']:
-        fname = os.path.join(dir_name, 'train/crops', '_'.join([s,'noisy.npy']))
+        fname = os.path.join(dir_name, f"train/planes/{s}_noisy.npy")
         n.append(np.load(fname).flatten())
     n = np.concat(n)
 
@@ -134,6 +131,9 @@ def main(dir_name, n_crops, crop_edge, percentage):
     # standardization
     fname = os.path.join(dir_name, 'standardization')
     np.save(fname,[n.mean(),n.var()])
+
+    dname = os.path.join(dir_name, 'train')
+    crop_planes_and_dump(dname, n_crops, patch_size, percentage)
     
 if __name__ == '__main__':
     args = vars(parser.parse_args())
