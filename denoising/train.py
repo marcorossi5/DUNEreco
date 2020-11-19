@@ -53,7 +53,7 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
                               batch_size=args.test_batch_size,
                               num_workers=args.num_workers)
     if args.rank == 0:
-        print('[+] Testing')
+        print('\n[+] Testing')
     model.eval()
 
     n = test_data.noisy.shape[0]
@@ -111,6 +111,18 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
 
     return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), output, \
             end-start
+
+
+def average_fn(x, y):
+    """
+    Needed to store correct metrics when training on both collection and
+    induction
+    """
+    x = x.reshape([-1,2])
+    y = y.reshape([-1,2])
+    means = (x[:,0] + y[:,0])*0.5
+    stds = np.sqrt((x[:,1])**2 + (y[:,1])**2)*0.5
+    return np.stack([means, stds], 1).flatten()
 
 
 ########### main train function

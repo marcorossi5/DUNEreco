@@ -404,20 +404,21 @@ def weight_scan(module):
 
 def freeze_weights(model, task):
     """
-    Freezes weights of ROI either finder or GCNN denoiser
+    Freezes weights of either ROI finder or denoiser
     Parameters:
-        model: torch.nn.Module, first childred should be ROI
+        model: torch.nn.Module
         task: str, mode of the training ('roi'/'dn')
     """
-    ROI = 0 if task=="roi" else 1
-    for i, child in enumerate(model.children()):
-        if ((i == 0)%2 + ROI + 1)%2:
+    for child in model.children():
+        c = "ROI" == child._get_name()
+        cond = not c if task=="roi" else c
+        if cond:
             for param in child.parameters():
                 param.requires_grad = False
-
-    model_parameters = filter(lambda p: p.requires_grad, model.parameters())
-    params = sum([np.prod(p.size()) for p in model_parameters])
-
-    net = 'roi' if ROI==0 else 'dn'
+    # model_parameters = filter(lambda p: p.requires_grad, model.parameters())
+    # params = sum([np.prod(p.size()) for p in model_parameters])
+    # net = 'roi' if ROI==0 else 'dn'
     # print('Trainable parameters in %s: %d'% (net, params))
     return model
+
+
