@@ -52,7 +52,7 @@ def stat_gaussian_filter(input, win):
 def _ssim(X, Y, 
           data_range, 
           win, 
-          size_average=True, 
+          reduction=True, 
           K=(0.01,0.03)):
           
     r""" Calculate ssim index for X and Y
@@ -61,7 +61,7 @@ def _ssim(X, Y,
         Y (torch.Tensor): images
         win (torch.Tensor): 1-D gauss kernel
         data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-        size_average (bool, optional): if size_average=True, ssim of all images will be averaged as a scalar
+        reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
     Returns:
         torch.Tensor: ssim results.
     """
@@ -95,7 +95,7 @@ def _ssim(X, Y,
 def _stat_ssim(X, Y, 
           data_range, 
           win, 
-          size_average=True, 
+          reduction=True, 
           K=(0.01,0.03)):
           
     r""" Calculate stat_ssim index for X and Y
@@ -104,7 +104,7 @@ def _stat_ssim(X, Y,
         Y (torch.Tensor): images
         win (torch.Tensor): 1-D gauss kernel
         data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-        size_average (bool, optional): if size_average=True, ssim of all images will be averaged as a scalar
+        reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
     Returns:
         torch.Tensor: ssim results.
     """
@@ -142,7 +142,7 @@ def _stat_ssim(X, Y,
 
 def ssim(X, Y, 
          data_range=255, 
-         size_average=True, 
+         reduction=True, 
          win_size=11, 
          win_sigma=3, 
          win=None, 
@@ -153,7 +153,7 @@ def ssim(X, Y,
         X (torch.Tensor): a batch of images, (N,C,H,W)
         Y (torch.Tensor): a batch of images, (N,C,H,W)
         data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-        size_average (bool, optional): if size_average=True, ssim of all images will be averaged as a scalar
+        reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
         win_size: (int, optional): the size of gauss kernel
         win_sigma: (float, optional): sigma of normal distribution
         win (torch.Tensor, optional): 1-D gauss kernel. if None, a new kernel will be created according to win_size and win_sigma
@@ -185,20 +185,20 @@ def ssim(X, Y,
     ssim_per_channel, cs = _ssim(X, Y,
                                 data_range=data_range,
                                 win=win,
-                                size_average=False,
+                                reduction=False,
                                 K=K)
     if nonnegative_ssim:
         ssim_per_channel = torch.relu(ssim_per_channel)
     
-    if size_average:
+    if reduction=='mean':
         return ssim_per_channel.mean()
-    else:
+    elif reduction=='none':
         return ssim_per_channel.mean(1)
   
 
 def ms_ssim(X, Y, 
             data_range=255, 
-            size_average=True, 
+            reduction=True, 
             win_size=11, 
             win_sigma=3, 
             win=None, 
@@ -210,7 +210,7 @@ def ms_ssim(X, Y,
         X (torch.Tensor): a batch of images, (N,C,H,W)
         Y (torch.Tensor): a batch of images, (N,C,H,W)
         data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-        size_average (bool, optional): if size_average=True, ssim of all images will be averaged as a scalar
+        reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
         win_size: (int, optional): the size of gauss kernel
         win_sigma: (float, optional): sigma of normal distribution
         win (torch.Tensor, optional): 1-D gauss kernel. if None, a new kernel will be created according to win_size and win_sigma
@@ -252,7 +252,7 @@ def ms_ssim(X, Y,
         ssim_per_channel, cs = _ssim(X, Y,
                              win=win,
                              data_range=data_range,
-                             size_average=False,
+                             reduction=False,
                              K=K)
 
         if i<levels-1: 
@@ -265,14 +265,14 @@ def ms_ssim(X, Y,
     mcs_and_ssim = torch.stack( mcs+[ssim_per_channel], dim=0 ) # (level, batch, channel)
     ms_ssim_val = torch.prod( mcs_and_ssim ** weights.view(-1, 1, 1), dim=0 )
 
-    if size_average:
+    if reduction=='mean':
         return ms_ssim_val.mean()
-    else:
+    elif reduction=='none':
         return ms_ssim_val.mean(1)
 
 def stat_ssim(X, Y, 
          data_range=255, 
-         size_average=True, 
+         reduction=True, 
          win_size=11, 
          win_sigma=3, 
          win=None, 
@@ -283,7 +283,7 @@ def stat_ssim(X, Y,
         X (torch.Tensor): a batch of images, (N,C,H,W)
         Y (torch.Tensor): a batch of images, (N,C,H,W)
         data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-        size_average (bool, optional): if size_average=True, ssim of all images will be averaged as a scalar
+        reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
         win_size: (int, optional): the size of gauss kernel
         win_sigma: (float, optional): sigma of normal distribution
         win (torch.Tensor, optional): 1-D gauss kernel. if None, a new kernel will be created according to win_size and win_sigma
@@ -315,21 +315,21 @@ def stat_ssim(X, Y,
     ssim_per_channel, cs = _stat_ssim(X, Y,
                                 data_range=data_range,
                                 win=win,
-                                size_average=False,
+                                reduction=False,
                                 K=K)
     if nonnegative_ssim:
         ssim_per_channel = torch.relu(ssim_per_channel)
     
-    if size_average:
+    if reduction=='mean':
         return ssim_per_channel.mean()
-    else:
+    elif reduction=='none':
         return ssim_per_channel.mean(1)
 
 
 class SSIM(torch.nn.Module):
     def __init__(self, 
                  data_range=255, 
-                 size_average=True, 
+                 reduction=True, 
                  win_size=11, 
                  win_sigma=1.5, 
                  channel=3, 
@@ -338,7 +338,7 @@ class SSIM(torch.nn.Module):
         r""" class for ssim
         Args:
             data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-            size_average (bool, optional): if size_average=True, ssim of all images will be averaged as a scalar
+            reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
             win_size: (int, optional): the size of gauss kernel
             win_sigma: (float, optional): sigma of normal distribution
             channel (int, optional): input channels (default: 3)
@@ -349,7 +349,7 @@ class SSIM(torch.nn.Module):
         super(SSIM, self).__init__()
         self.win_size = win_size
         self.win = _fspecial_gauss_1d(win_size, win_sigma).repeat(channel, 1, 1, 1)
-        self.size_average = size_average
+        self.reduction = reduction
         self.data_range = data_range
         self.K = K
         self.nonnegative_ssim = nonnegative_ssim
@@ -357,7 +357,7 @@ class SSIM(torch.nn.Module):
     def forward(self, X, Y):
         return ssim(X, Y, 
                     data_range=self.data_range, 
-                    size_average=self.size_average, 
+                    reduction=self.reduction, 
                     win=self.win, 
                     K=self.K, 
                     nonnegative_ssim=self.nonnegative_ssim)
@@ -366,7 +366,7 @@ class SSIM(torch.nn.Module):
 class MS_SSIM(torch.nn.Module):
     def __init__(self, 
                  data_range=255, 
-                 size_average=True, 
+                 reduction=True, 
                  win_size=11, 
                  win_sigma=1.5, 
                  channel=3, 
@@ -375,7 +375,7 @@ class MS_SSIM(torch.nn.Module):
         r""" class for ms-ssim
         Args:
             data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-            size_average (bool, optional): if size_average=True, ssim of all images will be averaged as a scalar
+            reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
             win_size: (int, optional): the size of gauss kernel
             win_sigma: (float, optional): sigma of normal distribution
             channel (int, optional): input channels (default: 3)
@@ -386,7 +386,7 @@ class MS_SSIM(torch.nn.Module):
         super(MS_SSIM, self).__init__()
         self.win_size = win_size
         self.win = _fspecial_gauss_1d(win_size, win_sigma).repeat(channel, 1, 1, 1)
-        self.size_average = size_average
+        self.reduction = reduction
         self.data_range = data_range
         self.weights = weights
         self.K = K
@@ -394,7 +394,7 @@ class MS_SSIM(torch.nn.Module):
     def forward(self, X, Y):
         return ms_ssim(X, Y, 
                        data_range=self.data_range, 
-                       size_average=self.size_average, 
+                       reduction=self.reduction, 
                        win=self.win, 
                        weights=self.weights, 
                        K=self.K)
@@ -402,7 +402,7 @@ class MS_SSIM(torch.nn.Module):
 class STAT_SSIM(torch.nn.Module):
     def __init__(self, 
                  data_range=255, 
-                 size_average=True, 
+                 reduction=True, 
                  win_size=11, 
                  win_sigma=1.5, 
                  channel=3, 
@@ -411,7 +411,7 @@ class STAT_SSIM(torch.nn.Module):
         r""" class for stat_ssim
         Args:
             data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-            size_average (bool, optional): if size_average=True, ssim of all images will be averaged as a scalar
+            reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
             win_size: (int, optional): the size of gauss kernel
             win_sigma: (float, optional): sigma of normal distribution
             channel (int, optional): input channels (default: 3)
@@ -422,7 +422,7 @@ class STAT_SSIM(torch.nn.Module):
         super(STAT_SSIM, self).__init__()
         self.win_size = win_size
         self.win = _fspecial_gauss_1d(win_size, win_sigma).repeat(channel, 1, 1, 1)
-        self.size_average = size_average
+        self.reduction = reduction
         self.data_range = data_range
         self.K = K
         self.nonnegative_ssim = nonnegative_ssim
@@ -430,7 +430,7 @@ class STAT_SSIM(torch.nn.Module):
     def forward(self, X, Y):
         return stat_ssim(X, Y, 
                     data_range=self.data_range, 
-                    size_average=self.size_average, 
+                    reduction=self.reduction, 
                     win=self.win, 
                     K=self.K, 
                     nonnegative_ssim=self.nonnegative_ssim)

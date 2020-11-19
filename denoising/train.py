@@ -13,7 +13,6 @@ from model_utils import freeze_weights
 from model_utils import MyDDP
 
 from losses import get_loss
-from losses import loss_ssim
 
 from time import time as tm
 
@@ -97,12 +96,12 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
         fname = "results"
         torch.save(output.cpu(), fname)
 
-    loss_fn = get_loss(args.loss_fn)(args.a, size_average=False) if \
+    loss_fn = get_loss(args.loss_fn)(args.a, reduction='none') if \
               task=='dn' else nn.BCELoss(reduction='none')
     loss = to_np(reduce( loss_fn(target, output) ))
     if task == 'dn':
-        ssim = to_np(reduce( 1-loss_ssim(size_average=False)(target, output) ))
-        mse = to_np(reduce( nn.MSELoss(reduction='none')(output, target) ))
+        ssim = to_np(reduce( 1-get_loss('loss_ssim')(reduction='none')(target, output) ))
+        mse = to_np(reduce( get_loss('mse')(reduction='none')(output, target) ))
         psnr = to_np(compute_psnr(target.cpu(), output.cpu(), reduction='none'))
 
         return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
