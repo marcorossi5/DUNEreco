@@ -24,9 +24,9 @@ class MinMax(nn.Module):
             raise ValueError("MinMax normalization requires different and \
                               ascending ordered scale factors")
 
-    def forward(self, x, invert=True):
+    def forward(self, x, invert=False):
         if invert:
-            x*(self.Max-self.Min) + self.Min
+            return x*(self.Max-self.Min) + self.Min
         return (x-self.Min)/(self.Max-self.Min)
 
 
@@ -43,7 +43,7 @@ class Standardization(nn.Module):
         if self.var==0:
             raise ValueError("Standardization requires non-zero variance")
 
-    def forward(self, x, invert=True):
+    def forward(self, x, invert=False):
         if invert:
             return x*self.var + self.mu
         return (x-self.mu)/self.var

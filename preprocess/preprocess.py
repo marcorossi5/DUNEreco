@@ -130,7 +130,7 @@ def main(dir_name, n_crops, crop_edge, percentage):
 
     # standardization
     fname = os.path.join(dir_name, 'standardization')
-    np.save(fname,[n.mean(),n.var()])
+    np.save(fname,[n.mean(),n.std()])
 
     dname = os.path.join(dir_name, 'train')
     crop_planes_and_dump(dname, n_crops, patch_size, percentage)

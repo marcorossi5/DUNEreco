@@ -72,35 +72,32 @@ function job_func(){
 trap 'rm -f "$logdir"/tmp*' EXIT # automatic clean of tmp files
 separator="\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n"
 
-rank=$(( $nnodes - 1 ))
-rank_h=0
-for gpu in ${gpus[*]}; do
-    host=${hosts[$rank_h]}
-    job_func $rank $gpu
-    logfiles[$rank]=$($touchtmp)
-    errfiles[$rank]=$($touchtmp)
-    echo -e "ibmminsky-$host\nLogfile" | tee ${logfiles[$rank]} >/dev/null
-    echo -e "ibmminsky-$host\nErrfile" | tee ${errfiles[$rank]} >/dev/null
-    if [ $rank -gt 0 ]; then
-        job="$setenv;cd $workdir;$job"
-        nohup ssh -K ibmminsky-$host $job 1>>${logfiles[$rank]} \
-        2>>${errfiles[$rank]} &
-    else
-        $job 1>>${logfiles[$rank]} 2>>${errfiles[$rank]}
-        returncode=$?
-    fi
-    rank=$(( $rank - 1 ))
-    rank_h=$(( $rank_h + 1 ))
-done
-
 log=${logdir}/log.txt
 err=${logdir}/err.txt
 if [[ -f $log && -f $err ]]; then
     rm $log $err
 fi
 
-for idx in ${!logfiles[*]}; do
-    cat ${logfiles[$idx]} <(echo -e $separator) >> $log
+rank=$(( $nnodes - 1 ))
+rank_h=0
+for gpu in ${gpus[*]}; do
+    host=${hosts[$rank_h]}
+    job_func $rank $gpu
+    errfiles[$rank]=$($touchtmp)
+    echo -e "ibmminsky-$host\nErrfile" | tee ${errfiles[$rank]} >/dev/null
+    if [ $rank -gt 0 ]; then
+        job="$setenv;cd $workdir;$job"
+        nohup ssh -K ibmminsky-$host $job 1>/dev/null \
+        2>>${errfiles[$rank]} &
+    else
+        $job 1>>${log} 2>>${errfiles[$rank]}
+        returncode=$?
+    fi
+    rank=$(( $rank - 1 ))
+    rank_h=$(( $rank_h + 1 ))
+done
+
+for idx in ${!errfiles[*]}; do
     cat ${errfiles[$idx]} <(echo -e $separator) >> $err
 done
 

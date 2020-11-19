@@ -223,9 +223,9 @@ def train(args, train_data, val_data, model):
                     print(f"Test loss on collection APAs: {x[0]:.5} +- {x[1]:.5}")
                 if task == 'dn':
                     print(f"Test on collection APAs: {'loss:':7} {x[0]:.5} +- {x[1]:.5}\n \
-                         {'ssim:':7} {x[2]:.5} +- {x[3]:.5}\n \
-                         {'psnr:':7} {x[4]:.5} +- {x[5]:.5}\n \
-                         {'mse:':7} {x[6]:.5} +- {x[7]:.5}")
+                        {'ssim:':7} {x[2]:.5} +- {x[3]:.5}\n \
+                        {'psnr:':7} {x[4]:.5} +- {x[5]:.5}\n \
+                        {'mse:':7} {x[6]:.5} +- {x[7]:.5}")
                 print(f'Test epoch time: {end:.4}')
 
             #save the model if it is the best one
