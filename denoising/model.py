@@ -146,7 +146,8 @@ class DenoisingModel(nn.Module):
         hc = args.hidden_channels
         self.getgraph_fn = NonLocalGraph(args.k, self.patch_size) if \
                            self.model=="gcnn" else lambda x: None
-        self.norm_fn = choose_norm(args.dataset_dir, args.normalization)
+        self.norm_fn = choose_norm(args.dataset_dir, args.channel,
+                                   args.normalization)
         self.ROI = ROI(7, ic, hc, self.getgraph_fn, self.model)
         self.PreProcessBlocks = nn.ModuleList([
              PreProcessBlock(5, ic, hc, self.getgraph_fn, self.model),

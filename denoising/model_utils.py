@@ -70,8 +70,8 @@ class MedianNorm(nn.Module):
         return (x-self.med)/(self.Max-self.Min)
 
 
-def choose_norm(dataset_dir, op):
-    fname = os.path.join(dataset_dir, f"{op}.npy")
+def choose_norm(dataset_dir, ch, op):
+    fname = os.path.join(dataset_dir, f"{ch}_{op}.npy")
     params = np.load(fname)
     if op == "zscore":
         return ZScore(*params)
