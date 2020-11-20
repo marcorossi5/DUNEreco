@@ -113,29 +113,6 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
             end-start
 
 
-def average_fn(x, y):
-    """
-    Needed to store correct metrics when training on both collection and
-    induction
-    """
-    x = x.reshape([-1,2])
-    y = y.reshape([-1,2])
-    means = (x[:,0] + y[:,0])*0.5
-    stds = np.sqrt((x[:,1])**2 + (y[:,1])**2)*0.5
-    return np.stack([means, stds], 1).flatten()
-
-
-def print_test(task, x, end):
-    if task == 'roi':
-        print(f"Test loss on induction APAs: {x[0]:.5} +- {x[1]:.5}")
-    if task == 'dn':
-        print(f"Test on induction APAs: {'loss:':7} {x[0]:.5} +- {x[1]:.5}\n \
-                        {'ssim:':7} {x[2]:.5} +- {x[3]:.5}\n \
-                        {'psnr:':7} {x[4]:.5} +- {x[5]:.5}\n \
-                        {'mse:':7} {x[6]:.5} +- {x[7]:.5}")
-        print(f'Test epoch time: {end:.4}')
-
-
 ########### main train function
 def train(args, train_data, val_data, model):
     task = args.task
@@ -230,7 +207,15 @@ def train(args, train_data, val_data, model):
             end = tm() - start
             test_metrics.append(x)
             time_test.append(t)
-            print_test(task, x, end)
+            if args.rank == 0:
+                if args.task == 'roi':
+                    print(f"Test loss on {args.channel:10} APAs: {x[0]:.5} +- {x[1]:.5}")
+                if args.task == 'dn':
+                    print(f"Test on {args.channel:10} APAs: {'loss:':7} {x[0]:.5} +- {x[1]:.5}\n\
+                         {'ssim:':7} {x[2]:.5} +- {x[3]:.5}\n\
+                         {'psnr:':7} {x[4]:.5} +- {x[5]:.5}\n\
+                         {'mse:':7} {x[6]:.5} +- {x[7]:.5}")
+                    print(f'Test epoch time: {end:.4}')
 
             #save the model if it is the best one
             if test_metrics[-1][0] + test_metrics[-1][1] < best_loss \

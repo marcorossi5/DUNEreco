@@ -28,4 +28,4 @@ scan: False
 
 normalization: "zscore" # zscore | minmax | mednnorm
 
-channel: "both" # induction | collection | both
+channel: "induction" # induction | collection
