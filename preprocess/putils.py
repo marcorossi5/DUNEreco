@@ -7,9 +7,9 @@ from skimage.feature import canny
 
 event_step = 15360
 collection_step = 960
-readout_step = 800
+induction_step = 800
 time_len = 6000
-ada_step = event_step // (2*readout_step + collection_step)
+ada_step = event_step // (2*induction_step + collection_step)
 #c_pedestal = 500
 #r_pedestal = 1800
 
@@ -37,16 +37,16 @@ def load_files(path_clear, path_noise):
 def plane_idx():
     signal_planes = [i for i in range(ada_step)]
 
-    readout = []
+    induction = []
     collection = []
-    cpp = 2*readout_step+collection_step #channel per plane
+    cpp = 2*induction_step+collection_step #channel per plane
 
     for i in range(ada_step):
-        readout.extend(range(cpp*i, cpp*i + 2*readout_step))
-        collection.extend(range(cpp*i + 2*readout_step,
-                               cpp*i + 2*readout_step + collection_step))
+        induction.extend(range(cpp*i, cpp*i + 2*induction_step))
+        collection.extend(range(cpp*i + 2*induction_step,
+                               cpp*i + 2*induction_step + collection_step))
 
-    return readout, collection
+    return induction, collection
 
 def stack_planes(clear_file, noised_file, r_idx, c_idx):
     r_clear = clear_file[r_idx]
@@ -61,14 +61,14 @@ def stack_planes(clear_file, noised_file, r_idx, c_idx):
     c_n_clear = []
     c_n_noised = []
 
-    for i in range(int(r_clear.shape[0]/readout_step)):
-        if r_clear[i*readout_step:(i+1)*readout_step].max() == 0:
+    for i in range(int(r_clear.shape[0]/induction_step)):
+        if r_clear[i*induction_step:(i+1)*induction_step].max() == 0:
             print('skipped')
             continue
-        r_n_clear.append(r_clear[i*readout_step:
-                                                  (i+1)*readout_step])
-        r_n_noised.append(r_noised[i*readout_step:
-                                                  (i+1)*readout_step])
+        r_n_clear.append(r_clear[i*induction_step:
+                                                  (i+1)*induction_step])
+        r_n_noised.append(r_noised[i*induction_step:
+                                                  (i+1)*induction_step])
 
     for i in range(int(c_clear.shape[0]/collection_step)):
         if c_clear[i*collection_step:(i+1)*collection_step].max() == 0:

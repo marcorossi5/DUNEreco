@@ -35,8 +35,7 @@ def main(args):
     #load datasets
     set_random_seed(0)
     train_data = CropLoader(args)
-    val_data = [PlaneLoader(args,'val','readout'),
-                PlaneLoader(args,'val','collection')]
+    val_data = PlaneLoader(args, 'val')
 
     model = DenoisingModel(args)
 
@@ -77,5 +76,3 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     # main
     spmd_main(**args)
-
-# TODO: replace readout by induction everywhere

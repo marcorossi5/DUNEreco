@@ -29,8 +29,8 @@ c_step = 960
 rc_step = 2*r_step + c_step
 
 def get_planes_and_dump(dname):
-    readout_clear = []
-    readout_noisy = []
+    induction_clear = []
+    induction_noisy = []
     collection_clear = []
     collection_noisy = []
 
@@ -41,30 +41,30 @@ def get_planes_and_dump(dname):
         c = np.load(file_clear)[:,2:]
         n = np.load(file_noisy)[:,2:]
         for i in range(APAs):
-            readout_clear.append(c[i*rc_step:i*rc_step+r_step])
-            readout_noisy.append(n[i*rc_step:i*rc_step+r_step])
-            readout_clear.append(c[i*rc_step+r_step:i*rc_step+2*r_step])
-            readout_noisy.append(n[i*rc_step+r_step:i*rc_step+2*r_step])
+            induction_clear.append(c[i*rc_step:i*rc_step+r_step])
+            induction_noisy.append(n[i*rc_step:i*rc_step+r_step])
+            induction_clear.append(c[i*rc_step+r_step:i*rc_step+2*r_step])
+            induction_noisy.append(n[i*rc_step+r_step:i*rc_step+2*r_step])
             collection_clear.append(c[i*rc_step+2*r_step:(i+1)*rc_step])
             collection_noisy.append(n[i*rc_step+2*r_step:(i+1)*rc_step])
     
     collection_clear = np.stack(collection_clear,0)[:,None]
     collection_noisy = np.stack(collection_noisy,0)[:,None]
-    readout_clear = np.stack(readout_clear,0)[:,None]
-    readout_noisy = np.stack(readout_noisy,0)[:,None]
+    induction_clear = np.stack(induction_clear,0)[:,None]
+    induction_noisy = np.stack(induction_noisy,0)[:,None]
 
     print("\tCollection clear planes: ", collection_clear.shape)
     print("\tCollection noisy planes: ", collection_noisy.shape)
-    print("\tReadout clear planes: ", readout_clear.shape)
-    print("\tReadout noisy planes: ", readout_noisy.shape)
+    print("\tinduction clear planes: ", induction_clear.shape)
+    print("\tinduction noisy planes: ", induction_noisy.shape)
 
-    fname = os.path.join(dname, "planes", "readout_clear")
+    fname = os.path.join(dname, "planes", "induction_clear")
     np.save(fname,
-            np.stack(readout_clear,0))
+            np.stack(induction_clear,0))
 
-    fname = os.path.join(dname, "planes", "readout_noisy")
+    fname = os.path.join(dname, "planes", "induction_noisy")
     np.save(fname,
-            np.stack(readout_noisy,0))
+            np.stack(induction_noisy,0))
 
     fname = os.path.join(dname, "planes", "collection_clear")
     np.save(fname,
@@ -75,7 +75,7 @@ def get_planes_and_dump(dname):
             np.stack(collection_noisy,0))
 
 def crop_planes_and_dump(dir_name, n_crops, patch_size, p):
-    for s in ['readout', 'collection']:
+    for s in ['induction', 'collection']:
         fname = os.path.join(dir_name,'planes',f'{s}_clear.npy')
         clear_planes = np.load(fname)[:,0]
 
@@ -118,23 +118,21 @@ def main(dir_name, n_crops, crop_edge, percentage):
         get_planes_and_dump(dname)
 
     # save the normalization (this contain info from all the APAs)
-    n = []
-    for s in ['readout', 'collection']:
+    for s in ['induction', 'collection']:
         fname = os.path.join(dir_name, f"train/planes/{s}_noisy.npy")
-        n.append(np.load(fname).flatten())
-    n = np.concatenate(n)
+        n = np.load(fname).flatten()
 
-    # MinMax
-    fname = os.path.join(dir_name, 'minmax')
-    np.save(fname,[n.min(),n.max()])
+        # MinMax
+        fname = os.path.join(dir_name, f"{s}_minmax")
+        np.save(fname,[n.min(),n.max()])
 
-    # zscore
-    fname = os.path.join(dir_name, 'zscore')
-    np.save(fname,[n.mean(),n.std()])
+        # zscore
+        fname = os.path.join(dir_name, f"{s}_zscore")
+        np.save(fname,[n.mean(),n.std()])
 
-    # median normalization
-    fname = os.path.join(dir_name, 'mednorm')
-    np.save(fname,[n.median(),n.min(), n.max()])
+        # median normalization
+        fname = os.path.join(dir_name, f"{s}_mednorm")
+        np.save(fname,[np.median(n),n.min(), n.max()])
 
     dname = os.path.join(dir_name, 'train')
     crop_planes_and_dump(dname, n_crops, patch_size, percentage)

@@ -91,9 +91,9 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
         return tensor.cpu().numpy()
 
     if args.rank==0:
-        fname = "labels"
+        fname = os.path.join(args.dir_testing, "labels")
         torch.save(target.cpu(), fname)
-        fname = "results"
+        fname = os.path.join(args.dir_testing, "results")
         torch.save(output.cpu(), fname)
 
     loss_fn = get_loss(args.loss_fn)(args.a, reduction='none') if \
@@ -223,28 +223,14 @@ def train(args, train_data, val_data, model):
 
         # test
         if epoch % args.epoch_test == 0 and epoch>=args.epoch_test_start:
-
             test_epochs.append(epoch)
             start = tm()
-            x, _, tx = test_epoch(val_data[0], model, args, task,
+            x, _, t = test_epoch(val_data, model, args, task,
                               dry_inference=False)
-            endx = tm() - start
-            start = tm()
-            y, _, ty = test_epoch(val_data[1], model, args, task,
-                              dry_inference=False)
-            endy = tm() - start
-            if args.channel == 'both':
-                test_metrics.append( average_fn(x, y) )
-                time_test.append(tx + ty)
-            elif args.channel == 'readout':
-                test_metrics.append( x )
-                time_test.append( tx )
-            elif args.channel == 'collection':
-                test_metrics.append( y )
-                time_test.append( ty )
-            if not args.scan and args.rank==0:
-                print_test(task, x, endx)
-                print_test(task, y, endy)
+            end = tm() - start
+            test_metrics.append(x)
+            time_test.append(t)
+            print_test(task, x, end)
 
             #save the model if it is the best one
             if test_metrics[-1][0] + test_metrics[-1][1] < best_loss \

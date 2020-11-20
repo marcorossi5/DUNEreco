@@ -43,7 +43,7 @@ class Args:
         #build directories
         t = dtm.now().strftime("%y%m%d_%H%M%S") if self.out_name is None \
             else self.out_name
-        self.dir_output = f"./denoising/output/{t}"
+        self.dir_output = f"./denoising/output/{t}/{self.channel}"
 
         def mkdir_fn(name, build):
             dirname = os.path.join(self.dir_output, name)
