@@ -116,6 +116,7 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
 ########### main train function
 def train(args, train_data, val_data, model):
     task = args.task
+    channel = args.channel
     # check if load existing model
     model = freeze_weights(model, task)
     model = MyDDP(model.to(args.dev_ids[0]), device_ids=args.dev_ids,
@@ -209,9 +210,9 @@ def train(args, train_data, val_data, model):
             time_test.append(t)
             if args.rank == 0:
                 if args.task == 'roi':
-                    print(f"Test loss on {args.channel:10} APAs: {x[0]:.5} +- {x[1]:.5}")
+                    print(f"Test loss on {channel:10} APAs: {x[0]:.5} +- {x[1]:.5}")
                 if args.task == 'dn':
-                    print(f"Test on {args.channel:10} APAs: {'loss:':7} {x[0]:.5} +- {x[1]:.5}\n\
+                    print(f"Test on {channel:10} APAs: {'loss:':7} {x[0]:.5} +- {x[1]:.5}\n\
                          {'ssim:':7} {x[2]:.5} +- {x[3]:.5}\n\
                          {'psnr:':7} {x[4]:.5} +- {x[5]:.5}\n\
                          {'mse:':7} {x[6]:.5} +- {x[7]:.5}")
@@ -236,7 +237,7 @@ def train(args, train_data, val_data, model):
                     print('updated best model at: ',bname)
             if args.save and args.rank==0:
                 fname = os.path.join(args.dir_saved_models,
-                         f'{args.model}_{task}_{epoch}.dat')
+                         f'{args.model}_{task}_{channel}_{epoch}.dat')
                 if not args.scan:
                     print('saved model at: %s'%fname)
             if args.rank==0:
