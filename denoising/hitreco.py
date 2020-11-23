@@ -71,7 +71,7 @@ def get_model_and_args(modeltype, task, channel):
     model =  DenoisingModel(args)
     prefix = "denoising/best_models"
     name = f"{modeltype}_{task}"
-    fname = os.path.join(prefix, name, name + f"_{channel}.dat" )
+    fname = os.path.join(prefix, name + f"_{channel}.dat" )
     model.load_state_dict(torch.load(fname))
     return ArgsTuple(args.patch_size, args.test_batch_size), model
 
