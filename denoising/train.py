@@ -38,6 +38,16 @@ def train_epoch(args, epoch, train_loader, model, optimizer, task):
 
     return np.array([loss.item()]), tm() - start
 
+
+def inference(test_loader, model, dev):
+    outs = []
+    for noisy in test_loader:
+        noisy = noisy.to(dev)
+        out =  model(noisy).data
+        outs.append(out)
+    return torch.cat(outs)
+
+
 def test_epoch(test_data, model, args, task, dry_inference=True):
     """
     Parameters:
@@ -59,12 +69,7 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
     n = test_data.noisy.shape[0]
 
     start = tm()
-    outs = []
-    for noisy in test_loader:
-        noisy = noisy.to(args.dev_ids[0])
-        out =  model(noisy).data
-        outs.append(out)
-    outs = torch.cat(outs)
+    outs = inference(test_loader, model, args.dev_ids[0])
     ws = dist.get_world_size() # world size
     output = [torch.zeros_like(outs) for i in range(ws)]
     dist.all_gather(output, outs)

@@ -34,11 +34,12 @@ class CropLoader(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.noisy)
+
     def __getitem__(self, index):
         return self.clear[index], self.noisy[index]
 
 class PlaneLoader(torch.utils.data.Dataset):
-    def __init__(self, args, folder):
+    def __init__(self, args, folder=None, planes=None):
         """
         This function loads the planes for inference.
         Only noisy planes are normalized since clear planes don't
@@ -48,21 +49,24 @@ class PlaneLoader(torch.utils.data.Dataset):
             folder: str, one of ['train','val','test']
             t: float, threshold to be put on labels
         """
-        self.patch_size = args.patch_size
-        data_dir = os.path.join(args.dataset_dir, folder)
+        if folder==None and planes==None:
+            raise ValueError("Either folder or planes arguments must be given")
 
-        fname = os.path.join(data_dir, 'planes', f'{args.channel}_noisy.npy')
-        self.noisy = torch.Tensor( np.load(fname) )
+        self.patch_size = args.patch_size
+        if folder is not None:
+            data_dir = os.path.join(args.dataset_dir, folder)
+            fname = os.path.join(data_dir, f"planes/{args.channel}_clear.npy")
+            clear = torch.Tensor( np.load(fname) )
+            hits = torch.clone(clear)
+            hits[hits!= 0] = 1
+            self.clear = torch.cat([clear, hits],1)
+            fname = os.path.join(data_dir, f"planes/{args.channel}_noisy.npy")
+            self.noisy = torch.Tensor( np.load(fname) )
+        else:
+            self.noisy = torch.Tensor(planes)
         
         self.converter = Converter(self.patch_size)
         self.splits = self.converter.planes2tiles(self.noisy)
-
-        fname = os.path.join(data_dir, 'planes', f'{args.channel}_clear.npy')
-        clear = torch.Tensor( np.load(fname) )
-
-        hits = torch.clone(clear)
-        hits[hits!= 0] = 1
-        self.clear = torch.cat([clear, hits],1)
 
     def __len__(self):
         return len(self.splits)
@@ -72,5 +76,3 @@ class PlaneLoader(torch.utils.data.Dataset):
 
 # TODO: is the label generation in the PlaneLoader correct according to the
 # threshold considerations?
-
-# TODO: instantiate a EventLoader class

@@ -59,7 +59,7 @@ def spmd_main(card, local_rank, local_world_size):
     START = tm.time()
     main(args)
     if args.rank == 0:
-        print(f'[{os.getpid()}] Process done in {tm.time()-START}')
+        print(f"[{os.getpid()}] Process done in {tm.time()-START}")
 
     dist.destroy_process_group()
 

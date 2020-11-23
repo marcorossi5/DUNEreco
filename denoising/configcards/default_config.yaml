@@ -14,11 +14,11 @@ lr_roi: 0.001
 
 out_name: "202011/cnn_roi" # output dirname in denoising/output folder
 
-load_path: None # "denoising/output/202011/collection/model_save/cnn_roi_collection_90.dat" # torch .dat absolute filepath
+load_path: None # "denoising/output/202011/cnn_roi/collection/model_save/cnn_roi_collection_90.dat" # torch .dat absolute filepath
 
 batch_size: 256 # 128 (gcnn dn) | 256 (else)
 
-test_batch_size: 2000 # 2000 | 376 cnn, 512 | 128
+test_batch_size: 4000 # 4000 | 376 cnn, 512 | 128
 
 threshold: 3.5
 
