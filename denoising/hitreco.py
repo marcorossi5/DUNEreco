@@ -32,18 +32,17 @@ def evt2planes(event):
     Output: np.array
         induction and collection arrays of shape type (N,C,H,W)
     """
-    event = event[None]
     base = np.arange(apas).reshape(-1,1) * apastep
     iidxs = [[0, istep, 2*istep]] + base
     cidxs = [[2*istep, apastep]] + base
     inductions = []
     for start, idx, end in iidxs:
-        induction = [event[:,start:idx], event[:,idx:end]]
+        induction = [event[start:idx], event[idx:end]]
         inductions.extend(induction)
     collections = []
     for start, end in cidxs:
-        collections.append(event[:,start:end])
-    return np.stack(inductions), np.stack(collections)
+        collections.append(event[start:end])
+    return np.stack(inductions)[:,None], np.stack(collections)[:,None]
 
     
 def planes2evt(inductions, collections):
@@ -69,11 +68,13 @@ def get_model_and_args(modeltype, task, channel):
     parameters["channel"] = channel
     args =  Args(**parameters)
 
-    model =  DenoisingModel(args)
+    model =  torch.nn.DataParallel( DenoisingModel(args), device_ids=[0] )
     prefix = "denoising/best_models"
-    name = f"{modeltype}_{task}"
-    fname = os.path.join(prefix, name + f"_{channel}.dat" )
-    model.load_state_dict(torch.load(fname))
+    name = f"{modeltype}_{task}_{channel}.dat"
+    fname = os.path.join(prefix, name)
+
+    state_dict = torch.load(fname)
+    model.load_state_dict(state_dict)
     return ArgsTuple(args.patch_size, args.test_batch_size), model
 
 
@@ -95,17 +96,11 @@ class DnRoiModel:
         self.dnargs, self.dn = mkModel(modeltype, "dn")
         self.loader = PlaneLoader    
 
-    def _inference(self, event, models, args, dev):
-        inductions, collections = evt2planes(event[None])
-        iset = self.loader(args[0], planes=inductions)
-        cset = self.loader(args[1], planes=collections)
-
-        iloader = DataLoader(dataset=iset, batch_size=args[0].batch_size)
-        cloader = DataLoader(dataset=cset, batch_size=args[1].batch_size)
-
-        iout = inference(iloader, models.induction, dev)
-        cout = inference(cloader, models.collection, dev)
-        return planes2evt(iout, cout)
+    def _inference(self, planes, model, args, dev):
+        dataset = self.loader(args, planes=planes)
+        loader = DataLoader(dataset=dataset, batch_size=args.batch_size)
+        out =  inference(loader, model.to(dev), dev)
+        return dataset.converter.tiles2planes( out.cpu() )
 
 
     def roi_selection(self, event, dev):
@@ -120,8 +115,10 @@ class DnRoiModel:
                 np.array
                     event region of interests
         """
-        return self._inference(event, self.roi.to(dev), self.roiargs, dev)
-        
+        inductions, collections = evt2planes(event)
+        iout =  self._inference(inductions, self.roi.induction, self.roiargs[0], dev)
+        cout =  self._inference(collections, self.roi.collection, self.roiargs[1], dev)
+        return planes2evt(iout, cout)        
 
     def denoise(self, event, dev):
         """
@@ -133,5 +130,8 @@ class DnRoiModel:
                 np.array
                     denoised event
         """
-        return self._inference(event, self.dn.to(dev), self.dnargs, dev)
-    
+        inductions, collections = evt2planes(event)
+        iout =  self._inference(inductions, self.dn.induction, self.dnargs[0], dev)
+        cout =  self._inference(collections, self.dn.collection, self.dnargs[1], dev)
+        return planes2evt(iout, cout)        
+  

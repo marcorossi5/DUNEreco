@@ -49,7 +49,7 @@ class PlaneLoader(torch.utils.data.Dataset):
             folder: str, one of ['train','val','test']
             t: float, threshold to be put on labels
         """
-        if folder==None and planes==None:
+        if folder==None and (planes is None):
             raise ValueError("Either folder or planes arguments must be given")
 
         self.patch_size = args.patch_size

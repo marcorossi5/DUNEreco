@@ -1,12 +1,15 @@
 import os
 import sys
-import nummpy as np
+import numpy as np
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from hitreco import DnRoiModel
 
 
 if __name__=="__main__":
-    evt = np.load("../datasets/denoising/test/evts/out_noiseon_evt9")
+    evt = np.load("../datasets/denoising/test/evts/out_noiseon_evt9")[:,2:]
     model = DnRoiModel("cnn")
-    roi = model.roi_selection(evt, "cuda:0")
-    dn = model.denoise(evt, "cuda:0")
+    dev = "cuda:0"
+    roi = model.roi_selection(evt, dev)
+    dn = model.denoise(evt, dev)
+    np.save("samples/roi_evt", roi)
+    np.save("samples/dn_evt", dn)

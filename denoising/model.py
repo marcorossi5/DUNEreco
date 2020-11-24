@@ -176,5 +176,4 @@ class DenoisingModel(nn.Module):
         y = self.combine(y, y_hpf)
         for LPF in self.LPFs:
             y = self.combine( LPF(y), y_hpf )
-        x = self.PostProcessBlock(y) + x
-        return self.norm_fn(x, invert=True)
+        return self.PostProcessBlock(y) + x
