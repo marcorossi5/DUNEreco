@@ -50,14 +50,15 @@ class ZScore(nn.Module):
 
 
 class MedianNorm(nn.Module):
-    def __init__(self, med, Min, Max):
+    def __init__(self, Min, Max):
         """
         Median normalization layer with scale factors Min and Max
+        This functions divides by (Max-Min)
         Parameters:
-            med, Min, Max: float, scaling factors
+            Min, Max: float, scaling factors
         """
         super(MedianNorm, self).__init__()
-        self.med = nn.Parameter(torch.Tensor([med]), requires_grad=False)
+        # self.med = nn.Parameter(torch.Tensor([med]), requires_grad=False)
         self.Min = nn.Parameter(torch.Tensor([Min]), requires_grad=False)
         self.Max = nn.Parameter(torch.Tensor([Max]), requires_grad=False)
         if  self.Max-self.Min <= 0:
@@ -66,8 +67,8 @@ class MedianNorm(nn.Module):
 
     def forward(self, x, invert=False):
         if invert:
-            return x*(self.Max-self.Min) + self.med
-        return (x-self.med)/(self.Max-self.Min)
+            return x*(self.Max-self.Min)
+        return x/(self.Max-self.Min)
 
 
 def choose_norm(dataset_dir, ch, op):

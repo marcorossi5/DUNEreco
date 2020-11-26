@@ -61,9 +61,11 @@ class PlaneLoader(torch.utils.data.Dataset):
             hits[hits!= 0] = 1
             self.clear = torch.cat([clear, hits],1)
             fname = os.path.join(data_dir, f"planes/{args.channel}_noisy.npy")
-            self.noisy = torch.Tensor( np.load(fname) )
+            noisy = np.load(fname)
         else:
-            self.noisy = torch.Tensor(planes)
+            noisy = planes
+        medians = np.median(noisy.reshape([noisy.shape[0],-1], axis=1))
+        self.noisy = torch.Tensor( noisy - medians[:,None,None,None] )
         
         self.converter = Converter(self.patch_size)
         self.splits = self.converter.planes2tiles(self.noisy)
