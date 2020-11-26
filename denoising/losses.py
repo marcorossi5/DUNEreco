@@ -1,8 +1,11 @@
 """ This module implements several losses. Main option is reduction, which could
     be either 'mean' (default) or 'none'."""
+import torch
 from torch import nn
 import ssim
 from abc import ABC, abstractmethod
+
+EPS = torch.finfo(torch.float64).eps
 
 class loss(ABC):
     """Mother class interface"""
@@ -15,12 +18,14 @@ class loss(ABC):
     def __call__(self, *args):
         """ Compute the loss function"""
 
+
 class loss_mse(loss):
     def __init__(self, a=0.84, data_range=1., reduction='mean'):
         super().__init__(reduction=reduction)
         self.loss = nn.MSELoss(reduction=self.reduction)
     def __call__(self,*args):
         return self.loss(*args)
+
 
 class loss_ssim(loss):
     def __init__(self, a=0.84, data_range=1., reduction='mean'):
@@ -42,6 +47,7 @@ class loss_ssim_l2(loss):
             loss2 = loss2.reshape([n,-1]).mean(-1)
         return self.a*loss1 + 1e-3 * (1-self.a)*loss2
 
+
 class loss_ssim_l1(loss):
     def __init__(self, a=0.84, data_range=1., reduction='mean'):
         super().__init__(a,data_range,reduction)
@@ -57,6 +63,26 @@ class loss_ssim_l1(loss):
             loss2 = loss2.reshape([n,-1]).mean(-1)
         return self.a*loss1 + (1-self.a)*loss2
 
+
+class loss_bce(loss):
+    def __init__(self, ratio, reduction='mean'):
+        """
+            Ratio is the number of positive against negative example in training
+            set. It's used for reweighting the cross entropy
+        """
+        super().__init__(0,0,reduction)
+        self.ratio = ratio
+    def __call__(self, x, y):
+        log = lambda x: torch.log(x + EPS)
+        loss = - y*log(x)/(1-self.ratio) - (1-y)*log(1-x)/self.ratio
+        if self.reduction == 'mean':
+            return loss.mean()
+        elif self.reduction == 'sum':
+            return loss.sum()
+        elif self.reduction == 'none':
+            return loss
+
+
 def get_loss(loss):
     if loss == "mse":
         return loss_mse
@@ -66,6 +92,8 @@ def get_loss(loss):
         return loss_ssim_l2
     elif loss == "ssim_l1":
         return loss_ssim_l1
+    elif loss == "bce":
+        return loss_bce
     else:
         raise NotImplementedError("Loss function not implemented")
 

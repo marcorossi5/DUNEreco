@@ -19,12 +19,13 @@ from time import time as tm
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import compute_psnr
 
-def train_epoch(args, epoch, train_loader, model, optimizer, task):
+def train_epoch(args, epoch, train_loader, model, optimizer, balance_ratio,
+                task):
     if args.rank == 0:
         print('\n[+] Training')
     start = tm()
     loss_fn = get_loss(args.loss_fn)(args.a) if task=='dn' else \
-              torch.nn.BCELoss()
+              get_loss("bce")(balance_ratio)
     model.train()
     for i, (clear, noised) in enumerate(train_loader):
         clear = clear.to(args.dev_ids[0])
@@ -102,8 +103,8 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
         torch.save(output.cpu(), fname)
 
     loss_fn = get_loss(args.loss_fn)(args.a, reduction='none') if \
-              task=='dn' else nn.BCELoss(reduction='none')
-    loss = to_np(reduce( loss_fn(target, output) ))
+              task=='dn' else get_loss("bce")(0.5, reduction='none')
+    loss = to_np(reduce( loss_fn(output, target) ))
     if task == 'dn':
         ssim = to_np(reduce( 1-get_loss('ssim')(reduction='none')(target, output) ))
         mse = to_np(reduce( get_loss('mse')(reduction='none')(output, target) ))
@@ -197,7 +198,8 @@ def train(args, train_data, val_data, model):
         start = tm()
         train_sampler.set_epoch(epoch)
         loss, t = train_epoch(args, epoch, train_loader, model,
-                          optimizer,task=task)
+                              optimizer, train_data.balance_ratio,
+                              task=task)
         end = tm() - start
         loss_sum.append(loss)
         time_train.append(t)
@@ -221,7 +223,7 @@ def train(args, train_data, val_data, model):
                          {'ssim:':7} {x[2]:.5} +- {x[3]:.5}\n\
                          {'psnr:':7} {x[4]:.5} +- {x[5]:.5}\n\
                          {'mse:':7} {x[6]:.5} +- {x[7]:.5}")
-                    print(f'Test epoch time: {end:.4}')
+                print(f'Test epoch time: {end:.4}')
 
             #save the model if it is the best one
             if test_metrics[-1][0] + test_metrics[-1][1] < best_loss \

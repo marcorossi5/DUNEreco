@@ -29,7 +29,10 @@ class CropLoader(torch.utils.data.Dataset):
                          f'{args.channel}_clear_{edge_patch}_{p}.npy')
         clear = torch.Tensor( np.load(fname) )
         hits = torch.clone(clear)
-        hits[hits!=0] = 1
+        mask = (hits <= args.threshold) & (hits >= -args.threshold)
+        hits[mask] = 0
+        hits[~mask] = 1
+        self.balance_ratio = np.count_nonzero(hits)/hits.numel()
         self.clear = torch.cat([clear, hits],1)
 
     def __len__(self):
@@ -58,13 +61,15 @@ class PlaneLoader(torch.utils.data.Dataset):
             fname = os.path.join(data_dir, f"planes/{args.channel}_clear.npy")
             clear = torch.Tensor( np.load(fname) )
             hits = torch.clone(clear)
-            hits[hits!= 0] = 1
+            mask = (hits <= args.threshold) & (hits >= -args.threshold)
+            hits[mask] = 0
+            hits[~mask] = 1
             self.clear = torch.cat([clear, hits],1)
             fname = os.path.join(data_dir, f"planes/{args.channel}_noisy.npy")
             noisy = np.load(fname)
         else:
             noisy = planes
-        medians = np.median(noisy.reshape([noisy.shape[0],-1], axis=1))
+        medians = np.median(noisy.reshape([noisy.shape[0],-1]), axis=1)
         self.noisy = torch.Tensor( noisy - medians[:,None,None,None] )
         
         self.converter = Converter(self.patch_size)

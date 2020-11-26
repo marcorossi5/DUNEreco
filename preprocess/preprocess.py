@@ -82,6 +82,7 @@ def crop_planes_and_dump(dir_name, n_crops, patch_size, p):
         nplanes = np.load(fname)[:,0]
 
         medians = np.median(nplanes.reshape([nplanes.shape[0],-1]), axis=1)
+        medians = medians.reshape([-1,1,1])
         m = (nplanes - medians).min()
         M = (nplanes - medians).max()
         
@@ -89,20 +90,20 @@ def crop_planes_and_dump(dir_name, n_crops, patch_size, p):
         assert (M - m) != 0
 
         # normalize noisy planes
-        nplanes = (nplanes - medians[:,None,None])/(M-m)
+        nplanes = nplanes - medians
 
         ccrops = []
         ncrops = []
-        for cplane, nplane, median in zip(cplanes,nplanes,medians):
+        for cplane, nplane in zip(cplanes,nplanes):
             idx = putils.get_crop(cplane,
                                   n_crops = n_crops,
                                   patch_size = patch_size,
                                   p = p)
-            clear_crops.append(cplane[idx])
-            noisy_crops.append(nplane[idx])
+            ccrops.append(cplane[idx])
+            ncrops.append(nplane[idx])
 
-        clear_crops = np.concatenate(ccrops, 0)[:,None]
-        noisy_crops = np.concatenate(ncrops, 0)[:,None]
+        ccrops = np.concatenate(ccrops, 0)[:,None]
+        ncrops = np.concatenate(ncrops, 0)[:,None]
 
         print(f'\n{s} clear crops:', ccrops.shape)
         print(f'{s} noisy crops:', ncrops.shape)
@@ -114,7 +115,7 @@ def crop_planes_and_dump(dir_name, n_crops, patch_size, p):
         np.save(fname,ncrops)
 
         # median normalization
-        fname = os.path.join(dir_name, f"{s}_mednorm")
+        fname = os.path.join(dir_name, f"../{s}_mednorm")
         np.save(fname, [m ,M])
             
 def main(dir_name, n_crops, crop_edge, percentage):
@@ -126,7 +127,7 @@ def main(dir_name, n_crops, crop_edge, percentage):
     for s in ['train', 'test', 'val']:
         print(f'\n{s}:')
         dname = os.path.join(dir_name, s)
-        get_planes_and_dump(dname)
+        # get_planes_and_dump(dname)
 
     # save the normalization (this contain info from all the apas)
     for s in ['induction', 'collection']:
