@@ -39,7 +39,7 @@ def get_planes_and_dump(dname):
     cnoisy = []
 
     path_clear = glob.glob(f'{dname}/evts/*noiseoff*')
-    path_noisy = glob.glob(f'{dname}/evts/*noiseon*')
+    path_noisy = glob.glob(f'{dname}/evts/*rawdigit_evt*')
 
     for file_clear, file_noisy in zip(path_clear, path_noisy):
         c = np.load(file_clear)[:,2:]

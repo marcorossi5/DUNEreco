@@ -13,7 +13,7 @@ class Args:
         check(self.task, ["roi", "dn"])
         
         self.patch_size = (32,32)
-        self.crop_p = 0.99 # signal to noise crops percentage
+        self.crop_p = 0.9 # signal to noise crops percentage
 
         self.num_workers = 8
 
