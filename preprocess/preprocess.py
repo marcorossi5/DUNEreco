@@ -23,16 +23,20 @@ from utils.utils import get_freer_gpu
 from denoising.ssim import _fspecial_gauss_1d, stat_gaussian_filter
 
 #patch_size = (32,32)
-APAs = 6
-r_step = 800
-c_step = 960
-rc_step = 2*r_step + c_step
+apas = 6
+istep = 800 # induction plane channel number
+cstep = 960 # collection plane channel number
+apastep = 2*istep + cstep
 
 def get_planes_and_dump(dname):
-    induction_clear = []
-    induction_noisy = []
-    collection_clear = []
-    collection_noisy = []
+    base = np.arange(apas).reshape(-1,1) * apastep
+    iidxs = [[0, istep, 2*istep]] + base
+    cidxs = [[2*istep, apastep]] + base
+    
+    iclear = []
+    inoisy = []
+    cclear = []
+    cnoisy = []
 
     path_clear = glob.glob(f'{dname}/evts/*noiseoff*')
     path_noisy = glob.glob(f'{dname}/evts/*noiseon*')
@@ -40,71 +44,78 @@ def get_planes_and_dump(dname):
     for file_clear, file_noisy in zip(path_clear, path_noisy):
         c = np.load(file_clear)[:,2:]
         n = np.load(file_noisy)[:,2:]
-        for i in range(APAs):
-            induction_clear.append(c[i*rc_step:i*rc_step+r_step])
-            induction_noisy.append(n[i*rc_step:i*rc_step+r_step])
-            induction_clear.append(c[i*rc_step+r_step:i*rc_step+2*r_step])
-            induction_noisy.append(n[i*rc_step+r_step:i*rc_step+2*r_step])
-            collection_clear.append(c[i*rc_step+2*r_step:(i+1)*rc_step])
-            collection_noisy.append(n[i*rc_step+2*r_step:(i+1)*rc_step])
+        for start, idx, end in iidxs:
+            iclear.extend( [c[start:idx], c[idx:end]] )
+            inoisy.extend( [n[start:idx], n[idx:end]] )
+        for start, end in cidxs:
+            cclear.append( c[start:end] )
+            cnoisy.append( n[start:end] )
     
-    collection_clear = np.stack(collection_clear,0)[:,None]
-    collection_noisy = np.stack(collection_noisy,0)[:,None]
-    induction_clear = np.stack(induction_clear,0)[:,None]
-    induction_noisy = np.stack(induction_noisy,0)[:,None]
+    cclear = np.stack(cclear,0)[:,None]
+    cnoisy = np.stack(cnoisy,0)[:,None]
+    iclear = np.stack(iclear,0)[:,None]
+    inoisy = np.stack(inoisy,0)[:,None]
 
-    print("\tCollection clear planes: ", collection_clear.shape)
-    print("\tCollection noisy planes: ", collection_noisy.shape)
-    print("\tinduction clear planes: ", induction_clear.shape)
-    print("\tinduction noisy planes: ", induction_noisy.shape)
+    print("\tCollection clear planes: ", cclear.shape)
+    print("\tCollection noisy planes: ", cnoisy.shape)
+    print("\tInduction clear planes: ", iclear.shape)
+    print("\tInduction noisy planes: ", inoisy.shape)
 
-    fname = os.path.join(dname, "planes", "induction_clear")
-    np.save(fname,
-            np.stack(induction_clear,0))
+    fname = os.path.join(dname, f"planes/induction_clear")
+    np.save(fname, np.stack(iclear,0))
 
-    fname = os.path.join(dname, "planes", "induction_noisy")
-    np.save(fname,
-            np.stack(induction_noisy,0))
+    fname = os.path.join(dname, f"planes/induction_noisy")
+    np.save(fname, np.stack(inoisy,0))
 
-    fname = os.path.join(dname, "planes", "collection_clear")
-    np.save(fname,
-            np.stack(collection_clear,0))
+    fname = os.path.join(dname, f"planes/collection_clear")
+    np.save(fname, np.stack(cclear,0))
 
-    fname = os.path.join(dname, "planes", "collection_noisy")
-    np.save(fname,
-            np.stack(collection_noisy,0))
+    fname = os.path.join(dname, f"planes/collection_noisy")
+    np.save(fname, np.stack(cnoisy,0))
 
 def crop_planes_and_dump(dir_name, n_crops, patch_size, p):
     for s in ['induction', 'collection']:
-        fname = os.path.join(dir_name,'planes',f'{s}_clear.npy')
-        clear_planes = np.load(fname)[:,0]
+        fname = os.path.join(dir_name,f"planes/{s}_clear.npy")
+        cplanes = np.load(fname)[:,0]
 
-        fname = os.path.join(dir_name,'planes',f'{s}_noisy.npy')
-        noisy_planes = np.load(fname)[:,0]
+        fname = os.path.join(dir_name,f"planes/{s}_noisy.npy")
+        nplanes = np.load(fname)[:,0]
 
-        clear_crops = []
-        noisy_crops = []
-        for clear_plane, noisy_plane in zip(clear_planes,noisy_planes):
-            idx = putils.get_crop(clear_plane,
+        medians = np.median(nplanes.reshape([nplanes.shape[0],-1]), axis=1)
+        m = (nplanes - medians).min()
+        M = (nplanes - medians).max()
+        
+        # ensure nplanes are not just constant
+        assert (M - m) != 0
+
+        # normalize noisy planes
+        nplanes = (nplanes - medians[:,None,None])/(M-m)
+
+        ccrops = []
+        ncrops = []
+        for cplane, nplane, median in zip(cplanes,nplanes,medians):
+            idx = putils.get_crop(cplane,
                                   n_crops = n_crops,
                                   patch_size = patch_size,
                                   p = p)
-            clear_crops.append(clear_plane[idx])
-            noisy_crops.append(noisy_plane[idx])
+            clear_crops.append(cplane[idx])
+            noisy_crops.append(nplane[idx])
 
-        clear_crops = np.concatenate(clear_crops, 0)[:,None]
-        noisy_crops = np.concatenate(noisy_crops, 0)[:,None]
+        clear_crops = np.concatenate(ccrops, 0)[:,None]
+        noisy_crops = np.concatenate(ncrops, 0)[:,None]
 
-        print(f'\n{s} clear crops:', clear_crops.shape)
-        print(f'{s} noisy crops:', noisy_crops.shape)
+        print(f'\n{s} clear crops:', ccrops.shape)
+        print(f'{s} noisy crops:', ncrops.shape)
 
-        fname = os.path.join(dir_name,'crops',
-                             f'{s}_clear_{patch_size[0]}_{p}')
-        np.save(fname, clear_crops)
+        fname = os.path.join(dir_name,f"crops/{s}_clear_{patch_size[0]}_{p}")
+        np.save(fname, ccrops)
 
-        fname = os.path.join(dir_name,'crops',
-                             f'{s}_noisy_{patch_size[0]}_{p}')
-        np.save(fname,noisy_crops)
+        fname = os.path.join(dir_name,f"crops/{s}_noisy_{patch_size[0]}_{p}")
+        np.save(fname,ncrops)
+
+        # median normalization
+        fname = os.path.join(dir_name, f"{s}_mednorm")
+        np.save(fname, [m ,M])
             
 def main(dir_name, n_crops, crop_edge, percentage):
     patch_size = (crop_edge, crop_edge)
@@ -117,7 +128,7 @@ def main(dir_name, n_crops, crop_edge, percentage):
         dname = os.path.join(dir_name, s)
         get_planes_and_dump(dname)
 
-    # save the normalization (this contain info from all the APAs)
+    # save the normalization (this contain info from all the apas)
     for s in ['induction', 'collection']:
         fname = os.path.join(dir_name, f"train/planes/{s}_noisy.npy")
         n = np.load(fname).flatten()
@@ -129,10 +140,6 @@ def main(dir_name, n_crops, crop_edge, percentage):
         # zscore
         fname = os.path.join(dir_name, f"{s}_zscore")
         np.save(fname,[n.mean(),n.std()])
-
-        # median normalization
-        fname = os.path.join(dir_name, f"{s}_mednorm")
-        np.save(fname,[np.median(n),n.min(), n.max()])
 
     dname = os.path.join(dir_name, 'train')
     crop_planes_and_dump(dname, n_crops, patch_size, percentage)
