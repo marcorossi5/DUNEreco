@@ -1,11 +1,19 @@
+from math import ceil
+
 import torch
 import torch.nn.functional as F
 from torch import nn
+from torchvision.models import resnext50_32x4d
 
 from model_utils import choose_norm
 from model_utils import choose
 from model_utils import NonLocalAggregator
 from model_utils import NonLocalGraph
+
+from SCG_Net import SCG_Block
+from SCG_Net import GCN_Layer
+from SCG_Net import Pooling_Block
+from SCG_Net import Recombination_Layer
 
 
 class PreProcessBlock(nn.Module):
@@ -33,6 +41,7 @@ class PreProcessBlock(nn.Module):
 
 
 class ROI(nn.Module):
+    """ U-net style binary segmentation """
     def __init__(self, kernel_size, ic, hc, getgraph_fn, model):
         super(ROI, self).__init__()
         self.getgraph_fn = getgraph_fn
@@ -177,3 +186,78 @@ class DenoisingModel(nn.Module):
         for LPF in self.LPFs:
             y = self.combine( LPF(y), y_hpf )
         return self.PostProcessBlock(y) + x
+
+
+class SCG_Net(nn.Module):
+    def __init__(self, out_channels=1, h=960, w=6000, pretrained=True,
+                 nodes=(28,28), dropout=0.5,
+                 enhance_diag=True, aux_pred=True):
+        """
+	Parameters:
+            out_channels: int, output image channels number
+            h: int, input image height
+            w: int, input image width
+            pretrained: bool, if True, download weight of pretrained resnet
+            nodes: tuple, (height, width) of the image input of SCG block
+        """
+	super(SCG_Net, self).__init__()
+
+        self.aux_pred = aux_pred
+        self.node_size = nodes
+        self.num_cluster = out_channels
+
+        resnet = resnext50_32x4d(pretrained=pretrained, progress=True)
+        resnet_12 = nn.Sequential(nn.Conv2d(1,3,1),
+                                  resnet.conv1,
+                                  resnet.bn1,
+                                  resnet.relu,
+                                  resnet.maxpool,
+                                  resnet.layer1,
+                                  resnet.layer2)
+        resnet_34 = nn.Sequential(resnet.layer3,
+                                  resnet.layer4,
+                                  nn.Conv2d(2048, 1024, 1))
+        self.downsamples = nn.ModuleList([resnet_12,
+                                          resnet_34,
+                                          Pooling_Block(1024, 28, 28)])
+        self.upsamples = nn.ModuleList([Pooling_Block(1, ceil(h/32), ceil(w/32)),
+                                        Pooling_Block(1, ceil(h/8), ceil(w/8)),
+                                        Pooling_Block(1, h, w)])
+        self.GCNs = nn.Sequential(GCN_Layer(1024, 128, bnorm=True, activation=nn.ReLU(True), dropout=dropout),
+                                  GCN_Layer(128, out_channels, bnorm=False, activation=None))
+        self.scg = SCG_Block(in_ch=1024,
+                             hidden_ch=out_channels,
+                             node_size=nodes,
+                             add_diag=enhance_diag,
+                             dropout=dropout)
+        self.adapts = nn.ModuleList([nn.Conv2d(512,1,1,bias=False),
+                                     nn.Conv2d(1024,1,1,bias=False),
+                                     nn.Conv2d(1024,1,1,bias=False),])
+        self.recombs = nn.ModuleList([Recombination_Layer() for i in range(3)])
+        self.last_recomb = Recombination_Layer()
+
+    def forward(self, x):
+        i = x
+
+	# downsampling
+        ys = []
+        for adapt, downsample in zip(self.adapts, self.downsamples):
+            x = downsample(x)
+            ys.append(adapt(x))
+
+        # Graph
+        B, C, H, W = x.size()
+        A, x, loss, z_hat = self.scg(x)
+        x, _ = self.GCNs( (x.reshape(B, -1, C), A) )
+        if self.aux_pred:
+            x += z_hat
+        x = x.reshape(B, self.num_cluster, self.node_size[0], self.node_size[1])
+
+        # upsampling
+        for y, recomb, upsample in zip(reversed(ys), reversed(self.recombs),
+                                       self.upsamples):
+            x = upsample(recomb(x,y))
+
+        if self.training:
+            return self.last_recomb(x, i).cpu().data, loss
+        return self.last_recomb(x, i).cpu().data

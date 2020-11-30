@@ -83,6 +83,61 @@ class loss_bce(loss):
             return loss
 
 
+class  loss_SoftDice(loss):
+    def __init__(self, reduction='mean'):
+        """
+            Reduction: str
+                'mean' | 'none'
+        """
+        super().__init__(0,0,reduction)
+    
+    def dice(self, x, y):
+        """
+            Parameters:
+                x,y: torch.tensor
+                    output and target tensors of shape (N,C,H,W)
+        """
+        ratio = x * y / (x*x + y*y + EPS)
+        return 2 * ratio.sum(-1).sum(-1).mean(-1)
+
+    def __call__(self, x, y):
+        """
+            Parameters:
+                x,y: torch.tensor
+                    output and target tensors of shape (N,C,H,W)
+        """
+        ratio = x * y / (x*x + y*y + EPS)
+        loss = 1 - 2 * ratio.sum(-1).sum(-1).mean(-1)
+        if self.reduction == 'mean':
+            return loss.mean()
+        elif self.reduction ==  'none':
+            return loss
+
+
+class  loss_bce_dice(loss):
+    def __init__(self, reduction='mean'):
+        """
+            Reduction: str
+                'mean' | 'none'
+        """
+        super().__init__(0,0,reduction)
+        self.bce = loss_bce(reduction='none')
+        self.dice = loss_bce_dice()
+    def __call__(self, x, y):
+        """
+            Parameters:
+                x,y: torch.tensor
+                    output and target tensors of shape (N,C,H,W)
+        """
+        shape = [x.shape[0], -1]
+        bce = self.bce(x,y).reshape(shape).mean(-1)
+        dice = - torch.log(self.dice.dice(x,y) + EPS)
+        loss = bce + dice
+        if self.reduction == 'mean':
+            return loss.mean()
+        elif self.reduction ==  'none':
+            return loss
+
 def get_loss(loss):
     if loss == "mse":
         return loss_mse
@@ -94,6 +149,10 @@ def get_loss(loss):
         return loss_ssim_l1
     elif loss == "bce":
         return loss_bce
+    elif loss == "softdice":
+        return loss_SoftDice
+    elif loss == "bce_dice":
+        return loss_bce_dice
     else:
         raise NotImplementedError("Loss function not implemented")
 
