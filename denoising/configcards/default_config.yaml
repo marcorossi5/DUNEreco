@@ -29,3 +29,9 @@ scan: False
 normalization: "mednorm" # zscore | minmax | mednnorm
 
 channel: "collection" # induction | collection
+
+patch_h: 960
+
+patch_w: 2000
+
+patch_stride: 1000

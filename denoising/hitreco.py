@@ -135,3 +135,4 @@ class DnRoiModel:
         cout =  self._inference(collections, self.dn.collection, self.dnargs[1], dev)
         return planes2evt(iout, cout)        
   
+# TODO: must fix argument passing in inference

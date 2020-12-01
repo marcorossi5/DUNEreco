@@ -12,7 +12,7 @@ class Args:
         check(self.model, ["cnn", "gcnn"])
         check(self.task, ["roi", "dn"])
         
-        self.patch_size = (128,128)
+        self.patch_size = (960,3500)
         self.crop_p = 0.5 # signal to noise crops percentage
 
         self.num_workers = 8

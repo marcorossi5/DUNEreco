@@ -14,7 +14,7 @@ from distributed import set_random_seed
 
 from dataloader import CropLoader
 from dataloader import PlaneLoader
-from model import DenoisingModel
+from model import SCG_Net
 from args import Args
 
 from model_utils import print_summary_file
@@ -34,10 +34,12 @@ def main(args):
 
     #load datasets
     set_random_seed(0)
-    train_data = CropLoader(args)
-    val_data = PlaneLoader(args, 'val')
+    train_data = PlaneLoader(args.dataset_dir, args.channel, args.task,
+                             'train', args.threshold)
+    val_data = PlaneLoader(args.dataset_dir, args.channel, args.task,
+                           'val', args.threshold)
 
-    model = DenoisingModel(args)
+    model = SCG_Net(h=args.patch_size[0], w=args.patch_size[1])
 
     #train
     return train.train(args, train_data, val_data, model)

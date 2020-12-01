@@ -1,5 +1,6 @@
 import sys
 import os
+from math import ceil
 import numpy as np
 
 import torch
@@ -16,8 +17,20 @@ from losses import get_loss
 
 from time import time as tm
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.utils import compute_psnr
+
+def time_windows(plane, w, stride):
+    """ This function takes a plane and takes time windows """
+    B, C, H, W = plane.size()
+    n = ceil((W-w)/stride) + 1
+    base = np.arange(n).reshape([-1,1]) * stride
+    idxs = [[0, w]] + base
+    windows = []
+    div = torch.zeros_like(plane)
+    for start, end in idxs:
+        windows.append(plane[:,:,:,start:end])
+        div[:,:,:,start:end] += 1        
+    return div, windows, idxs
+
 
 def train_epoch(args, epoch, train_loader, model, optimizer, balance_ratio,
                 task):
@@ -27,26 +40,66 @@ def train_epoch(args, epoch, train_loader, model, optimizer, balance_ratio,
     loss_fn = get_loss(args.loss_fn)(args.a) if task=='dn' else \
               get_loss("bce")(balance_ratio)
     model.train()
-    for i, (clear, noised) in enumerate(train_loader):
-        clear = clear.to(args.dev_ids[0])
-        noised = noised.to(args.dev_ids[0])
-        optimizer.zero_grad()
-        out = model(noised)
-        idx = 0 if task=='dn' else 1 # label idx
-        loss = loss_fn(out, clear[:,idx:idx+1])
-        loss.backward()
-        optimizer.step()
-
+    for clear, noisy in train_loader:
+        _, cwindows, _ = time_windows(clear, args.patch_w, args.patch_stride)
+        _, nwindows, _ = time_windows(noisy, args.patch_w, args.patch_stride)
+        for cwindow, nwindow in zip(cwindows, nwindows):
+            cwindow = cwindow.to(args.dev_ids[0])
+            nwindow = nwindow.to(args.dev_ids[0])
+            optimizer.zero_grad()
+            out, loss0 = model(nwindow)
+            loss = loss_fn(out, cwindow) + loss0
+            loss.backward()
+            optimizer.step()
     return np.array([loss.item()]), tm() - start
 
 
-def inference(test_loader, model, dev):
+def inference(test_loader, w, stride, model, dev):
+    model.eval()
     outs = []
     for noisy in test_loader:
-        noisy = noisy.to(dev)
-        out =  model(noisy).data
-        outs.append(out)
+        div, nwindows, idxs = time_windows(noisy, w, stride)
+        out = torch.zeros_like(noisy)
+        for nwindow, (start, end) in zip(nwindows, idxs):
+            nwindow = nwindow.to(dev)
+            out[:,:,:,start:end] += model(nwindow).data
+        outs.append( out/div )
     return torch.cat(outs)
+
+
+def compute_val_loss(test_loader, outputs, args, task, dry_time):
+    loss = []
+    ssim = []
+    mse = []
+    psnr = []
+    loss_fn = get_loss(args.loss_fn)(args.a) if task=='dn' else get_loss("bce")(0.5)
+    if task == 'dn':
+        ssim_fn = get_loss('ssim')()
+        mse_fn = get_loss('mse')()
+        psnr_fn = get_loss('psnr')
+    for (_, target), output in zip(test_loader, outputs):
+        # works only with unit batch_size
+        output = output.unsqueeze(0).to(args.dev_ids[0])
+        target = target.to(args.dev_ids[0])
+        loss.append( loss_fn(output, target) )
+        if task == 'dn':
+            ssim.append( 1-ssim_fn(target, output) )
+            mse.append( mse_fn(output, target) )
+            psnr.append( psnr_fn(target.cpu(), output.cpu()) )
+    if args.rank==0:
+        fname = os.path.join(args.dir_testing, "labels")
+        torch.save(target.cpu(), fname)
+        fname = os.path.join(args.dir_testing, "results")
+        torch.save(output.cpu(), fname)
+
+    n = len(loss)
+    if task == 'dn':
+        return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
+                np.mean(ssim), np.std(ssim)/np.sqrt(n),
+                np.mean(psnr), np.std(psnr)/np.sqrt(n),
+                np.mean(mse), np.std(mse)/np.sqrt(n)]), output, dry_time
+    return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), output, \
+            dry_time
 
 
 def test_epoch(test_data, model, args, task, dry_inference=True):
@@ -61,62 +114,22 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
     """
     test_sampler = DistributedSampler(dataset=test_data, shuffle=False)
     test_loader = DataLoader(dataset=test_data, sampler=test_sampler,
-                              batch_size=args.test_batch_size,
+                              batch_size=1,
                               num_workers=args.num_workers)
     if args.rank == 0:
         print('\n[+] Testing')
-    model.eval()
-
-    n = test_data.noisy.shape[0]
-
     start = tm()
-    outs = inference(test_loader, model, args.dev_ids[0])
-    ws = dist.get_world_size() # world size
-    output = [torch.zeros_like(outs) for i in range(ws)]
-    dist.all_gather(output, outs)
-    h, w = args.patch_size # height, weight
-    c = args.input_channels # channels
-    output = torch.cat( output )
-    output = output.reshape(ws,-1,c,h,w).transpose(0,1).reshape(-1,c,h,w)
-    output = test_data.converter.tiles2planes( output )
+    output = inference(test_loader, args.patch_w, args.patch_stride, model,
+                     args.dev_ids[0])
     if task == 'dn':
         mask = (output <= args.threshold) & (output >= -args.threshold)
         output[mask] = 0
-    end = tm()    
+    dry_time = tm() - start
 
     if dry_inference:
         return output
-    idx = 0 if task=="dn" else 1
-    target = test_data.clear[:,idx:idx+1].to(args.dev_ids[0])
-
-    def reduce(loss):
-        """ Reduces losses keeping the batch size """
-        return loss.reshape(n,-1).mean(-1)
-    def to_np(tensor):
-        """ Cast gpu torch tensor to numpy """
-        return tensor.cpu().numpy()
-
-    if args.rank==0:
-        fname = os.path.join(args.dir_testing, "labels")
-        torch.save(target.cpu(), fname)
-        fname = os.path.join(args.dir_testing, "results")
-        torch.save(output.cpu(), fname)
-
-    loss_fn = get_loss(args.loss_fn)(args.a, reduction='none') if \
-              task=='dn' else get_loss("bce")(0.5, reduction='none')
-    loss = to_np(reduce( loss_fn(output, target) ))
-    if task == 'dn':
-        ssim = to_np(reduce( 1-get_loss('ssim')(reduction='none')(target, output) ))
-        mse = to_np(reduce( get_loss('mse')(reduction='none')(output, target) ))
-        psnr = to_np(compute_psnr(target.cpu(), output.cpu(), reduction='none'))
-
-        return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
-                np.mean(ssim), np.std(ssim)/np.sqrt(n),
-                np.mean(psnr), np.std(psnr)/np.sqrt(n),
-                np.mean(mse), np.std(mse)/np.sqrt(n)]), output, end-start
-
-    return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), output, \
-            end-start
+    return compute_val_loss(test_loader, output, args, task, dry_time)
+    
 
 
 ########### main train function
@@ -188,7 +201,7 @@ def train(args, train_data, val_data, model):
 
     train_sampler = DistributedSampler(dataset=train_data, shuffle=True)
     train_loader = DataLoader(dataset=train_data, sampler=train_sampler,
-                              batch_size=args.batch_size,
+                              batch_size=1,
                               num_workers=args.num_workers)
 
     # main training loop

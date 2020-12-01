@@ -42,7 +42,7 @@ class CropLoader(torch.utils.data.Dataset):
         return self.clear[index], self.noisy[index]
 
 class PlaneLoader(torch.utils.data.Dataset):
-    def __init__(self, args, folder=None, planes=None):
+    def __init__(self, dataset_dir, folder, task, channel, threshold):
         """
         This function loads the planes for inference.
         Only noisy planes are normalized since clear planes don't
@@ -52,34 +52,28 @@ class PlaneLoader(torch.utils.data.Dataset):
             folder: str, one of ['train','val','test']
             t: float, threshold to be put on labels
         """
-        if folder==None and (planes is None):
-            raise ValueError("Either folder or planes arguments must be given")
-
-        self.patch_size = args.patch_size
-        if folder is not None:
-            data_dir = os.path.join(args.dataset_dir, folder)
-            fname = os.path.join(data_dir, f"planes/{args.channel}_clear.npy")
-            clear = torch.Tensor( np.load(fname) )
+        data_dir = os.path.join(dataset_dir, folder)
+        fname = os.path.join(data_dir, f"planes/{channel}_clear.npy")
+        clear = torch.Tensor( np.load(fname) )
+        if task == 'roi':
             hits = torch.clone(clear)
-            mask = (hits <= args.threshold) & (hits >= -args.threshold)
+            mask = (hits <= threshold) & (hits >= -threshold)
             hits[mask] = 0
             hits[~mask] = 1
-            self.clear = torch.cat([clear, hits],1)
-            fname = os.path.join(data_dir, f"planes/{args.channel}_noisy.npy")
-            noisy = np.load(fname)
-        else:
-            noisy = planes
+            self.balance_ratio = np.count_nonzero(hits)/hits.numel()
+            clear = hits
+        self.clear = clear
+
+        fname = os.path.join(data_dir, f"planes/{channel}_noisy.npy")
+        noisy = np.load(fname)
         medians = np.median(noisy.reshape([noisy.shape[0],-1]), axis=1)
         self.noisy = torch.Tensor( noisy - medians[:,None,None,None] )
         
-        self.converter = Converter(self.patch_size)
-        self.splits = self.converter.planes2tiles(self.noisy)
-
     def __len__(self):
-        return len(self.splits)
+        return len(self.noisy)
 
     def __getitem__(self, index):
-        return self.splits[index]
+        return self.noisy[index], self.clear[index]
 
 # TODO: is the label generation in the PlaneLoader correct according to the
 # threshold considerations?

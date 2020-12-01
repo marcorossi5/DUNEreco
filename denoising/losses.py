@@ -115,14 +115,14 @@ class  loss_SoftDice(loss):
 
 
 class  loss_bce_dice(loss):
-    def __init__(self, reduction='mean'):
+    def __init__(self, ratio, reduction='mean'):
         """
             Reduction: str
                 'mean' | 'none'
         """
         super().__init__(0,0,reduction)
-        self.bce = loss_bce(reduction='none')
-        self.dice = loss_bce_dice()
+        self.bce = loss_bce(ratio, reduction='none')
+        self.dice = loss_SoftDice(reduction='none')
     def __call__(self, x, y):
         """
             Parameters:
@@ -137,6 +137,31 @@ class  loss_bce_dice(loss):
             return loss.mean()
         elif self.reduction ==  'none':
             return loss
+
+
+def loss_psnr(image, noisy, reduction='mean'):
+    """
+    Parameters:
+        image: torch.Tensor, shape (N,C,W,H)
+        noisy: torch.Tensor, shape (N,C,W,H)
+        reduction: str, either 'mean'| 'none'
+    """
+    if len(image.shape) == 3: # (C,W,H)
+        mse = torch.nn.MSELoss()(image, noisy).item()
+        m2 = image.max().item()**2
+        return 0 if mse==0 else 10 * np.log10(m2/mse)
+    else: # (N,C,H,W)
+        nimages = image.shape[0]
+        x1 = image.reshape(nimages, -1)
+        x2 = noisy.reshape(nimages, -1)
+        mse = torch.nn.MSELoss(reduction='none')(x1,x2).data.mean(-1)
+        m2 = x1.max(-1).values**2
+        psnr = torch.where(m2 == 0, torch.Tensor([0.]), 10*torch.log10(m2/mse))
+        if reduction == 'none':
+            return psnr
+        elif reduction == 'mean':
+            return psnr.mean()
+
 
 def get_loss(loss):
     if loss == "mse":
@@ -153,7 +178,10 @@ def get_loss(loss):
         return loss_SoftDice
     elif loss == "bce_dice":
         return loss_bce_dice
+    elif loss == "psnr":
+        return loss_psnr
     else:
         raise NotImplementedError("Loss function not implemented")
 
 # TODO: must check if all the reductions are consistent
+# TODO: transform psnr into loss subclass
