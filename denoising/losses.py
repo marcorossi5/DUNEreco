@@ -5,7 +5,7 @@ from torch import nn
 import ssim
 from abc import ABC, abstractmethod
 
-EPS = torch.finfo(torch.float64).eps
+EPS = torch.Tensor( [torch.finfo(torch.float64).eps] )
 
 class loss(ABC):
     """Mother class interface"""
@@ -45,7 +45,7 @@ class loss_ssim_l2(loss):
         if self.reduction == 'none':
             n = loss2.shape[0]
             loss2 = loss2.reshape([n,-1]).mean(-1)
-        return self.a*loss1 + 1e-3 * (1-self.a)*loss2
+        return self.a*loss1 + (1-self.a)*loss2
 
 
 class loss_ssim_l1(loss):
@@ -73,7 +73,7 @@ class loss_bce(loss):
         super().__init__(0,0,reduction)
         self.ratio = ratio
     def __call__(self, x, y):
-        log = lambda x: torch.log(x + EPS)
+        log = lambda x: torch.log(x + EPS.to(x.device))
         loss = - y*log(x)/(1-self.ratio) - (1-y)*log(1-x)/self.ratio
         if self.reduction == 'mean':
             return loss.mean()
@@ -97,7 +97,7 @@ class  loss_SoftDice(loss):
                 x,y: torch.tensor
                     output and target tensors of shape (N,C,H,W)
         """
-        ratio = x * y / (x*x + y*y + EPS)
+        ratio = x * y / (x*x + y*y + EPS.to(x.device))
         return 2 * ratio.sum(-1).sum(-1).mean(-1)
 
     def __call__(self, x, y):
@@ -106,7 +106,7 @@ class  loss_SoftDice(loss):
                 x,y: torch.tensor
                     output and target tensors of shape (N,C,H,W)
         """
-        ratio = x * y / (x*x + y*y + EPS)
+        ratio = x * y / (x*x + y*y + EPS.to(x.device))
         loss = 1 - 2 * ratio.sum(-1).sum(-1).mean(-1)
         if self.reduction == 'mean':
             return loss.mean()
@@ -131,8 +131,9 @@ class  loss_bce_dice(loss):
         """
         shape = [x.shape[0], -1]
         bce = self.bce(x,y).reshape(shape).mean(-1)
-        dice = - torch.log(self.dice.dice(x,y) + EPS)
-        loss = bce + dice
+        dice = - torch.log(self.dice.dice(x,y) + EPS.to(x.device))
+        # loss = bce + dice
+        loss = bce
         if self.reduction == 'mean':
             return loss.mean()
         elif self.reduction ==  'none':

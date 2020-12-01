@@ -1,34 +1,26 @@
-dataset_dir: "../datasets/denoising"
+dataset_dir: "../datasets/20201124"
 
-task: "roi" # roi | dn
+task: "dn" # roi | dn
 
 model: "cnn" # cnn | gcnn
 
-epochs: 100 # number of training epochs
+epochs: 10 # number of training epochs
 
-loss_fn: "ssim_l2" # mse | ssim | ssim_l1 | ssim_l2
+loss_fn: "mse" # mse | ssim | ssim_l1 | ssim_l2
 
-lr_dn: 0.009032117010326078
+lr: 0.001
 
-lr_roi: 0.001
-
-out_name: "202011/cnn_roi" # output dirname in denoising/output folder
+out_name: "202011/scg" # output dirname in denoising/output folder
 
 load_path: None # "denoising/output/202011/cnn_roi/collection/model_save/cnn_roi_collection_90.dat" # torch .dat absolute filepath
-
-batch_size: 256 # 128 (gcnn dn) | 256 (else)
-
-test_batch_size: 4000 # 4000 | 376 cnn, 512 | 128
 
 threshold: 3.5
 
 amsgrad: True
 
-scan: False
-
-normalization: "mednorm" # zscore | minmax | mednnorm
-
 channel: "collection" # induction | collection
+
+scan: False
 
 patch_h: 960
 

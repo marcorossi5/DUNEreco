@@ -56,12 +56,10 @@ class PlaneLoader(torch.utils.data.Dataset):
         fname = os.path.join(data_dir, f"planes/{channel}_clear.npy")
         clear = torch.Tensor( np.load(fname) )
         if task == 'roi':
-            hits = torch.clone(clear)
-            mask = (hits <= threshold) & (hits >= -threshold)
-            hits[mask] = 0
-            hits[~mask] = 1
-            self.balance_ratio = np.count_nonzero(hits)/hits.numel()
-            clear = hits
+            mask = (clear <= threshold) & (clear >= -threshold)
+            clear[mask] = 0
+            clear[~mask] = 1
+            self.balance_ratio = np.count_nonzero(clear)/clear.numel()
         self.clear = clear
 
         fname = os.path.join(data_dir, f"planes/{channel}_noisy.npy")

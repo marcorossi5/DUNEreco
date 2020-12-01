@@ -34,13 +34,11 @@ def main(args):
 
     #load datasets
     set_random_seed(0)
-    train_data = PlaneLoader(args.dataset_dir, args.channel, args.task,
-                             'train', args.threshold)
-    val_data = PlaneLoader(args.dataset_dir, args.channel, args.task,
-                           'val', args.threshold)
-
-    model = SCG_Net(h=args.patch_size[0], w=args.patch_size[1])
-
+    train_data = PlaneLoader(args.dataset_dir, 'train', args.task,
+                             args.channel, args.threshold)
+    val_data = PlaneLoader(args.dataset_dir, 'val', args.task,
+                           args.channel, args.threshold)
+    model = SCG_Net(task=args.task, h=args.patch_h, w=args.patch_w)
     #train
     return train.train(args, train_data, val_data, model)
 
@@ -69,7 +67,7 @@ def spmd_main(card, local_rank, local_world_size):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--card", type=str, help='yaml config file path',
-                        default="config.yaml")
+                        default="default_config.yaml")
     parser.add_argument("--local_rank", default=0, type=int,
                     help="Distributed utility")
     parser.add_argument("--local_world_size", default=1, type=int,

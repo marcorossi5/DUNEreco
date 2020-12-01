@@ -12,7 +12,6 @@ class Args:
         check(self.model, ["cnn", "gcnn"])
         check(self.task, ["roi", "dn"])
         
-        self.patch_size = (960,3500)
         self.crop_p = 0.5 # signal to noise crops percentage
 
         self.num_workers = 8
@@ -29,7 +28,7 @@ class Args:
 
         self.epoch_log = 1
         self.epoch_test_start = 0
-        self.epoch_test = 5
+        self.epoch_test = 1
 
         self.t = 0.5
 

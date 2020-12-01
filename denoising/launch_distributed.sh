@@ -33,7 +33,6 @@ minsky_IPs=(128.142.165.77 \
             128.142.165.79)
 
 gpus=($1)
-card=$2
 
 # filter unused nodes
 
@@ -67,7 +66,7 @@ touchtmp="mktemp -p $logdir"
 
 function job_func(){
     job="python $launch --nproc_per_node=$2 --nnodes=$nnodes --node_rank=$1 \
-         --master_addr=$master_addr $main --local_world_size=$2 --card=$card"
+         --master_addr=$master_addr $main --local_world_size=$2"
 }
 trap 'rm -f "$logdir"/tmp*' EXIT # automatic clean of tmp files
 separator="\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n\n"

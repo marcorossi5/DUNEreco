@@ -1,3 +1,4 @@
+from math import isnan
 import torch
 from torch import nn
 
@@ -15,7 +16,7 @@ class SCG_Block(nn.Module):
             nn.Dropout(dropout),
         )
 
-	self.logvar = nn.Sequential(
+        self.logvar = nn.Sequential(
             nn.Conv2d(in_ch, hidden_ch, 1, 1, bias=True),
             nn.Dropout(dropout),
         )
@@ -53,9 +54,9 @@ class SCG_Block(nn.Module):
 
     def laplacian_matrix(self, A, self_loop=False):
         '''
-	    Computes normalized Laplacian matrix: A (B, N, N)
+            Computes normalized Laplacian matrix: A (B, N, N)
         '''
-	    if self_loop:
+        if self_loop:
             A = A + torch.eye(A.size(1), device=A.device).unsqueeze(0)
         deg_inv_sqrt = (torch.sum(A, 1) + 1e-5).pow(-0.5)
         LA = deg_inv_sqrt.unsqueeze(-1) * A * deg_inv_sqrt.unsqueeze(-2)
@@ -96,12 +97,12 @@ class BatchNorm_GCN(nn.BatchNorm1d):
 class Pooling_Block(nn.Module):
     def __init__(self, c, h, w):
         """
-	Parameters:
+        Parameters:
             c: int, image channels
             h: int, output height
             w: int, output width
         """
-	super(Pooling_Block, self).__init__()
+        super(Pooling_Block, self).__init__()
         self.pooling = nn.Sequential(nn.AdaptiveMaxPool2d((h,w)),
                                      nn.Conv2d(c, c, 3, padding=1, bias=False),
                                      nn.BatchNorm2d(c),
@@ -109,6 +110,7 @@ class Pooling_Block(nn.Module):
 
     def forward(self, x):
         return self.pooling(x)
+
 
 class Recombination_Layer(nn.Module):
     """
@@ -122,3 +124,18 @@ class Recombination_Layer(nn.Module):
 
     def  forward(self, x, y):
         return self.conv( torch.cat([x,y], axis=1) )
+
+
+def weight_xavier_init(*models):
+    for model in models:
+        for module in model.modules():
+            if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
+                # nn.init.xavier_normal_(module.weight)
+                nn.init.orthogonal_(module.weight)
+                # nn.init.kaiming_normal_(module.weight)
+                if module.bias is not None:
+                    module.bias.data.zero_()
+            elif isinstance(module, nn.BatchNorm2d):
+                module.weight.data.fill_(1)
+                module.bias.data.zero_()
+

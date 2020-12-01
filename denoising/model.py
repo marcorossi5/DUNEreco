@@ -14,6 +14,7 @@ from SCG_Net import SCG_Block
 from SCG_Net import GCN_Layer
 from SCG_Net import Pooling_Block
 from SCG_Net import Recombination_Layer
+from SCG_Net import weight_xavier_init
 
 
 class PreProcessBlock(nn.Module):
@@ -190,7 +191,7 @@ class DenoisingModel(nn.Module):
 
 class SCG_Net(nn.Module):
     def __init__(self, out_channels=1, h=960, w=6000, pretrained=True,
-                 nodes=(28,28), dropout=0.5,
+                 task='dn', nodes=(28,28), dropout=0.5,
                  enhance_diag=True, aux_pred=True):
         """
 	Parameters:
@@ -200,7 +201,7 @@ class SCG_Net(nn.Module):
             pretrained: bool, if True, download weight of pretrained resnet
             nodes: tuple, (height, width) of the image input of SCG block
         """
-	super(SCG_Net, self).__init__()
+        super(SCG_Net, self).__init__()
 
         self.aux_pred = aux_pred
         self.node_size = nodes
@@ -230,16 +231,18 @@ class SCG_Net(nn.Module):
                              node_size=nodes,
                              add_diag=enhance_diag,
                              dropout=dropout)
+        # weight_xavier_init(*self.GCNs, self.scg)
         self.adapts = nn.ModuleList([nn.Conv2d(512,1,1,bias=False),
                                      nn.Conv2d(1024,1,1,bias=False),
                                      nn.Conv2d(1024,1,1,bias=False),])
         self.recombs = nn.ModuleList([Recombination_Layer() for i in range(3)])
         self.last_recomb = Recombination_Layer()
+        self.act = nn.Sigmoid() if task=='roi' else nn.Identity()
 
     def forward(self, x):
         i = x
 
-	# downsampling
+        # downsampling
         ys = []
         for adapt, downsample in zip(self.adapts, self.downsamples):
             x = downsample(x)
@@ -259,5 +262,5 @@ class SCG_Net(nn.Module):
             x = upsample(recomb(x,y))
 
         if self.training:
-            return self.last_recomb(x, i), loss
-        return self.last_recomb(x, i).cpu().data
+            return self.act(self.last_recomb(x, i)), loss
+        return self.act(self.last_recomb(x, i)).cpu().data
