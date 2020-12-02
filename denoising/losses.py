@@ -140,28 +140,24 @@ class  loss_bce_dice(loss):
             return loss
 
 
-def loss_psnr(image, noisy, reduction='mean'):
+def loss_psnr(noisy, image, reduction='mean'):
     """
     Parameters:
         image: torch.Tensor, shape (N,C,W,H)
         noisy: torch.Tensor, shape (N,C,W,H)
         reduction: str, either 'mean'| 'none'
     """
-    if len(image.shape) == 3: # (C,W,H)
-        mse = torch.nn.MSELoss()(image, noisy).item()
-        m2 = image.max().item()**2
-        return 0 if mse==0 else 10 * np.log10(m2/mse)
-    else: # (N,C,H,W)
-        nimages = image.shape[0]
-        x1 = image.reshape(nimages, -1)
-        x2 = noisy.reshape(nimages, -1)
-        mse = torch.nn.MSELoss(reduction='none')(x1,x2).data.mean(-1)
-        m2 = x1.max(-1).values**2
-        psnr = torch.where(m2 == 0, torch.Tensor([0.]), 10*torch.log10(m2/mse))
-        if reduction == 'none':
-            return psnr
-        elif reduction == 'mean':
-            return psnr.mean()
+    nimages = image.shape[0]
+    x1 = image.reshape(nimages, -1)
+    x2 = noisy.reshape(nimages, -1)
+    mse = torch.nn.MSELoss(reduction='none')(x1,x2).mean(-1)
+    m2 = x1.max(-1).values**2
+    zero = torch.Tensor([0.]).to(x1.device)
+    psnr = torch.where(m2 == 0, zero, 10*torch.log10(m2/mse))
+    if reduction == 'none':
+        return psnr
+    elif reduction == 'mean':
+        return psnr.mean()
 
 
 def get_loss(loss):

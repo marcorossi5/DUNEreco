@@ -4,7 +4,7 @@ task: "dn" # roi | dn
 
 model: "cnn" # cnn | gcnn
 
-epochs: 10 # number of training epochs
+epochs: 30 # number of training epochs
 
 loss_fn: "mse" # mse | ssim | ssim_l1 | ssim_l2
 
@@ -12,17 +12,17 @@ lr: 0.001
 
 out_name: "202011/scg" # output dirname in denoising/output folder
 
-load_path: None # "denoising/output/202011/cnn_roi/collection/model_save/cnn_roi_collection_90.dat" # torch .dat absolute filepath
+load_path: "denoising/best_models/scg_dn_induction.pth" # torch .dat absolute filepath
 
 threshold: 3.5
 
 amsgrad: True
 
-channel: "collection" # induction | collection
+channel: "induction" # induction | collection
 
 scan: False
 
-patch_h: 960
+patch_h: 800
 
 patch_w: 2000
 

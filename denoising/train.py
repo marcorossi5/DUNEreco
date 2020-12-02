@@ -82,24 +82,35 @@ def compute_val_loss(test_loader, outputs, args, task):
         # works only with unit batch_size
         output = output.unsqueeze(0).to(args.dev_ids[0])
         target = target.to(args.dev_ids[0])
-        loss.append( loss_fn(output, target).cpu().item() )
+        loss.append( loss_fn(output, target).unsqueeze(0) )
         if task == 'dn':
-            ssim.append( 1-ssim_fn(target, output).cpu().item() )
-            mse.append( mse_fn(output, target).cpu().item() )
-            psnr.append( psnr_fn(target.cpu(), output.cpu()).item() )
+            ssim.append( 1-ssim_fn(output, target).unsqueeze(0) )
+            mse.append( mse_fn(output, target).unsqueeze(0) )
+            psnr.append( psnr_fn(output, target).unsqueeze(0) )
     if args.rank==0:
         fname = os.path.join(args.dir_testing, "labels")
         torch.save(target.cpu(), fname)
         fname = os.path.join(args.dir_testing, "results")
         torch.save(output.cpu(), fname)
 
-    n = len(loss)
+    def all_gather(loss):
+        loss = torch.cat(loss)
+        ws = dist.get_world_size()
+        lossws = [torch.zeros_like(loss) for i in range(ws)]
+        dist.all_gather(lossws, loss)
+        return torch.cat(lossws).cpu().numpy()
+
+    loss = all_gather(loss)
+    sqrtn = len(loss)
     if task == 'dn':
-        return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
-                np.mean(ssim), np.std(ssim)/np.sqrt(n),
-                np.mean(psnr), np.std(psnr)/np.sqrt(n),
-                np.mean(mse), np.std(mse)/np.sqrt(n)])
-    return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)])
+        ssim = all_gather(ssim)
+        psnr = all_gather(psnr)
+        mse = all_gather(mse)
+        return np.array([loss.mean(), loss.std()/sqrtn,
+                ssim.mean(), ssim.std()/sqrtn,
+                psnr.mean(), psnr.std()/sqrtn,
+                mse.mean(), mse.std()/sqrtn])
+    return np.array([loss.mean(), loss.std()/sqrtn])
 
 
 def test_epoch(test_data, model, args, task, dry_inference=True):
@@ -129,7 +140,10 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
     if dry_inference:
         return outputs, dry_time
     return compute_val_loss(test_loader, outputs, args, task), outputs, dry_time
-    
+
+
+def optimizer_fn(params, lr, amsgrad):
+    return optim.Adam(params, lr=lr, amsgrad=amsgrad)
 
 
 ########### main train function
@@ -194,11 +208,7 @@ def train(args, train_data, val_data, model):
     best_model_name = os.path.join(args.dir_saved_models,f"{args.model}_-1.dat")
         
     # initialize optimizer
-    #optimizer = optim.Adam(list(model.parameters()), lr=args.lr,
-    #                       amsgrad=args.amsgrad)
-    optimizer = optim.SGD(list(model.parameters()), lr=args.lr,
-                           momentum=0.8)
-    optimizer = optim.Adam(list(model.parameters()), amsgrad=True)
+    optimizer = optimizer_fn(list(model.parameters()), args.lr, args.amsgrad)
 
     train_sampler = DistributedSampler(dataset=train_data, shuffle=True)
     train_loader = DataLoader(dataset=train_data, sampler=train_sampler,
@@ -207,6 +217,8 @@ def train(args, train_data, val_data, model):
 
     # main training loop
     while epoch <= args.epochs:
+        if epoch % 6 == 0:
+            optimizer = optimizer_fn(list(model.parameters()), args.lr, args.amsgrad)
 
         # train
         start = tm()

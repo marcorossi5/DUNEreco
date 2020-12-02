@@ -4,7 +4,7 @@ import collections
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from model import DenoisingModel
+from model import SCG_Net
 from dataloader import PlaneLoader
 from train import inference
 from args import Args
@@ -68,7 +68,7 @@ def get_model_and_args(modeltype, task, channel):
     parameters["channel"] = channel
     args =  Args(**parameters)
 
-    model =  torch.nn.DataParallel( DenoisingModel(args), device_ids=[0] )
+    model =  torch.nn.DataParallel( SCG_Net(args), device_ids=[0] )
     prefix = "denoising/best_models"
     name = f"{modeltype}_{task}_{channel}.dat"
     fname = os.path.join(prefix, name)

@@ -262,5 +262,5 @@ class SCG_Net(nn.Module):
             x = upsample(recomb(x,y))
 
         if self.training:
-            return self.act(self.last_recomb(x, i)), loss
-        return self.act(self.last_recomb(x, i)).cpu().data
+            return self.act(x * i), loss
+        return self.act(x * i).cpu().data
