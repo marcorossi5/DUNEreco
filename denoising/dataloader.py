@@ -10,37 +10,6 @@ from model_utils import Converter
 from ssim import _fspecial_gauss_1d, stat_gaussian_filter
 
 
-class CropLoader(torch.utils.data.Dataset):
-    def __init__(self, args):
-        """
-        This function loads the crops for training.
-        Crops are normalized in the [0,1] range with the minmax
-        normalization\.
-        Parameters:
-            args: Args object
-        """
-        data_dir = args.dataset_dir
-        edge_patch = args.patch_size[0]
-        p = args.crop_p
-        fname = os.path.join(data_dir,'train/crops',
-                             f"{args.channel}_noisy_{edge_patch}_{p}.npy")
-        self.noisy = torch.Tensor( np.load(fname) )
-        fname = os.path.join(data_dir,'train/crops',
-                         f'{args.channel}_clear_{edge_patch}_{p}.npy')
-        clear = torch.Tensor( np.load(fname) )
-        hits = torch.clone(clear)
-        mask = (hits <= args.threshold) & (hits >= -args.threshold)
-        hits[mask] = 0
-        hits[~mask] = 1
-        self.balance_ratio = np.count_nonzero(hits)/hits.numel()
-        self.clear = torch.cat([clear, hits],1)
-
-    def __len__(self):
-        return len(self.noisy)
-
-    def __getitem__(self, index):
-        return self.clear[index], self.noisy[index]
-
 class PlaneLoader(torch.utils.data.Dataset):
     def __init__(self, dataset_dir, folder, task, channel, threshold):
         """
@@ -66,12 +35,30 @@ class PlaneLoader(torch.utils.data.Dataset):
         noisy = np.load(fname)
         medians = np.median(noisy.reshape([noisy.shape[0],-1]), axis=1)
         self.noisy = torch.Tensor( noisy - medians[:,None,None,None] )
+
+        fname = os.path.join(dataset_dir, f"{channel}_minmax.npy")
+        norm = np.load(fname)
+        self.Min = norm[0]
+        self.Max = norm[1]
         
     def __len__(self):
         return len(self.noisy)
 
     def __getitem__(self, index):
         return self.noisy[index], self.clear[index]
+
+
+class InferenceLoader(torch.utils.data.Dataset):
+    def __init__(self, noisy):
+        medians = np.median(noisy.reshape([noisy.shape[0],-1]), axis=1)
+        self.noisy = torch.Tensor( noisy - medians[:,None,None,None] )
+
+    def __len__(self):
+        return len(self.noisy)
+
+    def __getitem__(self, index):
+        return self.noisy[index], 0
+
 
 # TODO: is the label generation in the PlaneLoader correct according to the
 # threshold considerations?

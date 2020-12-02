@@ -55,7 +55,8 @@ def train_epoch(args, epoch, train_loader, model, optimizer,
     return np.array([loss.item()]), tm() - start
 
 
-def inference(test_loader, w, stride, model, dev):
+def inference(test_loader, stride, model, dev):
+    w = model.w
     model.eval()
     outs = []
     for noisy, _ in test_loader:
@@ -130,11 +131,11 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
     if args.rank == 0:
         print('\n[+] Testing')
     start = tm()
-    outputs = inference(test_loader, args.patch_w, args.patch_stride, model,
+    outputs = inference(test_loader, args.patch_stride, model,
                      args.dev_ids[0])
-    if task == 'dn':
-        mask = (outputs <= args.threshold) & (outputs >= -args.threshold)
-        outputs[mask] = 0
+    # if task == 'dn':
+    #     mask = (outputs <= args.threshold) & (outputs >= -args.threshold)
+    #     outputs[mask] = 0
     dry_time = tm() - start
 
     if dry_inference:

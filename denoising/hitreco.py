@@ -5,7 +5,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from model import SCG_Net
-from dataloader import PlaneLoader
+from model_utils import MyDataParallel
+from dataloader import InferenceLoader
 from train import inference
 from args import Args
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,9 +18,10 @@ istep = 800 # channel number in induction plane
 cstep = 960 # channel number in collection plane
 apas = 6
 apastep = 2*istep + cstep # number of channels per apa
+device_ids = [0]
 evstep = apas * apastep # total channel number
 ModelTuple = collections.namedtuple('Model', ['induction', 'collection'])
-ArgsTuple = collections.namedtuple('Args', ['patch_size', 'batch_size'])
+ArgsTuple = collections.namedtuple('Args', ['batch_size', 'patch_stride'])
 
 
 def evt2planes(event):
@@ -68,14 +70,15 @@ def get_model_and_args(modeltype, task, channel):
     parameters["channel"] = channel
     args =  Args(**parameters)
 
-    model =  torch.nn.DataParallel( SCG_Net(args), device_ids=[0] )
+    model =  MyDataParallel( SCG_Net(task=args.task, h=args.patch_h,
+                                     w=args.w), device_ids=device_ids )
     prefix = "denoising/best_models"
-    name = f"{modeltype}_{task}_{channel}.dat"
+    name = f"{modeltype}_{task}_{channel}.pth"
     fname = os.path.join(prefix, name)
 
     state_dict = torch.load(fname)
     model.load_state_dict(state_dict)
-    return ArgsTuple(args.patch_size, args.test_batch_size), model
+    return ArgsTuple(args.test_batch_size, args.patch_stride), model
 
 
 def mkModel(modeltype, task):
@@ -90,18 +93,16 @@ class DnRoiModel:
             Wrapper for inference model
             Parameters:
                 modeltype: str
-                    "cnn" | "gcnn"
+                    "cnn" | "gcnn" | "sgc"
         """
         self.roiargs, self.roi = mkModel(modeltype, "roi")
         self.dnargs, self.dn = mkModel(modeltype, "dn")
-        self.loader = PlaneLoader    
+        self.loader = InferenceLoader    
 
     def _inference(self, planes, model, args, dev):
-        dataset = self.loader(args, planes=planes)
+        dataset = self.loader(planes)
         loader = DataLoader(dataset=dataset, batch_size=args.batch_size)
-        out =  inference(loader, model.to(dev), dev)
-        return dataset.converter.tiles2planes( out.cpu() )
-
+        return inference(loader, args.patch_stride, model.to(dev), dev).cpu()
 
     def roi_selection(self, event, dev):
         """

@@ -190,8 +190,8 @@ class DenoisingModel(nn.Module):
 
 
 class SCG_Net(nn.Module):
-    def __init__(self, out_channels=1, h=960, w=6000, pretrained=True,
-                 task='dn', nodes=(28,28), dropout=0.5,
+    def __init__(self, out_channels=1, h=960, w=6000, Min=0, Max=1,
+                 pretrained=True, task='dn', nodes=(28,28), dropout=0.5,
                  enhance_diag=True, aux_pred=True):
         """
 	Parameters:
@@ -202,6 +202,12 @@ class SCG_Net(nn.Module):
             nodes: tuple, (height, width) of the image input of SCG block
         """
         super(SCG_Net, self).__init__()
+        assert Max - Min > 0
+        self.Max = nn.Parameter(torch.Tensor([Min]), requires_grad=False)
+        self.Min = nn.Parameter(torch.Tensor([Max]), requires_grad=False)
+        self.h = h
+        self.w = w
+        self.task = task
 
         self.aux_pred = aux_pred
         self.node_size = nodes
@@ -240,6 +246,7 @@ class SCG_Net(nn.Module):
         self.act = nn.Sigmoid() if task=='roi' else nn.Identity()
 
     def forward(self, x):
+        x /= self.Max - self.Min
         i = x
 
         # downsampling

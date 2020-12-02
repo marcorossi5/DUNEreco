@@ -12,7 +12,6 @@ from torch.utils.data import DataLoader
 
 from distributed import set_random_seed
 
-from dataloader import CropLoader
 from dataloader import PlaneLoader
 from model import SCG_Net
 from args import Args
@@ -38,7 +37,8 @@ def main(args):
                              args.channel, args.threshold)
     val_data = PlaneLoader(args.dataset_dir, 'val', args.task,
                            args.channel, args.threshold)
-    model = SCG_Net(task=args.task, h=args.patch_h, w=args.patch_w)
+    model = SCG_Net(task=args.task, h=args.patch_h, w=args.patch_w,
+                    Min=train_data.Min, Max=train_data.Max)
     #train
     return train.train(args, train_data, val_data, model)
 

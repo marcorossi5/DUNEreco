@@ -9,10 +9,11 @@ class Args:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
         
-        check(self.model, ["cnn", "gcnn"])
+        check(self.model, ["cnn", "gcnn", "scg"])
         check(self.task, ["roi", "dn"])
-        
-        self.crop_p = 0.5 # signal to noise crops percentage
+
+        self.w = 6000
+        self.patch_h = 800 if self.channel=='induction' else 960
 
         self.num_workers = 8
 

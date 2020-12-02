@@ -2,7 +2,7 @@ dataset_dir: "../datasets/20201124"
 
 task: "dn" # roi | dn
 
-model: "cnn" # cnn | gcnn
+model: "scg" # cnn | gcnn | scg
 
 epochs: 30 # number of training epochs
 
@@ -12,17 +12,15 @@ lr: 0.001
 
 out_name: "202011/scg" # output dirname in denoising/output folder
 
-load_path: "denoising/best_models/scg_dn_induction.pth" # torch .dat absolute filepath
+load_path: None # "denoising/best_models/scg_dn_induction.pth" # torch .dat absolute filepath
 
 threshold: 3.5
 
 amsgrad: True
 
-channel: "induction" # induction | collection
+channel: "collection" # induction | collection
 
 scan: False
-
-patch_h: 800
 
 patch_w: 2000
 
