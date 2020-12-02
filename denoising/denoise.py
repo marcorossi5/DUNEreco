@@ -37,8 +37,7 @@ def main(args):
                              args.channel, args.threshold)
     val_data = PlaneLoader(args.dataset_dir, 'val', args.task,
                            args.channel, args.threshold)
-    model = SCG_Net(task=args.task, h=args.patch_h, w=args.patch_w,
-                    Min=train_data.Min, Max=train_data.Max)
+    model = SCG_Net(task=args.task, h=args.patch_h, w=args.patch_w)
     #train
     return train.train(args, train_data, val_data, model)
 

@@ -35,11 +35,6 @@ class PlaneLoader(torch.utils.data.Dataset):
         noisy = np.load(fname)
         medians = np.median(noisy.reshape([noisy.shape[0],-1]), axis=1)
         self.noisy = torch.Tensor( noisy - medians[:,None,None,None] )
-
-        fname = os.path.join(dataset_dir, f"{channel}_minmax.npy")
-        norm = np.load(fname)
-        self.Min = norm[0]
-        self.Max = norm[1]
         
     def __len__(self):
         return len(self.noisy)
