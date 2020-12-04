@@ -1,6 +1,7 @@
 import os
 import sys
 import collections
+from math import sqrt
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
@@ -8,6 +9,7 @@ from model import SCG_Net
 from model_utils import MyDataParallel
 from dataloader import InferenceLoader
 from train import inference
+from losses import get_loss
 from args import Args
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import load_yaml
@@ -134,6 +136,40 @@ class DnRoiModel:
         inductions, collections = evt2planes(event)
         iout =  self._inference(inductions, self.dn.induction, self.dnargs[0], dev)
         cout =  self._inference(collections, self.dn.collection, self.dnargs[1], dev)
-        return planes2evt(iout, cout)        
+        return planes2evt(iout, cout)
+
+
+def to_cuda(*args):
+    dev = "cuda:0"
+    args = list(map(torch.Tensor, args[0]))
+    return list(map(lambda x: x.to(dev), args))
+
+
+def compute_metrics(output, target, task):
+    """ This function takes the two events and computes the metrics between
+    their planes. Separating collection and inductions planes."""
+    if task == 'roi':
+        metrics = ['bce', 'softdice']
+    elif task == 'dn':
+        metrics = ['ssim', 'psnr', 'mse']
+    else:
+        raise NotImplementedError("Task not implemented")
+    metrics_fns = list(map(lambda x: get_loss(x)(reduction='none'), metrics))
+    ioutput, coutput = to_cuda(evt2planes(output))
+    itarget, ctarget = to_cuda(evt2planes(target))
+    iloss = list(map(lambda x: x(ioutput, itarget), metrics_fns))
+    closs = list(map(lambda x: x(coutput, ctarget), metrics_fns))
+    def reduce(loss):
+        sqrtn = sqrt(len(loss))
+        return [loss.mean(), loss.std()/sqrtn]
+    iloss = list(map(reduce, iloss))
+    closs = list(map(reduce, closs))
+    print("Induction planes:")
+    for metric, loss in zip(metrics, iloss):
+        print(f"\t\t {metric:7}: {loss[0]:.5} +- {loss[1]:.5}")
+    print("Collection planes:")
+    for metric, loss in zip(metrics, closs):
+        print(f"\t\t {metric:7}: {loss[0]:.5} +- {loss[1]:.5}")
+
   
 # TODO: must fix argument passing in inference

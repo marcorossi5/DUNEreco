@@ -18,7 +18,7 @@ class Args:
         self.num_workers = 8
 
         #model parameters
-        self.a = 0.84
+        self.a = 0.5
         self.k = 8
         self.input_channels = 1
         self.hidden_channels = 32

@@ -9,7 +9,7 @@ EPS = torch.Tensor( [torch.finfo(torch.float64).eps] )
 
 class loss(ABC):
     """Mother class interface"""
-    def __init__(self, a=0.84, data_range=1., reduction='mean'):
+    def __init__(self, a=0.5, data_range=1., reduction='mean'):
         self.a = a
         self.data_range = data_range
         self.reduction = reduction
@@ -22,9 +22,13 @@ class loss(ABC):
 class loss_mse(loss):
     def __init__(self, a=0.84, data_range=1., reduction='mean'):
         super().__init__(reduction=reduction)
-        self.loss = nn.MSELoss(reduction=self.reduction)
+        self.loss = nn.MSELoss(reduction='none')
     def __call__(self,*args):
-        return self.loss(*args)
+        loss = self.loss(*args)
+        if self.reduction == 'mean':
+            return loss.mean()
+        elif self.reduction == 'none':
+            return loss.reshape([loss.shape[0],-1]).mean(-1)
 
 
 class loss_ssim(loss):
@@ -65,7 +69,7 @@ class loss_ssim_l1(loss):
 
 
 class loss_bce(loss):
-    def __init__(self, ratio, reduction='mean'):
+    def __init__(self, ratio=0.5, reduction='mean'):
         """
             Ratio is the number of positive against negative example in training
             set. It's used for reweighting the cross entropy
@@ -115,7 +119,7 @@ class  loss_SoftDice(loss):
 
 
 class  loss_bce_dice(loss):
-    def __init__(self, ratio, reduction='mean'):
+    def __init__(self, ratio=0.5, reduction='mean'):
         """
             Reduction: str
                 'mean' | 'none'
@@ -139,25 +143,29 @@ class  loss_bce_dice(loss):
         elif self.reduction ==  'none':
             return loss
 
+class loss_psnr(loss):
+    def __init__(self, reduction='mean'):
+        super().__init__(reduction=reduction)
+        self.mse = nn.MSELoss(reduction='none')
 
-def loss_psnr(noisy, image, reduction='mean'):
-    """
-    Parameters:
-        image: torch.Tensor, shape (N,C,W,H)
-        noisy: torch.Tensor, shape (N,C,W,H)
-        reduction: str, either 'mean'| 'none'
-    """
-    nimages = image.shape[0]
-    x1 = image.reshape(nimages, -1)
-    x2 = noisy.reshape(nimages, -1)
-    mse = torch.nn.MSELoss(reduction='none')(x1,x2).mean(-1)
-    m2 = x1.max(-1).values**2
-    zero = torch.Tensor([0.]).to(x1.device)
-    psnr = torch.where(m2 == 0, zero, 10*torch.log10(m2/mse))
-    if reduction == 'none':
-        return psnr
-    elif reduction == 'mean':
-        return psnr.mean()
+    def __call__(self, noisy, image):
+        """
+        Parameters:
+            image: torch.Tensor, shape (N,C,W,H)
+            noisy: torch.Tensor, shape (N,C,W,H)
+            reduction: str, either 'mean'| 'none'
+        """
+        nimages = image.shape[0]
+        x1 = image.reshape(nimages, -1)
+        x2 = noisy.reshape(nimages, -1)
+        mse = self.mse(x1,x2).mean(-1)
+        m2 = x1.max(-1).values**2
+        zero = torch.Tensor([0.]).to(x1.device)
+        psnr = torch.where(m2 == 0, zero, 10*torch.log10(m2/mse))
+        if self.reduction == 'none':
+            return psnr
+        elif self.reduction == 'mean':
+            return psnr.mean()
 
 
 def get_loss(loss):

@@ -1,21 +1,13 @@
 """ This module compare results on test set of DN against Pandora recob::wires"""
 from analysis_roi import set_ticks
-from losses import loss_ssim, loss_mse
-from utils.utils import compute_psnr
-from dataloader import PlaneLoader
 import sys
 import os
 import argparse
 import numpy as np
-import time as tm
+from time import time
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from operator import itemgetter
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(os.path.dirname(os.path.dirname(
-    os.path.dirname(os.path.abspath(__file__)))))
-
 
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument("--dirname", "-p", default="final",
@@ -360,6 +352,6 @@ def main(dirname):
 
 if __name__ == '__main__':
     args = vars(PARSER.parse_args())
-    start = tm.time()
+    start = time()
     main(**args)
-    print(f'Program done in {tm.time()-start}')
+    print(f'Program done in {time()-start}')

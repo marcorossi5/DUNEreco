@@ -2,6 +2,7 @@ import sys
 import os
 from math import ceil
 from math import isnan
+from math import sqrt
 import numpy as np
 
 import torch
@@ -13,6 +14,7 @@ from torch.utils.data import DataLoader
 
 from model_utils import freeze_weights
 from model_utils import MyDDP
+from model_utils import MyDataParallel
 
 from losses import get_loss
 
@@ -78,7 +80,7 @@ def compute_val_loss(test_loader, outputs, args, task):
     if task == 'dn':
         ssim_fn = get_loss('ssim')()
         mse_fn = get_loss('mse')()
-        psnr_fn = get_loss('psnr')
+        psnr_fn = get_loss('psnr')()
     for (_, target), output in zip(test_loader, outputs):
         # works only with unit batch_size
         output = output.unsqueeze(0).to(args.dev_ids[0])
@@ -95,14 +97,16 @@ def compute_val_loss(test_loader, outputs, args, task):
         torch.save(output.cpu(), fname)
 
     def all_gather(loss):
-        loss = torch.cat(loss)
-        ws = dist.get_world_size()
-        lossws = [torch.zeros_like(loss) for i in range(ws)]
-        dist.all_gather(lossws, loss)
-        return torch.cat(lossws).cpu().numpy()
+        # loss = torch.cat(loss)
+        # ws = dist.get_world_size()
+        # lossws = [torch.zeros_like(loss) for i in range(ws)]
+        # dist.all_gather(lossws, loss)
+        # return torch.cat(lossws).cpu().numpy()
+        return torch.cat(loss).cpu().numpy()
 
     loss = all_gather(loss)
-    sqrtn = len(loss)
+
+    sqrtn = sqrt(len(loss))
     if task == 'dn':
         ssim = all_gather(ssim)
         psnr = all_gather(psnr)
@@ -124,8 +128,8 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
         torch.Tensor: denoised data, shape (batch,C,W,H)
         float: dry inference time
     """
-    test_sampler = DistributedSampler(dataset=test_data, shuffle=False)
-    test_loader = DataLoader(dataset=test_data, sampler=test_sampler,
+    # test_sampler = DistributedSampler(dataset=test_data, shuffle=False)
+    test_loader = DataLoader(dataset=test_data, # sampler=test_sampler,
                               batch_size=1,
                               num_workers=args.num_workers)
     if args.rank == 0:
@@ -152,8 +156,9 @@ def train(args, train_data, val_data, model):
     task = args.task
     channel = args.channel
     # check if load existing model
-    model = MyDDP(model.to(args.dev_ids[0]), device_ids=args.dev_ids,
-                   find_unused_parameters=True)
+    model = MyDataParallel(model, device_ids=args.dev_ids)
+    # model = MyDDP(model.to(args.dev_ids[0]), device_ids=args.dev_ids,
+    #               find_unused_parameters=True)
 
     if args.load:
         if args.load_path is None:
@@ -194,7 +199,8 @@ def train(args, train_data, val_data, model):
 
         if args.rank == 0:
             print(f'Loading model at {fname}')
-        map_location = {"cuda:{0:d}": f"cuda:{args.local_rank:d}"}
+        map_location = {"cuda:{0:d}": f"cuda:{args.dev:d}"}
+        # map_location = {"cuda:{0:d}": f"cuda:{args.local_rank:d}"}
         model.load_state_dict(torch.load(fname, map_location=map_location))
     else:
         epoch = 1
@@ -211,8 +217,8 @@ def train(args, train_data, val_data, model):
     # initialize optimizer
     optimizer = optimizer_fn(list(model.parameters()), args.lr, args.amsgrad)
 
-    train_sampler = DistributedSampler(dataset=train_data, shuffle=True)
-    train_loader = DataLoader(dataset=train_data, sampler=train_sampler,
+    # train_sampler = DistributedSampler(dataset=train_data, shuffle=True)
+    train_loader = DataLoader(dataset=train_data, shuffle=True, # sampler=train_sampler,
                               batch_size=1,
                               num_workers=args.num_workers)
 
@@ -223,7 +229,7 @@ def train(args, train_data, val_data, model):
 
         # train
         start = tm()
-        train_sampler.set_epoch(epoch)
+        # train_sampler.set_epoch(epoch)
         balance_ratio = train_data.balance_ratio if task=='roi' else None 
         loss, t = train_epoch(args, epoch, train_loader, model,
                               optimizer, balance_ratio,

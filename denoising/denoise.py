@@ -28,8 +28,9 @@ from utils.utils import load_yaml
 def main(args):
     """This is the main function"""
 
-    n = torch.cuda.device_count() // args.local_world_size
-    args.dev_ids = list(range(args.local_rank * n, (args.local_rank + 1) * n))
+    # n = torch.cuda.device_count() // args.local_world_size
+    # args.dev_ids = list(range(args.local_rank * n, (args.local_rank + 1) * n))
+    args.dev_ids = [args.dev]
 
     #load datasets
     set_random_seed(0)
@@ -42,15 +43,17 @@ def main(args):
     return train.train(args, train_data, val_data, model)
 
 
-def spmd_main(card, local_rank, local_world_size):
+def spmd_main(card, local_rank, local_world_size, dev):
     """ Spawn distributed processes """
-    dist.init_process_group(backend="nccl")
+    # dist.init_process_group(backend="nccl")
 
     prefix = "/nfs/public/romarco/DUNEreco/denoising/configcards"
     parameters = load_yaml(os.path.join(prefix, card))
     parameters["local_rank"] = local_rank
     parameters["local_world_size"] = local_world_size
-    parameters["rank"] = dist.get_rank()
+    parameters["rank"] = 0
+    parameters["dev"] = dev
+    # parameters["rank"] = dist.get_rank()
     args = Args(**parameters)
     args.build_directories(build=( args.rank==0 ))
     if args.rank == 0:
@@ -60,7 +63,7 @@ def spmd_main(card, local_rank, local_world_size):
     if args.rank == 0:
         print(f"[{os.getpid()}] Process done in {tm.time()-START}")
 
-    dist.destroy_process_group()
+    # dist.destroy_process_group()
 
 
 if __name__ == '__main__':
@@ -71,6 +74,8 @@ if __name__ == '__main__':
                     help="Distributed utility")
     parser.add_argument("--local_world_size", default=1, type=int,
                     help="Distributed utility")
+    parser.add_argument("--dev", default=0, type=int,
+                    help="cuda device")
     # load configuration
     args = vars(parser.parse_args())
     # main
