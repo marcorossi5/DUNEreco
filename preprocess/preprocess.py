@@ -35,31 +35,43 @@ def get_planes_and_dump(dname):
     
     iclear = []
     inoisy = []
+    isimch = []
     cclear = []
     cnoisy = []
+    csimch = []
 
     path_clear = glob.glob(f'{dname}/evts/*noiseoff*')
     path_noisy = glob.glob(f'{dname}/evts/*rawdigit_evt*')
+    path_simch = glob.glob(f'{dname}/evts/*simch_labels*')
 
-    for file_clear, file_noisy in zip(path_clear, path_noisy):
+    assert len(path_clear) != 0
+
+    for file_clear, file_noisy, file_simch in zip(path_clear, path_noisy, path_simch):
         c = np.load(file_clear)[:,2:]
         n = np.load(file_noisy)[:,2:]
+        s = np.load(file_simch)[:,2:]
         for start, idx, end in iidxs:
             iclear.extend( [c[start:idx], c[idx:end]] )
             inoisy.extend( [n[start:idx], n[idx:end]] )
+            isimch.extend( [s[start:idx], s[idx:end]] )
         for start, end in cidxs:
             cclear.append( c[start:end] )
             cnoisy.append( n[start:end] )
+            csimch.append( s[start:end] )
     
     cclear = np.stack(cclear,0)[:,None]
     cnoisy = np.stack(cnoisy,0)[:,None]
+    csimch = np.stack(csimch,0)[:,None]
     iclear = np.stack(iclear,0)[:,None]
     inoisy = np.stack(inoisy,0)[:,None]
+    isimch = np.stack(isimch,0)[:,None]
 
     print("\tCollection clear planes: ", cclear.shape)
     print("\tCollection noisy planes: ", cnoisy.shape)
+    print("\tCollection sim::SimChannel planes: ", csimch.shape)
     print("\tInduction clear planes: ", iclear.shape)
     print("\tInduction noisy planes: ", inoisy.shape)
+    print("\tInduction sim::SimChannel planes: ", isimch.shape)
 
     fname = os.path.join(dname, f"planes/induction_clear")
     np.save(fname, np.stack(iclear,0))
@@ -67,11 +79,17 @@ def get_planes_and_dump(dname):
     fname = os.path.join(dname, f"planes/induction_noisy")
     np.save(fname, np.stack(inoisy,0))
 
+    fname = os.path.join(dname, f"planes/induction_simch")
+    np.save(fname, np.stack(isimch,0))
+
     fname = os.path.join(dname, f"planes/collection_clear")
     np.save(fname, np.stack(cclear,0))
 
     fname = os.path.join(dname, f"planes/collection_noisy")
     np.save(fname, np.stack(cnoisy,0))
+
+    fname = os.path.join(dname, f"planes/collection_simch")
+    np.save(fname, np.stack(csimch,0))
 
 def crop_planes_and_dump(dir_name, n_crops, patch_size, p):
     for s in ['induction', 'collection']:
@@ -127,7 +145,7 @@ def main(dir_name, n_crops, crop_edge, percentage):
     for s in ['train', 'test', 'val']:
         print(f'\n{s}:')
         dname = os.path.join(dir_name, s)
-        # get_planes_and_dump(dname)
+        get_planes_and_dump(dname)
 
     # save the normalization (this contain info from all the apas)
     for s in ['induction', 'collection']:
