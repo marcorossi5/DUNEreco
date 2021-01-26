@@ -41,7 +41,7 @@ def train_epoch(args, epoch, train_loader, model, optimizer,
         print('\n[+] Training')
     start = tm()
     loss_fn = get_loss(args.loss_fn)(args.a) if task=='dn' else \
-              get_loss("bce")(balance_ratio)
+              get_loss("bce_dice")(balance_ratio)
     model.train()
     for noisy, clear in train_loader:
         _, cwindows, _ = time_windows(clear, args.patch_w, args.patch_stride)
@@ -72,11 +72,18 @@ def inference(test_loader, stride, model, dev):
 
 
 def compute_val_loss(test_loader, outputs, args, task):
+    # if task == 'roi':
+    #     metrics = ['bce', 'softdice']
+    # elif task == 'dn':
+    #     metrics = [args.loss_fn, 'ssim', 'psnr', 'mse']
+    # else:
+    #     raise NotImplementedError("Task not implemented")
+    # metrics_fns = list(map(lambda x: get_loss(x)(reduction='none'), metrics))
     loss = []
     ssim = []
     mse = []
     psnr = []
-    loss_fn = get_loss(args.loss_fn)(args.a) if task=='dn' else get_loss("bce")(0.5)
+    loss_fn = get_loss(args.loss_fn)(args.a) if task=='dn' else get_loss("bce_dice")(0.5)
     if task == 'dn':
         ssim_fn = get_loss('ssim')()
         mse_fn = get_loss('mse')()

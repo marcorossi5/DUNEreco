@@ -101,8 +101,14 @@ class  loss_SoftDice(loss):
                 x,y: torch.tensor
                     output and target tensors of shape (N,C,H,W)
         """
-        ratio = x * y / (x*x + y*y + EPS.to(x.device))
-        return 2 * ratio.sum(-1).sum(-1).mean(-1)
+        eps = EPS.to(x.device)
+        ix = 1-x
+        iy = 1-y
+        num1 = (x*y).sum(-1).sum(-1) + eps
+        den1 = (x*x + y*y).sum(-1).sum(-1) + eps
+        num2 = (ix*iy).sum(-1).sum(-1) + eps
+        den2 = (ix*ix + iy*iy).sum(-1).sum(-1) + eps
+        return num1/den1 + num2/den2
 
     def __call__(self, x, y):
         """
@@ -110,8 +116,8 @@ class  loss_SoftDice(loss):
                 x,y: torch.tensor
                     output and target tensors of shape (N,C,H,W)
         """
-        ratio = x * y / (x*x + y*y + EPS.to(x.device))
-        loss = 1 - 2 * ratio.sum(-1).sum(-1).mean(-1)
+        ratio = self.dice(x, y)
+        loss = 1 - ratio
         if self.reduction == 'mean':
             return loss.mean()
         elif self.reduction ==  'none':
@@ -135,9 +141,8 @@ class  loss_bce_dice(loss):
         """
         shape = [x.shape[0], -1]
         bce = self.bce(x,y).reshape(shape).mean(-1)
-        dice = - torch.log(self.dice.dice(x,y) + EPS.to(x.device))
-        # loss = bce + dice
-        loss = bce
+        dice = - torch.log(self.dice.dice(x,y))
+        loss = bce + dice
         if self.reduction == 'mean':
             return loss.mean()
         elif self.reduction ==  'none':

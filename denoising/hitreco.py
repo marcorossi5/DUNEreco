@@ -149,7 +149,7 @@ def compute_metrics(output, target, task):
     """ This function takes the two events and computes the metrics between
     their planes. Separating collection and inductions planes."""
     if task == 'roi':
-        metrics = ['bce', 'softdice']
+        metrics = ['bce_dice', 'bce', 'softdice']
     elif task == 'dn':
         metrics = ['ssim', 'psnr', 'mse']
     else:

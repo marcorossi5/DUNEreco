@@ -21,17 +21,25 @@ def main(inputs, labels):
     target = np.load(labels)[:,2:]
     model = DnRoiModel("scg")
     dev = "cuda:0"
-    dn = model.denoise(evt, dev)
     def save_evt(evtname, ext, evt):
         fname = evtname.split("/")[-1].split(".")[-2].split("_")
         fname.insert(-1,ext)
         fname = outdir + "_".join(fname)
         np.save(fname, evt)
         print(f"Saved output event at {fname}.npy")
+
+    dn = model.denoise(evt, dev)
     save_evt(inputs, "dn", dn)
     mask = (dn <= threshold) & (dn >= -threshold)
     dn[mask] = 0
     compute_metrics(dn, target, "dn")
+
+    roi = model.roi_selection(evt, dev)
+    mask = (target <= threshold) & (target >= -threshold)
+    target[mask] = 0
+    target[~mask] = 1
+    # compute_metrics(roi, target, "roi")
+    save_evt(inputs, "roi", roi)
 
 if __name__=="__main__":
     args = vars(parser.parse_args())
