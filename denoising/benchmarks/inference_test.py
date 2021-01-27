@@ -9,9 +9,9 @@ from hitreco import compute_metrics
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--inputs", "-i", type=str, help="The event filename",
-                   default="../datasets/20201124/test/evts/p03GeV_cosmics_rawdigit_evt9.npy")
+                   default="../datasets/20201124/test/evts/p2GeV_cosmics_rawdigit_evt9.npy")
 parser.add_argument("--labels", "-l", type=str, help="The event filename",
-                   default="../datasets/20201124/test/evts/p03GeV_cosmics_rawdigit_noiseoff_evt9.npy")
+                   default="../datasets/20201124/test/evts/p2GeV_cosmics_rawdigit_noiseoff_evt9.npy")
 
 def main(inputs, labels):
     threshold = 3.5
@@ -35,10 +35,13 @@ def main(inputs, labels):
     compute_metrics(dn, target, "dn")
 
     roi = model.roi_selection(evt, dev)
-    mask = (target <= threshold) & (target >= -threshold)
-    target[mask] = 0
-    target[~mask] = 1
-    # compute_metrics(roi, target, "roi")
+    fname = inputs.replace("rawdigit", "simch_labels")
+    roi_labels = np.load(fname)[:,2:]
+    
+    mask = (roi_labels <= 500) & (roi_labels >= -500)
+    roi_labels[mask] = 0
+    roi_labels[~mask] = 1
+    compute_metrics(roi, roi_labels, "roi")
     save_evt(inputs, "roi", roi)
 
 if __name__=="__main__":

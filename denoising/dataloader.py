@@ -10,15 +10,6 @@ from model_utils import Converter
 from ssim import _fspecial_gauss_1d, stat_gaussian_filter
 
 
-def plot_example(clear):
-    import matplotlib.pyplot as plt
-    plt.imshow(clear[-2,0,480:], aspect="auto")
-    plt.colorbar()
-    plt.savefig("../collection_t.png", dpi=300, bbox_inches='tight')
-    plt.close()
-    exit()
-
-
 class PlaneLoader(torch.utils.data.Dataset):
     def __init__(self, dataset_dir, folder, task, channel, threshold):
         """
@@ -40,7 +31,6 @@ class PlaneLoader(torch.utils.data.Dataset):
             clear[~mask] = 1
             self.balance_ratio = np.count_nonzero(clear)/clear.numel()
         self.clear = clear
-        plot_example(self.clear)
 
         fname = os.path.join(data_dir, f"planes/{channel}_noisy.npy")
         noisy = np.load(fname)

@@ -11,6 +11,7 @@ from dataloader import InferenceLoader
 from train import inference
 from losses import get_loss
 from args import Args
+from analysis.analysis_roi import confusion_matrix
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import load_yaml
 
@@ -67,7 +68,7 @@ def planes2evt(inductions, collections):
 
 def get_model_and_args(modeltype, task, channel):
     prefix = "./denoising/configcards"
-    card = f"{modeltype}_{task}.yaml"
+    card = f"{modeltype}_{task}_{channel}.yaml"
     parameters = load_yaml(os.path.join(prefix, card))
     parameters["channel"] = channel
     args =  Args(**parameters)
@@ -145,6 +146,38 @@ def to_cuda(*args):
     return list(map(lambda x: x.to(dev), args))
 
 
+def cnfm(output, target):
+    # compute the confusion matrix from cuda tensors
+    os = output.cpu().numpy()
+    ts = target.cpu().numpy()
+    n = len(os)
+    os = os.reshape([n,-1])
+    ts = os.reshape([n,-1])
+    cfnm = []
+    for o,t in zip(os, ts):
+        hit = o[t.astype(int)]
+        no_hit = o[1-t.astype(int)]
+        cfnm.append( confusion_matrix(hit, no_hit, 0.5) )
+    cfnm = np.stack(cfnm)
+    
+    cfnm = cfnm / cfnm[0,:].sum()
+    tp = [cfnm[:,0].mean(), cfnm[:,0].std()/sqrt(n)]
+    tn = [cfnm[:,1].mean(), cfnm[:,1].std()/sqrt(n)]
+    fp = [cfnm[:,2].mean(), cfnm[:,2].std()/sqrt(n)]
+    fn = [cfnm[:,3].mean(), cfnm[:,3].std()/sqrt(n)]
+
+    return [tp, tn, fp, fn]
+
+
+def print_cfnm(cfnm, channel):
+    tp, tn, fp, fn = cfnm
+    print(f"Confusion Matrix on {channel} planes:")
+    print(f"\tTrue positives: {tp[0]:.3f} +- {tp[1]:.3f}")
+    print(f"\tTrue negatives: {tn[0]:.3f} +- {tn[1]:.3f}")
+    print(f"\tFalse positives: {fp[0]:.3f} +- {fp[1]:.3f}")
+    print(f"\tFalse negatives: {fn[0]:.3f} +- {fn[1]:.3f}")
+
+
 def compute_metrics(output, target, task):
     """ This function takes the two events and computes the metrics between
     their planes. Separating collection and inductions planes."""
@@ -155,10 +188,18 @@ def compute_metrics(output, target, task):
     else:
         raise NotImplementedError("Task not implemented")
     metrics_fns = list(map(lambda x: get_loss(x)(reduction='none'), metrics))
+    if task == 'roi':
+        metrics_fns.append(cnfm)
     ioutput, coutput = to_cuda(evt2planes(output))
     itarget, ctarget = to_cuda(evt2planes(target))
     iloss = list(map(lambda x: x(ioutput, itarget), metrics_fns))
     closs = list(map(lambda x: x(coutput, ctarget), metrics_fns))
+    print(f"Task {task}")
+    if task == 'roi':
+        print_cfnm(iloss[-1], "induction")
+        iloss.pop(-1)
+        print_cfnm(closs[-1], "collection")
+        closs.pop(-1)
     def reduce(loss):
         sqrtn = sqrt(len(loss))
         return [loss.mean(), loss.std()/sqrtn]

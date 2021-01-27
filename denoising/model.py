@@ -244,6 +244,7 @@ class SCG_Net(nn.Module):
 
     def forward(self, x):
         i = x
+        # x /= (3197+524) # normalizing according to dataset
 
         # downsampling
         ys = []
