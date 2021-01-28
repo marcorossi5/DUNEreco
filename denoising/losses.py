@@ -78,7 +78,7 @@ class loss_bce(loss):
         self.ratio = ratio
     def __call__(self, x, y):
         log = lambda x: torch.log(x + EPS.to(x.device))
-        loss = - y*log(x)/(1-self.ratio) - (1-y)*log(1-x)/self.ratio
+        loss = - y*log(x)/self.ratio - (1-y)*log(1-x)/(1-self.ratio)
         if self.reduction == 'mean':
             return loss.mean()
         elif self.reduction == 'sum':
@@ -104,10 +104,10 @@ class  loss_SoftDice(loss):
         eps = EPS.to(x.device)
         ix = 1-x
         iy = 1-y
-        num1 = (x*y).sum(-1).sum(-1) + eps
-        den1 = (x*x + y*y).sum(-1).sum(-1) + eps
-        num2 = (ix*iy).sum(-1).sum(-1) + eps
-        den2 = (ix*ix + iy*iy).sum(-1).sum(-1) + eps
+        num1 = (x*y).sum((-1,-2)) + eps
+        den1 = (x*x + y*y).sum((-1,-2)) + eps
+        num2 = (ix*iy).sum((-1,-2)) + eps
+        den2 = (ix*ix + iy*iy).sum((-1,-2)) + eps
         return num1/den1 + num2/den2
 
     def __call__(self, x, y):

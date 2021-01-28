@@ -40,13 +40,14 @@ def get_planes_and_dump(dname):
     cnoisy = []
     csimch = []
 
-    path_clear = glob.glob(f'{dname}/evts/*noiseoff*')
-    path_noisy = glob.glob(f'{dname}/evts/*rawdigit_evt*')
-    path_simch = glob.glob(f'{dname}/evts/*simch_labels*')
+    path_clear = glob.glob(os.path.join(dname, 'evts/*noiseoff*'))
 
     assert len(path_clear) != 0
 
-    for file_clear, file_noisy, file_simch in zip(path_clear, path_noisy, path_simch):
+    for file_clear in path_clear:
+        file_noisy = file_clear.replace("rawdigit_noiseoff", "rawdigit")
+        file_simch = file_clear.replace("rawdigit_noiseoff", "simch_labels")
+        print(f"Processing files:\n\t{file_clear}\n\t{file_noisy}\n\t{file_simch}")
         c = np.load(file_clear)[:,2:]
         n = np.load(file_noisy)[:,2:]
         s = np.load(file_simch)[:,2:]
@@ -90,6 +91,15 @@ def get_planes_and_dump(dname):
 
     fname = os.path.join(dname, f"planes/collection_simch")
     np.save(fname, np.stack(csimch,0))
+
+    fname = os.path.join(dname, f"planes/sample_collection_clear")
+    np.save(fname, np.stack(cclear[:10],0))
+
+    fname = os.path.join(dname, f"planes/sample_collection_noisy")
+    np.save(fname, np.stack(cnoisy[:10],0))
+
+    fname = os.path.join(dname, f"planes/sample_collection_simch")
+    np.save(fname, np.stack(csimch[:10],0))
 
 def crop_planes_and_dump(dir_name, n_crops, patch_size, p):
     for s in ['induction', 'collection']:
@@ -161,7 +171,7 @@ def main(dir_name, n_crops, crop_edge, percentage):
         np.save(fname,[n.mean(),n.std()])
 
     dname = os.path.join(dir_name, 'train')
-    crop_planes_and_dump(dname, n_crops, patch_size, percentage)
+    # crop_planes_and_dump(dname, n_crops, patch_size, percentage)
     
 if __name__ == '__main__':
     args = vars(parser.parse_args())

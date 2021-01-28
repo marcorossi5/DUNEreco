@@ -41,7 +41,7 @@ def train_epoch(args, epoch, train_loader, model, optimizer,
         print('\n[+] Training')
     start = tm()
     loss_fn = get_loss(args.loss_fn)(args.a) if task=='dn' else \
-              get_loss("bce_dice")(balance_ratio)
+              get_loss("bce")(balance_ratio)
     model.train()
     for noisy, clear in train_loader:
         _, cwindows, _ = time_windows(clear, args.patch_w, args.patch_stride)
@@ -51,7 +51,9 @@ def train_epoch(args, epoch, train_loader, model, optimizer,
             nwindow = nwindow.to(args.dev_ids[0])
             optimizer.zero_grad()
             out, loss0 = model(nwindow)
-            loss = loss_fn(out, cwindow) + loss0
+            loss1 = loss_fn(out, cwindow)
+            loss = loss1  + loss0
+            # print(f"Dice {loss1.item():>10.7f}, graph {loss0.item():>10.7f}")
             loss.backward()
             optimizer.step()
     return np.array([loss.item()]), tm() - start
@@ -83,7 +85,7 @@ def compute_val_loss(test_loader, outputs, args, task):
     ssim = []
     mse = []
     psnr = []
-    loss_fn = get_loss(args.loss_fn)(args.a) if task=='dn' else get_loss("bce_dice")(0.5)
+    loss_fn = get_loss(args.loss_fn)(args.a) if task=='dn' else get_loss("bce")(0.5)
     if task == 'dn':
         ssim_fn = get_loss('ssim')()
         mse_fn = get_loss('mse')()

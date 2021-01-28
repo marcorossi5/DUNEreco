@@ -49,7 +49,21 @@ def evt2planes(event):
         collections.append(event[start:end])
     return np.stack(inductions)[:,None], np.stack(collections)[:,None]
 
-    
+
+def median_subtraction(planes):
+    """
+    Subtract median value from input planes
+    Input:
+        planes: np.array
+            array of shape (N,C,H,W)
+    Output: np.array
+        median subtracted planes ( =dim(N,C,H,W))
+    """
+    shape = [planes.shape[0], -1]
+    medians = np.median(planes.reshape(shape), axis=1)
+    return planes - medians[:,None,None,None]
+
+
 def planes2evt(inductions, collections):
     """
     Convert planes to event
@@ -66,40 +80,39 @@ def planes2evt(inductions, collections):
         event.extend([i, c])
     return np.concatenate(event)
 
-def get_model_and_args(modeltype, task, channel):
-    prefix = "./denoising/configcards"
+def get_model_and_args(modeltype, model_prefix, task, channel):
+    card_prefix = "./denoising/configcards"
     card = f"{modeltype}_{task}_{channel}.yaml"
-    parameters = load_yaml(os.path.join(prefix, card))
+    parameters = load_yaml(os.path.join(card_prefix, card))
     parameters["channel"] = channel
     args =  Args(**parameters)
 
     model =  MyDataParallel( SCG_Net(task=args.task, h=args.patch_h,
                                      w=args.w), device_ids=device_ids )
-    prefix = "denoising/best_models"
     name = f"{modeltype}_{task}_{channel}.pth"
-    fname = os.path.join(prefix, name)
+    fname = os.path.join(model_prefix, name)
 
     state_dict = torch.load(fname)
     model.load_state_dict(state_dict)
     return ArgsTuple(args.test_batch_size, args.patch_stride), model
 
 
-def mkModel(modeltype, task):
-    iargs, imodel = get_model_and_args(modeltype, task, 'induction')
-    cargs, cmodel = get_model_and_args(modeltype, task, 'collection')
+def mkModel(modeltype, prefix, task):
+    iargs, imodel = get_model_and_args(modeltype, prefix, task, 'induction')
+    cargs, cmodel = get_model_and_args(modeltype, prefix, task, 'collection')
     return [iargs, cargs], ModelTuple(imodel, cmodel)
 
 
 class DnRoiModel:
-    def __init__(self, modeltype):
+    def __init__(self, modeltype, prefix='denoising/best_models'):
         """
             Wrapper for inference model
             Parameters:
                 modeltype: str
                     "cnn" | "gcnn" | "sgc"
         """
-        self.roiargs, self.roi = mkModel(modeltype, "roi")
-        self.dnargs, self.dn = mkModel(modeltype, "dn")
+        self.roiargs, self.roi = mkModel(modeltype, prefix, "roi")
+        self.dnargs, self.dn = mkModel(modeltype, prefix, "dn")
         self.loader = InferenceLoader    
 
     def _inference(self, planes, model, args, dev):
@@ -119,7 +132,8 @@ class DnRoiModel:
                 np.array
                     event region of interests
         """
-        inductions, collections = evt2planes(event)
+        ic = evt2planes(event)
+        inductions, collections = map(median_subtraction, ic)
         iout =  self._inference(inductions, self.roi.induction, self.roiargs[0], dev)
         cout =  self._inference(collections, self.roi.collection, self.roiargs[1], dev)
         return planes2evt(iout, cout)        
@@ -134,7 +148,8 @@ class DnRoiModel:
                 np.array
                     denoised event
         """
-        inductions, collections = evt2planes(event)
+        ic = evt2planes(event)
+        inductions, collections = map(median_subtraction, ic)
         iout =  self._inference(inductions, self.dn.induction, self.dnargs[0], dev)
         cout =  self._inference(collections, self.dn.collection, self.dnargs[1], dev)
         return planes2evt(iout, cout)

@@ -9,6 +9,7 @@ from model_utils import Converter
 
 from ssim import _fspecial_gauss_1d, stat_gaussian_filter
 
+ElectronsToADC = 6.8906513e-3
 
 class PlaneLoader(torch.utils.data.Dataset):
     def __init__(self, dataset_dir, folder, task, channel, threshold):
