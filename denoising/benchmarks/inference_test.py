@@ -58,7 +58,7 @@ def main(root_path, energy, prefix, suffix, old):
 
     roi = model.roi_selection(evt, dev)
     
-    mask = (target <= threshold) & (target >= threshold)
+    mask = (target <= threshold) & (target >= -threshold)
     target[mask] = 0
     target[~mask] = 1
     compute_metrics(roi, target, "roi")

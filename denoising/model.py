@@ -243,9 +243,9 @@ class SCG_Net(nn.Module):
         self.act = nn.Sigmoid() if task=='roi' else nn.Identity()
 
     def forward(self, x):
+        if self.task == 'roi':
+             x /= (3197+524) # normalizing according to dataset
         i = x
-        # if self.task == 'roi':
-        #     x /= (3197+524) # normalizing according to dataset
 
         # downsampling
         ys = []

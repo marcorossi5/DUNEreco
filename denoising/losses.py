@@ -31,6 +31,19 @@ class loss_mse(loss):
             return loss.reshape([loss.shape[0],-1]).mean(-1)
 
 
+class loss_imae(loss):
+    """ Mean absolute error on integrated charge """
+    def __init__(self, a=0.84, data_range=1., reduction='mean'):
+        super().__init__(reduction=reduction)
+        self.loss = nn.L1Loss(reduction='none')
+    def __call__(self, y_pred, y_true):
+        loss = self.loss(y_pred.sum(-1), y_true.sum(-1))
+        if self.reduction == 'mean':
+            return loss.mean()
+        elif self.reduction == 'none':
+            return loss.reshape([loss.shape[0],-1]).mean(-1)
+
+
 class loss_ssim(loss):
     def __init__(self, a=0.84, data_range=1., reduction='mean'):
         super().__init__(a,data_range,reduction)
@@ -176,6 +189,8 @@ class loss_psnr(loss):
 def get_loss(loss):
     if loss == "mse":
         return loss_mse
+    elif loss == "imae":
+        return loss_imae
     elif loss == "ssim":
         return loss_ssim
     elif loss == "ssim_l2":

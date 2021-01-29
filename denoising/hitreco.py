@@ -167,25 +167,25 @@ def cnfm(output, target):
     ts = target.cpu().numpy()
     n = len(os)
     os = os.reshape([n,-1])
-    ts = os.reshape([n,-1])
+    ts = ts.reshape([n,-1])
     cfnm = []
     for o,t in zip(os, ts):
-        hit = o[t.astype(int)]
-        no_hit = o[1-t.astype(int)]
+        hit = o[t.astype(bool)]
+        no_hit = o[~t.astype(bool)]
         cfnm.append( confusion_matrix(hit, no_hit, 0.5) )
     cfnm = np.stack(cfnm)
     
     cfnm = cfnm / cfnm[0,:].sum()
     tp = [cfnm[:,0].mean(), cfnm[:,0].std()/sqrt(n)]
-    tn = [cfnm[:,1].mean(), cfnm[:,1].std()/sqrt(n)]
-    fp = [cfnm[:,2].mean(), cfnm[:,2].std()/sqrt(n)]
-    fn = [cfnm[:,3].mean(), cfnm[:,3].std()/sqrt(n)]
+    fp = [cfnm[:,1].mean(), cfnm[:,1].std()/sqrt(n)]
+    fn = [cfnm[:,2].mean(), cfnm[:,2].std()/sqrt(n)]
+    tn = [cfnm[:,3].mean(), cfnm[:,3].std()/sqrt(n)]
 
-    return [tp, tn, fp, fn]
+    return tp, fp, fn, tn
 
 
 def print_cfnm(cfnm, channel):
-    tp, tn, fp, fn = cfnm
+    tp, fp, fn, tn = cfnm
     print(f"Confusion Matrix on {channel} planes:")
     print(f"\tTrue positives: {tp[0]:.3f} +- {tp[1]:.3f}")
     print(f"\tTrue negatives: {tn[0]:.3f} +- {tn[1]:.3f}")
@@ -199,7 +199,7 @@ def compute_metrics(output, target, task):
     if task == 'roi':
         metrics = ['bce_dice', 'bce', 'softdice']
     elif task == 'dn':
-        metrics = ['ssim', 'psnr', 'mse']
+        metrics = ['ssim', 'psnr', 'mse', 'imae']
     else:
         raise NotImplementedError("Task not implemented")
     metrics_fns = list(map(lambda x: get_loss(x)(reduction='none'), metrics))
