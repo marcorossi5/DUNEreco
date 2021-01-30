@@ -104,6 +104,10 @@ def get_model_and_args(modeltype, model_prefix, task, channel):
     parameters["channel"] = channel
     args =  Args(**parameters)
 
+    patch_size = 'None' if modeltype == "scg" else eval(args.patch_size)
+    patch_stride = args.patch_stride if modeltype == "scg" else None
+    batch_size = model2batch[modeltype][task]
+
     # TODO: when changing the models inputs, this has to be changed accordingly
     kwargs = {}
     if modeltype == "scg":
@@ -114,7 +118,7 @@ def get_model_and_args(modeltype, model_prefix, task, channel):
         kwargs["model"] = modeltype
         kwargs["task"] = task
         kwargs["channel"] = channel
-        kwargs["patch_size"] = eval(args.patch_size)
+        kwargs["patch_size"] = patch_size
         kwargs["input_channels"] = args.input_channels
         kwargs["hidden_channels"] = args.hidden_channels
         kwargs["k"] = args.k
@@ -129,10 +133,7 @@ def get_model_and_args(modeltype, model_prefix, task, channel):
 
     state_dict = torch.load(fname)
     model.load_state_dict(state_dict)
-    patch_size = None if modeltype == "scg" else args.patch_size
-    patch_stride = args.patch_stride if modeltype == "scg" else None
-    batch_size = model2batch[modeltype][task]
-    return ArgsTuple(batch_size, patch_stride, eval(patch_size)), model
+    return ArgsTuple(batch_size, patch_stride, patch_size), model
 
 
 def mkModel(modeltype, prefix, task):
