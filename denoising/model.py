@@ -273,9 +273,7 @@ class SCG_Net(nn.Module):
 def get_model(modeltype, **args):
     if modeltype == "scg":
         return SCG_Net(**args)
-    elif modeltype == "gcnn":
-        return DenoisingModel(model="gcnn", **args)
-    elif modeltype == "cnn":
-        return DenoisingModel(model="cnn", **args)
+    elif modeltype in ["gcnn", "cnn"]:
+        return DenoisingModel(**args)
     else:
         raise NotImplementedError("Loss function not implemented")

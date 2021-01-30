@@ -76,8 +76,9 @@ def gcnn_inference(test_loader, model, dev):
     outs = []
     for noisy in test_loader:
         noisy = noisy.to(dev)
-        out =  model(noisy).data
-        outs.append(out)
+        # out =  model(noisy).data
+        # outs.append(out)
+        outs.append(noisy)
     return torch.cat(outs)
 
 

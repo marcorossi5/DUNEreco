@@ -114,7 +114,7 @@ def get_model_and_args(modeltype, model_prefix, task, channel):
         kwargs["model"] = modeltype
         kwargs["task"] = task
         kwargs["channel"] = channel
-        kwargs["patch_size"] = args.patch_size
+        kwargs["patch_size"] = eval(args.patch_size)
         kwargs["input_channels"] = args.input_channels
         kwargs["hidden_channels"] = args.hidden_channels
         kwargs["k"] = args.k
@@ -123,41 +123,42 @@ def get_model_and_args(modeltype, model_prefix, task, channel):
     else:
         raise NotImplementedError("Loss function not implemented")
 
-    model =  MyDataParallel( get_model(**kwargs), device_ids=device_ids )
+    model =  MyDataParallel( get_model(modeltype, **kwargs), device_ids=device_ids )
     name = f"{modeltype}_{task}_{channel}.pth"
     fname = os.path.join(model_prefix, name)
 
     state_dict = torch.load(fname)
     model.load_state_dict(state_dict)
-    return ArgsTuple(args.test_batch_size, args.patch_stride, args.patch_size), model
+    patch_size = None if modeltype == "scg" else args.patch_size
+    patch_stride = args.patch_stride if modeltype == "scg" else None
+    batch_size = model2batch[modeltype][task]
+    return ArgsTuple(batch_size, patch_stride, eval(patch_size)), model
 
 
 def mkModel(modeltype, prefix, task):
     iargs, imodel = get_model_and_args(modeltype, prefix, task, 'induction')
     cargs, cmodel = get_model_and_args(modeltype, prefix, task, 'collection')
-    iargs.batch_size = model2batch[modeltype][task]
-    cargs.batch_size = model2batch[modeltype][task]
     return [iargs, cargs], ModelTuple(imodel, cmodel)
 
 
-def _scg_inference(self, planes, loader, model, args, dev):
-    dataset = self.loader(planes)
-    loader = DataLoader(dataset=dataset, batch_size=args.batch_size)
-    return inference(loader, args.patch_stride, model.to(dev), dev).cpu()
+def _scg_inference(planes, loader, model, args, dev):
+    dataset = loader(planes)
+    test = DataLoader(dataset=dataset, batch_size=args.batch_size)
+    return inference(test, args.patch_stride, model.to(dev), dev).cpu()
 
 
-def _gcnn_inference(self, planes, loader, model, args, dev):
+def _gcnn_inference(planes, loader, model, args, dev):
     # creating a new instance of converter every time could waste time if the
     # inference is called many times.
     # TODO: think about to make it a DnRoiModel attribute and pass it to the fn
     # TODO: the batch size changes according to task, modeltype
-    sub_planes = median_subtraction(planes)
+    sub_planes = torch.Tensor( median_subtraction(planes) )
     converter = Converter(args.patch_size)
     tiles = converter.planes2tiles(sub_planes)
 
     dataset = loader(tiles)
-    loader = DataLoader(dataset=dataset, batch_size=args.batch_size)
-    res =  gcnn_inference(loader, model.to(dev), dev).cpu()
+    test = DataLoader(dataset=dataset, batch_size=args.batch_size)
+    res =  gcnn_inference(test, model.to(dev), dev).cpu()
     return converter.tiles2planes(res)
 
 
@@ -194,10 +195,10 @@ class DnRoiModel:
                     event region of interests
         """
         inductions, collections = evt2planes(event)
-        iout =  get_inference(self.modeltype, planes=inductions, 
+        iout =  get_inference(self.modeltype, planes=inductions, loader=self.loader,
                               model=self.roi.induction, args=self.roiargs[0],
                               dev=dev)
-        cout =  get_inference(self.modeltype, planes=collections, 
+        cout =  get_inference(self.modeltype, planes=collections, loader=self.loader,
                               model=self.roi.collection, args=self.roiargs[1],
                               dev=dev)
         return planes2evt(iout, cout)
@@ -213,11 +214,10 @@ class DnRoiModel:
                     denoised event
         """
         inductions, collections = evt2planes(event)
-        args.batch_size = model2batch[self.modeltype]["dn"]
-        iout =  get_inference(self.modeltype, planes=inductions, 
+        iout =  get_inference(self.modeltype, planes=inductions, loader=self.loader,
                               model=self.dn.induction, args=self.dnargs[0],
                               dev=dev)
-        cout =  get_inference(self.modeltype, planes=collections, 
+        cout =  get_inference(self.modeltype, planes=collections, loader=self.loader,
                               model=self.dn.collection, args=self.dnargs[1],
                               dev=dev)
         # masking for gcnn output must be done

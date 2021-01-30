@@ -50,7 +50,7 @@ class ZScore(nn.Module):
 
 
 class MedianNorm(nn.Module):
-    def __init__(self, Min, Max):
+    def __init__(self, med, Min, Max):
         """
         Median normalization layer with scale factors Min and Max
         This functions divides by (Max-Min)

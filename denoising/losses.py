@@ -1,6 +1,7 @@
 """ This module implements several losses. Main option is reduction, which could
     be either 'mean' (default) or 'none'."""
 import torch
+import numpy as np
 from torch import nn
 import ssim
 from abc import ABC, abstractmethod
@@ -193,20 +194,20 @@ class loss_cfnm(loss):
     def __call__(self, output, target):
         # compute the confusion matrix from cuda tensors
         n = len(output)
-        os = output.reshape([n,-1])
-        ts = target.reshape([n,-1])
+        os = output.cpu().numpy().reshape([n,-1])
+        ts = target.cpu().numpy().reshape([n,-1])
         cfnm = []
         for o,t in zip(os, ts):
             hit = o[t.astype(bool)]
             no_hit = o[~t.astype(bool)]
             cfnm.append( confusion_matrix(hit, no_hit, 0.5) )
-        cfnm = torch.stack(cfnm)
+        cfnm = np.stack(cfnm)
 
         cfnm = cfnm / cfnm[0,:].sum()
-        tp = [cfnm[:,0].mean(), cfnm[:,0].std()/torch.sqrt(n)]
-        fp = [cfnm[:,1].mean(), cfnm[:,1].std()/torch.sqrt(n)]
-        fn = [cfnm[:,2].mean(), cfnm[:,2].std()/torch.sqrt(n)]
-        tn = [cfnm[:,3].mean(), cfnm[:,3].std()/torch.sqrt(n)]
+        tp = [cfnm[:,0].mean(), cfnm[:,0].std()/np.sqrt(n)]
+        fp = [cfnm[:,1].mean(), cfnm[:,1].std()/np.sqrt(n)]
+        fn = [cfnm[:,2].mean(), cfnm[:,2].std()/np.sqrt(n)]
+        tn = [cfnm[:,3].mean(), cfnm[:,3].std()/np.sqrt(n)]
 
         return tp, fp, fn, tn
 

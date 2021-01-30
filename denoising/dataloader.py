@@ -65,7 +65,7 @@ class CropLoader(torch.utils.data.Dataset):
         return len(self.noisy)
 
     def __getitem__(self, index):
-        return self.noisy[index], 0
+        return self.noisy[index]
 
 
 # TODO: is the label generation in the PlaneLoader correct according to the
