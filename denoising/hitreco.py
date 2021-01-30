@@ -27,6 +27,22 @@ ModelTuple = collections.namedtuple('Model', ['induction', 'collection'])
 ArgsTuple = collections.namedtuple('Args', ['batch_size', 'patch_stride', 'patch_size'])
 
 
+model2batch = {
+    "scg":{
+        "dn": 1,
+        "roi": 1
+    },
+    "gcnn": {
+        "dn": 128,
+        "roi": 512
+        },
+    "cnn": {
+        "dn": 376,
+        "roi": 2048
+        }
+}
+
+
 def evt2planes(event):
     """
     Convert planes to event
@@ -80,6 +96,7 @@ def planes2evt(inductions, collections):
         event.extend([i, c])
     return np.concatenate(event)
 
+
 def get_model_and_args(modeltype, model_prefix, task, channel):
     card_prefix = "./denoising/configcards"
     card = f"{modeltype}_{task}_{channel}.yaml"
@@ -100,6 +117,8 @@ def get_model_and_args(modeltype, model_prefix, task, channel):
 def mkModel(modeltype, prefix, task):
     iargs, imodel = get_model_and_args(modeltype, prefix, task, 'induction')
     cargs, cmodel = get_model_and_args(modeltype, prefix, task, 'collection')
+    iargs.batch_size = model2batch[modeltype][task]
+    cargs.batch_size = model2batch[modeltype][task]
     return [iargs, cargs], ModelTuple(imodel, cmodel)
 
 
@@ -107,18 +126,6 @@ def _scg_inference(self, planes, loader, model, args, dev):
     dataset = self.loader(planes)
     loader = DataLoader(dataset=dataset, batch_size=args.batch_size)
     return inference(loader, args.patch_stride, model.to(dev), dev).cpu()
-
-
-model2batch = {
-    "gcnn": {
-        "dn": 128,
-        "roi": 512
-        }
-    "cnn": {
-        "dn": 376,
-        "roi": 2048
-        }
-}
 
 
 def _gcnn_inference(self, planes, loader, model, args, dev):
@@ -169,7 +176,6 @@ class DnRoiModel:
                     event region of interests
         """
         inductions, collections = evt2planes(event)
-        args.batch_size = model2batch[self.modeltype]["roi"]
         iout =  get_inference(self.modeltype, planes=inductions, 
                               model=self.roi.induction, args=self.roiargs[0],
                               dev=dev)
