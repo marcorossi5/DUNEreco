@@ -139,7 +139,7 @@ def _gcnn_inference(self, planes, loader, model, args, dev):
 
     dataset = loader(tiles)
     loader = DataLoader(dataset=dataset, batch_size=args.batch_size)
-    res =  gcnn_inference(loader, args.batch_size, model.to(dev), dev).cpu()
+    res =  gcnn_inference(loader, model.to(dev), dev).cpu()
     return converter.tiles2planes(res)
 
 

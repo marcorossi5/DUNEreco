@@ -72,6 +72,15 @@ def inference(test_loader, stride, model, dev):
     return torch.cat(outs)
 
 
+def gcnn_inference(test_loader, model, dev):
+    outs = []
+    for noisy in test_loader:
+        noisy = noisy.to(dev)
+        out =  model(noisy).data
+        outs.append(out)
+    return torch.cat(outs)
+
+
 def test_epoch(test_data, model, args, task, dry_inference=True):
     """
     Parameters:
