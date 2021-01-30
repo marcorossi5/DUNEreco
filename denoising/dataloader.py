@@ -57,5 +57,16 @@ class InferenceLoader(torch.utils.data.Dataset):
         return self.noisy[index], 0
 
 
+class CropLoader(torch.utils.data.Dataset):
+    def __init__(self, noisy):
+        self.noisy = noisy
+
+    def __len__(self):
+        return len(self.noisy)
+
+    def __getitem__(self, index):
+        return self.noisy[index], 0
+
+
 # TODO: is the label generation in the PlaneLoader correct according to the
 # threshold considerations?

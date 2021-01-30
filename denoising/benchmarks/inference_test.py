@@ -12,6 +12,8 @@ parser.add_argument("--root_path", "-r",  type=str, help="Event root folder",
                    default="../datasets/20201124/test/evts")
 parser.add_argument("--energy", "-e", type=str, help="Proton beam energy (no separator .)",
                    default="03")
+parser.add_argument("--modeltype", "-m", type=str, help="Model type scg | gcnn | cnn",
+                   default="scg")
 parser.add_argument("--prefix", type=str, help="Folder for stored best models",
                    default="denoising/best_models")
 parser.add_argument("--suffix", type=str, help="File to process, overrides energy",
@@ -21,7 +23,7 @@ parser.add_argument("--old", action='store_true',
 
 outdir = "./samples/results/"
 
-def main(root_path, energy, prefix, suffix, old):
+def main(root_path, modeltype, energy, prefix, suffix, old):
     def save_evt(evtname, ext, evt):
         fname = evtname.split("/")[-1].split(".")[-2].split("_")
         fname.insert(-1,ext)
@@ -47,7 +49,7 @@ def main(root_path, energy, prefix, suffix, old):
     print(f"Denoising event at {fname}")
     evt = np.load(fname)[:,2:]
     target = np.load(label_fname)[:,2:]*mult
-    model = DnRoiModel("scg", prefix=prefix)
+    model = DnRoiModel(modeltype, prefix=prefix)
     dev = "cuda:0"
 
     dn = model.denoise(evt, dev)

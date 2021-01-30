@@ -109,10 +109,23 @@ def _scg_inference(self, planes, loader, model, args, dev):
     return inference(loader, args.patch_stride, model.to(dev), dev).cpu()
 
 
+model2batch = {
+    "gcnn": {
+        "dn": 128,
+        "roi": 512
+        }
+    "cnn": {
+        "dn": 376,
+        "roi": 2048
+        }
+}
+
+
 def _gcnn_inference(self, planes, loader, model, args, dev):
     # creating a new instance of converter every time could waste time if the
     # inference is called many times.
-    #  TODO: think about to make it a DnRoiModel attribute and pass it to the fn
+    # TODO: think about to make it a DnRoiModel attribute and pass it to the fn
+    # TODO: the batch size changes according to task, modeltype
     sub_planes = median_subtraction(planes)
     converter = Converter(args.patch_size)
     tiles = converter.planes2tiles(sub_planes)
@@ -156,6 +169,7 @@ class DnRoiModel:
                     event region of interests
         """
         inductions, collections = evt2planes(event)
+        args.batch_size = model2batch[self.modeltype]["roi"]
         iout =  get_inference(self.modeltype, planes=inductions, 
                               model=self.roi.induction, args=self.roiargs[0],
                               dev=dev)
@@ -175,6 +189,7 @@ class DnRoiModel:
                     denoised event
         """
         inductions, collections = evt2planes(event)
+        args.batch_size = model2batch[self.modeltype]["dn"]
         iout =  get_inference(self.modeltype, planes=inductions, 
                               model=self.dn.induction, args=self.dnargs[0],
                               dev=dev)
