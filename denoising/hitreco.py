@@ -104,8 +104,26 @@ def get_model_and_args(modeltype, model_prefix, task, channel):
     parameters["channel"] = channel
     args =  Args(**parameters)
 
-    model =  MyDataParallel(get_model(modeltype, task=args.task, h=args.patch_h,
-                                     w=args.w), device_ids=device_ids )
+    # TODO: when changing the models inputs, this has to be changed accordingly
+    kwargs = {}
+    if modeltype == "scg":
+        kwargs["task"] = args.task
+        kwargs["h"] = args.patch_h
+        kwargs["w"] = args.w
+    elif modeltype in ["cnn", "gcnn"]:
+        kwargs["model"] = modeltype
+        kwargs["task"] = task
+        kwargs["channel"] = channel
+        kwargs["patch_size"] = args.patch_size
+        kwargs["input_channels"] = args.input_channels
+        kwargs["hidden_channels"] = args.hidden_channels
+        kwargs["k"] = args.k
+        kwargs["dataset_dir"] = args.dataset_dir
+        kwargs["normalization"] = args.normalization
+    else:
+        raise NotImplementedError("Loss function not implemented")
+
+    model =  MyDataParallel( get_model(**kwargs), device_ids=device_ids )
     name = f"{modeltype}_{task}_{channel}.pth"
     fname = os.path.join(model_prefix, name)
 
