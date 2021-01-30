@@ -58,7 +58,7 @@ class MedianNorm(nn.Module):
             Min, Max: float, scaling factors
         """
         super(MedianNorm, self).__init__()
-        # self.med = nn.Parameter(torch.Tensor([med]), requires_grad=False)
+        self.med = nn.Parameter(torch.Tensor([med]), requires_grad=False)
         self.Min = nn.Parameter(torch.Tensor([Min]), requires_grad=False)
         self.Max = nn.Parameter(torch.Tensor([Max]), requires_grad=False)
         if  self.Max-self.Min <= 0:

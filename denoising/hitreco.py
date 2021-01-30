@@ -5,13 +5,13 @@ from math import sqrt
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from model import SCG_Net
+from model import get_model
 from model_utils import MyDataParallel
-from dataloader import InferenceLoader
-from train import inference
+from model_utils import Converter
+from dataloader import InferenceLoader, CropLoader
+from train import inference, gcnn_inference
 from losses import get_loss
 from args import Args
-from analysis.analysis_roi import confusion_matrix
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import load_yaml
 
@@ -24,7 +24,7 @@ apastep = 2*istep + cstep # number of channels per apa
 device_ids = [0]
 evstep = apas * apastep # total channel number
 ModelTuple = collections.namedtuple('Model', ['induction', 'collection'])
-ArgsTuple = collections.namedtuple('Args', ['batch_size', 'patch_stride'])
+ArgsTuple = collections.namedtuple('Args', ['batch_size', 'patch_stride', 'patch_size'])
 
 
 def evt2planes(event):
@@ -87,20 +87,47 @@ def get_model_and_args(modeltype, model_prefix, task, channel):
     parameters["channel"] = channel
     args =  Args(**parameters)
 
-    model =  MyDataParallel( SCG_Net(task=args.task, h=args.patch_h,
+    model =  MyDataParallel(get_model(modeltype, task=args.task, h=args.patch_h,
                                      w=args.w), device_ids=device_ids )
     name = f"{modeltype}_{task}_{channel}.pth"
     fname = os.path.join(model_prefix, name)
 
     state_dict = torch.load(fname)
     model.load_state_dict(state_dict)
-    return ArgsTuple(args.test_batch_size, args.patch_stride), model
+    return ArgsTuple(args.test_batch_size, args.patch_stride, args.patch_size), model
 
 
 def mkModel(modeltype, prefix, task):
     iargs, imodel = get_model_and_args(modeltype, prefix, task, 'induction')
     cargs, cmodel = get_model_and_args(modeltype, prefix, task, 'collection')
     return [iargs, cargs], ModelTuple(imodel, cmodel)
+
+
+def _scg_inference(self, planes, loader, model, args, dev):
+    dataset = self.loader(planes)
+    loader = DataLoader(dataset=dataset, batch_size=args.batch_size)
+    return inference(loader, args.patch_stride, model.to(dev), dev).cpu()
+
+
+def _gcnn_inference(self, planes, loader, model, args, dev):
+    # creating a new instance of converter every time could waste time if the
+    # inference is called many times.
+    #  TODO: think about to make it a DnRoiModel attribute and pass it to the fn
+    sub_planes = median_subtraction(planes)
+    converter = Converter(args.patch_size)
+    tiles = converter.planes2tiles(sub_planes)
+
+    dataset = loader(tiles)
+    loader = DataLoader(dataset=dataset, batch_size=args.batch_size)
+    res =  gcnn_inference(loader, args.batch_size, model.to(dev), dev).cpu()
+    return converter.tiles2planes(res)
+
+
+def get_inference(modeltype, **kwargs):
+    if modeltype == "scg":
+        return _scg_inference(**kwargs)
+    elif modeltype in ["cnn", "gcnn"]:
+        return _gcnn_inference(**kwargs)
 
 
 class DnRoiModel:
@@ -111,14 +138,10 @@ class DnRoiModel:
                 modeltype: str
                     "cnn" | "gcnn" | "sgc"
         """
+        self.modeltype = modeltype
         self.roiargs, self.roi = mkModel(modeltype, prefix, "roi")
         self.dnargs, self.dn = mkModel(modeltype, prefix, "dn")
-        self.loader = InferenceLoader    
-
-    def _inference(self, planes, model, args, dev):
-        dataset = self.loader(planes)
-        loader = DataLoader(dataset=dataset, batch_size=args.batch_size)
-        return inference(loader, args.patch_stride, model.to(dev), dev).cpu()
+        self.loader = InferenceLoader if modeltype == "scg" else CropLoader
 
     def roi_selection(self, event, dev):
         """
@@ -132,11 +155,14 @@ class DnRoiModel:
                 np.array
                     event region of interests
         """
-        ic = evt2planes(event)
-        inductions, collections = map(median_subtraction, ic)
-        iout =  self._inference(inductions, self.roi.induction, self.roiargs[0], dev)
-        cout =  self._inference(collections, self.roi.collection, self.roiargs[1], dev)
-        return planes2evt(iout, cout)        
+        inductions, collections = evt2planes(event)
+        iout =  get_inference(self.modeltype, planes=inductions, 
+                              model=self.roi.induction, args=self.roiargs[0],
+                              dev=dev)
+        cout =  get_inference(self.modeltype, planes=collections, 
+                              model=self.roi.collection, args=self.roiargs[1],
+                              dev=dev)
+        return planes2evt(iout, cout)
 
     def denoise(self, event, dev):
         """
@@ -148,10 +174,19 @@ class DnRoiModel:
                 np.array
                     denoised event
         """
-        ic = evt2planes(event)
-        inductions, collections = map(median_subtraction, ic)
-        iout =  self._inference(inductions, self.dn.induction, self.dnargs[0], dev)
-        cout =  self._inference(collections, self.dn.collection, self.dnargs[1], dev)
+        inductions, collections = evt2planes(event)
+        iout =  get_inference(self.modeltype, planes=inductions, 
+                              model=self.dn.induction, args=self.dnargs[0],
+                              dev=dev)
+        cout =  get_inference(self.modeltype, planes=collections, 
+                              model=self.dn.collection, args=self.dnargs[1],
+                              dev=dev)
+        # masking for gcnn output must be done
+        # think how to pass out the norm variables
+        # probably the model itself is not correct in the current version
+        # if self.modeltype in  ["gcnn", "cnn"]:
+        #     dn = dn * (norm[1]-norm[0]) + norm[0]
+        #     dn [dn <= args.threshold] = 0
         return planes2evt(iout, cout)
 
 
@@ -159,29 +194,6 @@ def to_cuda(*args):
     dev = "cuda:0"
     args = list(map(torch.Tensor, args[0]))
     return list(map(lambda x: x.to(dev), args))
-
-
-def cnfm(output, target):
-    # compute the confusion matrix from cuda tensors
-    os = output.cpu().numpy()
-    ts = target.cpu().numpy()
-    n = len(os)
-    os = os.reshape([n,-1])
-    ts = ts.reshape([n,-1])
-    cfnm = []
-    for o,t in zip(os, ts):
-        hit = o[t.astype(bool)]
-        no_hit = o[~t.astype(bool)]
-        cfnm.append( confusion_matrix(hit, no_hit, 0.5) )
-    cfnm = np.stack(cfnm)
-    
-    cfnm = cfnm / cfnm[0,:].sum()
-    tp = [cfnm[:,0].mean(), cfnm[:,0].std()/sqrt(n)]
-    fp = [cfnm[:,1].mean(), cfnm[:,1].std()/sqrt(n)]
-    fn = [cfnm[:,2].mean(), cfnm[:,2].std()/sqrt(n)]
-    tn = [cfnm[:,3].mean(), cfnm[:,3].std()/sqrt(n)]
-
-    return tp, fp, fn, tn
 
 
 def print_cfnm(cfnm, channel):
@@ -197,14 +209,12 @@ def compute_metrics(output, target, task):
     """ This function takes the two events and computes the metrics between
     their planes. Separating collection and inductions planes."""
     if task == 'roi':
-        metrics = ['bce_dice', 'bce', 'softdice']
+        metrics = ['bce_dice', 'bce', 'softdice', 'cfnm']
     elif task == 'dn':
         metrics = ['ssim', 'psnr', 'mse', 'imae']
     else:
         raise NotImplementedError("Task not implemented")
     metrics_fns = list(map(lambda x: get_loss(x)(reduction='none'), metrics))
-    if task == 'roi':
-        metrics_fns.append(cnfm)
     ioutput, coutput = to_cuda(evt2planes(output))
     itarget, ctarget = to_cuda(evt2planes(target))
     iloss = list(map(lambda x: x(ioutput, itarget), metrics_fns))

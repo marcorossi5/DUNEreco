@@ -4,6 +4,8 @@ import torch
 from torch import nn
 import ssim
 from abc import ABC, abstractmethod
+from analysis.analysis_roi import confusion_matrix
+
 
 EPS = torch.Tensor( [torch.finfo(torch.float64).eps] )
 
@@ -185,6 +187,29 @@ class loss_psnr(loss):
         elif self.reduction == 'mean':
             return psnr.mean()
 
+class loss_cfnm(loss):
+    def __init__(self, reduction:'mean'):
+        pass
+    def __call__(self, output, target):
+        # compute the confusion matrix from cuda tensors
+        n = len(output)
+        os = output.reshape([n,-1])
+        ts = target.reshape([n,-1])
+        cfnm = []
+        for o,t in zip(os, ts):
+            hit = o[t.astype(bool)]
+            no_hit = o[~t.astype(bool)]
+            cfnm.append( confusion_matrix(hit, no_hit, 0.5) )
+        cfnm = torch.stack(cfnm)
+
+        cfnm = cfnm / cfnm[0,:].sum()
+        tp = [cfnm[:,0].mean(), cfnm[:,0].std()/torch.sqrt(n)]
+        fp = [cfnm[:,1].mean(), cfnm[:,1].std()/torch.sqrt(n)]
+        fn = [cfnm[:,2].mean(), cfnm[:,2].std()/torch.sqrt(n)]
+        tn = [cfnm[:,3].mean(), cfnm[:,3].std()/torch.sqrt(n)]
+
+        return tp, fp, fn, tn
+
 
 def get_loss(loss):
     if loss == "mse":
@@ -205,6 +230,8 @@ def get_loss(loss):
         return loss_bce_dice
     elif loss == "psnr":
         return loss_psnr
+    elif loss == "cfnm":
+        return loss_cfnm
     else:
         raise NotImplementedError("Loss function not implemented")
 

@@ -147,17 +147,17 @@ class DenoisingModel(nn.Module):
     Generic neural network: based on args passed when running __init__, it
     switches between cnn|gcnn and roi|dn as well
     """
-    def __init__(self, args):
+    def __init__(self, model, task, channel, patch_size, input_channels,
+                 hidden_channels, k, dataset_dir, normalization):
         super(DenoisingModel, self).__init__()
-        self.patch_size = args.patch_size
-        self.model = args.model
-        self.task = args.task
-        ic = args.input_channels
-        hc = args.hidden_channels
-        self.getgraph_fn = NonLocalGraph(args.k, self.patch_size) if \
+        self.patch_size = patch_size
+        self.model = model
+        self.task = task
+        ic = input_channels
+        hc = hidden_channels
+        self.getgraph_fn = NonLocalGraph(k, self.patch_size) if \
                            self.model=="gcnn" else lambda x: None
-        self.norm_fn = choose_norm(args.dataset_dir, args.channel,
-                                   args.normalization)
+        self.norm_fn = choose_norm(dataset_dir, channel, normalization)
         self.ROI = ROI(7, ic, hc, self.getgraph_fn, self.model)
         self.PreProcessBlocks = nn.ModuleList([
              PreProcessBlock(5, ic, hc, self.getgraph_fn, self.model),
@@ -269,3 +269,13 @@ class SCG_Net(nn.Module):
         if self.training:
             return self.act(x * i), loss
         return self.act(x * i).cpu().data
+
+def get_model(modeltype, **args):
+    if modeltype == "scg":
+        return SCG_Net(**args)
+    elif modeltype == "gcnn":
+        return DenoisingModel(model="gcnn", **args)
+    elif modeltype == "cnn":
+        return DenoisingModel(model="cnn", **args)
+    else:
+        raise NotImplementedError("Loss function not implemented")
