@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from model import get_model
 from model_utils import MyDataParallel
 from model_utils import Converter
-from dataloader import InferenceLoader, CropLoader
+from dataloader import InferenceLoader, InferenceCropLoader
 from train import inference, gcnn_inference
 from losses import get_loss
 from args import Args
@@ -181,7 +181,7 @@ class DnRoiModel:
         self.modeltype = modeltype
         self.roiargs, self.roi = mkModel(modeltype, prefix, "roi")
         self.dnargs, self.dn = mkModel(modeltype, prefix, "dn")
-        self.loader = InferenceLoader if modeltype == "scg" else CropLoader
+        self.loader = InferenceLoader if modeltype == "scg" else InferenceCropLoader
 
     def roi_selection(self, event, dev):
         """

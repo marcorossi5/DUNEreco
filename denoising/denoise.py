@@ -12,8 +12,8 @@ from torch.utils.data import DataLoader
 
 from distributed import set_random_seed
 
-from dataloader import PlaneLoader
-from model import SCG_Net
+from dataloader import PlaneLoader, CropLoader
+from model import SCG_Net, DenoisingModel
 from args import Args
 
 from model_utils import print_summary_file
@@ -34,16 +34,27 @@ def main(args):
 
     #load datasets
     set_random_seed(0)
-    train_data = PlaneLoader(args.dataset_dir, 'train', args.task,
+    loader = PlaneLoader if args.model=="scg" else CropLoader
+    train_data = loader(args.dataset_dir, 'train', args.task,
                              args.channel, args.threshold)
     val_data = PlaneLoader(args.dataset_dir, 'val', args.task,
                            args.channel, args.threshold)
-    model = SCG_Net(task=args.task, h=args.patch_h, w=args.patch_w)
+    if args.model == "scg":
+        model = SCG_Net(task=args.task, h=args.patch_h, w=args.patch_w)
+    elif args.model in ["cnn", "gcnn"]:
+        args.patch_size = eval(args.patch_size)
+        val_data.to_crops(args.patch_size)
+        model = DenoisingModel(
+            args.model, args.task, args.channel, args.patch_size, args.input_channels,
+            args.hidden_channels, args.k, args.dataset_dir, args.normalization
+                              )
+    else:
+        raise NotImplementedError("Model not implemented")
     #train
     return train.train(args, train_data, val_data, model)
 
 
-def spmd_main(card, local_rank, local_world_size, dev):
+def spmd_main(card, local_rank, local_world_size, model, dev):
     """ Spawn distributed processes """
     # dist.init_process_group(backend="nccl")
 

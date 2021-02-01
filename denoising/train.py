@@ -35,7 +35,7 @@ def time_windows(plane, w, stride):
     return div, windows, idxs
 
 
-def train_epoch(args, epoch, train_loader, model, optimizer,
+def train_scg_epoch(args, epoch, train_loader, model, optimizer,
                 balance_ratio, task):
     if args.rank == 0:
         print('\n[+] Training')
@@ -58,6 +58,28 @@ def train_epoch(args, epoch, train_loader, model, optimizer,
     return np.array([loss.item()]), tm() - start
 
 
+def train_gcnn_epoch(args, epoch, train_loader, model, optimizer, balance_ratio, task):
+    print('\n[+] Training')
+    start = tm()
+    model.train()
+    for _, (clear, noisy) in enumerate(train_loader):
+        clear = clear.to(args.device)
+        noisy = noisy.to(args.device)
+        optimizer.zero_grad()
+        loss, out = model(noisy, clear)
+        loss.mean().backward()
+        optimizer.step()
+    return np.array([loss.mean().item()]), tm() - start
+
+def choose_train(modeltype, *args):
+    if modeltype == "scg":
+        return train_scg_epoch(*args)
+    elif modeltype in ["gcnn", "cnn"]:
+        return train_gcnn_epoch(*args)
+    else:
+        raise NotImplementedError("Model not implemented")
+
+
 def inference(test_loader, stride, model, dev):
     w = model.w
     model.eval()
@@ -74,79 +96,11 @@ def inference(test_loader, stride, model, dev):
 
 def gcnn_inference(test_loader, model, dev):
     outs = []
-    for noisy in test_loader:
+    for noisy, _ in test_loader:
         noisy = noisy.to(dev)
         out =  model(noisy).data
         outs.append(out)
     return torch.cat(outs)
-
-
-def test_epoch(test_data, model, args, task, dry_inference=True):
-    """
-    Parameters:
-        test_data: torch.utils.data.DataLoader, based on PlaneLoader
-        task: str, either roi or dn
-    Outputs:
-        np.array: n metrics, shape (2*n)
-        torch.Tensor: denoised data, shape (batch,C,W,H)
-        float: dry inference time
-    """
-    test_sampler = DistributedSampler(dataset=test_data, shuffle=False)
-    test_loader = DataLoader(dataset=test_data, sampler=test_sampler,
-                              batch_size=args.test_batch_size,
-                              num_workers=args.num_workers)
-    model.eval()
-
-    n = test_data.noisy.shape[0]
-
-    #start = tm()
-    outs = inference(test_loader, model, args.dev_ids[0])
-    ws = dist.get_world_size() # world size
-    output = [torch.zeros_like(outs) for i in range(ws)]
-    dist.all_gather(output, outs)
-    h, w = args.patch_size # height, weight
-    c = args.input_channels # channels
-    output = torch.cat( output )
-    output = output.reshape(ws,-1,c,h,w).transpose(0,1).reshape(-1,c,h,w)
-    output = test_data.converter.tiles2planes( output )
-    if task == 'dn':
-        mask = (output <= args.threshold) & (output >= -args.threshold)
-        output[mask] = 0
-    end = tm()    
-
-    if dry_inference:
-        return output
-    idx = 0 if task=="dn" else 1
-    target = test_data.clear[:,idx:idx+1].to(args.dev_ids[0])
-
-    def reduce(loss):
-        """ Reduces losses keeping the batch size """
-        return loss.reshape(n,-1).mean(-1)
-    def to_np(tensor):
-        """ Cast gpu torch tensor to numpy """
-        return tensor.cpu().numpy()
-
-    if args.rank==0:
-        fname = os.path.join(args.dir_testing, "labels")
-        torch.save(target.cpu(), fname)
-        fname = os.path.join(args.dir_testing, "results")
-        torch.save(output.cpu(), fname)
-
-    loss_fn = get_loss(args.loss_fn)(args.a, reduction='none') if \
-              task=='dn' else get_loss("bce")(0.5, reduction='none')
-    loss = to_np(reduce( loss_fn(output, target) ))
-    if task == 'dn':
-        ssim = to_np(reduce( 1-get_loss('ssim')(reduction='none')(target, output) ))
-        mse = to_np(reduce( get_loss('mse')(reduction='none')(output, target) ))
-        psnr = to_np(compute_psnr(target.cpu(), output.cpu(), reduction='none'))
-
-        return np.array([np.mean(loss), np.std(loss)/np.sqrt(n),
-                np.mean(ssim), np.std(ssim)/np.sqrt(n),
-                np.mean(psnr), np.std(psnr)/np.sqrt(n),
-                np.mean(mse), np.std(mse)/np.sqrt(n)]), output, end-start
-
-    return np.array([np.mean(loss), np.std(loss)/np.sqrt(n)]), output, \
-            end-start
 
 
 def compute_val_loss(test_loader, outputs, args, task):
@@ -215,13 +169,17 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
     """
     # test_sampler = DistributedSampler(dataset=test_data, shuffle=False)
     test_loader = DataLoader(dataset=test_data, # sampler=test_sampler,
-                              batch_size=1,
+                              batch_size=args.test_batch_size,
                               num_workers=args.num_workers)
     if args.rank == 0:
         print('\n[+] Testing')
     start = tm()
-    outputs = inference(test_loader, args.patch_stride, model,
-                     args.dev_ids[0])
+    if args.model == "scg":
+        outputs = inference(test_loader, args.patch_stride, model,
+        args.dev_ids[0])
+    elif args.model in ["cnn", "gcnn"]:
+        outputs = gcnn_inference(test_loader, model, args.dev_ids[0])
+        outputs = test_data.converter.tiles2planes(outputs)
     # if task == 'dn':
     #     mask = (outputs <= args.threshold) & (outputs >= -args.threshold)
     #     outputs[mask] = 0
@@ -316,9 +274,8 @@ def train(args, train_data, val_data, model):
         start = tm()
         # train_sampler.set_epoch(epoch)
         balance_ratio = train_data.balance_ratio if task=='roi' else None 
-        loss, t = train_epoch(args, epoch, train_loader, model,
-                              optimizer, balance_ratio,
-                              task=task)
+        loss, t = choose_train(args.model, args, epoch, train_loader, model,
+                              optimizer, balance_ratio, task)
         end = tm() - start
         loss_sum.append(loss)
         time_train.append(t)

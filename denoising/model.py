@@ -276,4 +276,4 @@ def get_model(modeltype, **args):
     elif modeltype in ["gcnn", "cnn"]:
         return DenoisingModel(**args)
     else:
-        raise NotImplementedError("Loss function not implemented")
+        raise NotImplementedError("Model not implemented")

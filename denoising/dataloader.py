@@ -11,6 +11,39 @@ from ssim import _fspecial_gauss_1d, stat_gaussian_filter
 
 ElectronsToADC = 6.8906513e-3
 
+
+class CropLoader(torch.utils.data.Dataset):
+    def __init__(self, dataset_dir, folder, task, channel, threshold):
+        """
+        This function loads the crops for training.
+        Parameters:
+            args: Args object
+            folder: str, one of ['train','val','test']
+            channel: str, one of ['readout','collection']
+        """
+        data_dir = args.dataset_dir
+        patch_size = args.crop_size[0]
+        p = args.crop_p
+
+        fname = os.path.join(dataset_dir, folder,'crops',
+                             f'{channel}_clear_{patch_size}_{p}.npy')
+        clear = torch.Tensor(np.load(fname))
+
+        fname = os.path.join(dataset_dir, folder,'crops',
+                             f'{channel}_noisy_{patch_size}_{p}.npy')
+        self.noisy = torch.Tensor(np.load(fname))
+
+        hits = torch.clone(clear)
+        hits[hits!=0] = 1
+
+        self.clear = torch.cat([clear, hits],1)
+
+    def __len__(self):
+        return len(self.noisy)
+    def __getitem__(self, index):
+        return self.clear[index], self.noisy[index]
+
+
 class PlaneLoader(torch.utils.data.Dataset):
     def __init__(self, dataset_dir, folder, task, channel, threshold):
         """
@@ -37,6 +70,12 @@ class PlaneLoader(torch.utils.data.Dataset):
         noisy = np.load(fname)
         medians = np.median(noisy.reshape([noisy.shape[0],-1]), axis=1)
         self.noisy = torch.Tensor( noisy - medians[:,None,None,None] )
+
+    def to_crops(self, patch_size):
+        """ Function to be called when this is used with cnn | gcnn"""
+        self.converter = Converter(patch_size)
+        self.noisy = self.converter.planes2tiles(self.noisy)
+        self.clear = self.converter.planes2tiles(self.clear)
         
     def __len__(self):
         return len(self.noisy)
@@ -57,7 +96,7 @@ class InferenceLoader(torch.utils.data.Dataset):
         return self.noisy[index], 0
 
 
-class CropLoader(torch.utils.data.Dataset):
+class InferenceCropLoader(torch.utils.data.Dataset):
     def __init__(self, noisy):
         self.noisy = noisy
 
@@ -65,7 +104,7 @@ class CropLoader(torch.utils.data.Dataset):
         return len(self.noisy)
 
     def __getitem__(self, index):
-        return self.noisy[index]
+        return self.noisy[index], 0
 
 
 # TODO: is the label generation in the PlaneLoader correct according to the
