@@ -272,10 +272,10 @@ def compute_metrics(output, target, task):
     closs = list(map(reduce, closs))
     print("Induction planes:")
     for metric, loss in zip(metrics, iloss):
-        print(f"\t\t {metric:7}: {loss[0]:.5} +- {loss[1]:.5}")
+        print(f"\t\t loss {metric:7}: {loss[0]:.5} +- {loss[1]:.5}")
     print("Collection planes:")
     for metric, loss in zip(metrics, closs):
-        print(f"\t\t {metric:7}: {loss[0]:.5} +- {loss[1]:.5}")
+        print(f"\t\t loss {metric:7}: {loss[0]:.5} +- {loss[1]:.5}")
 
   
 # TODO: must fix argument passing in inference
