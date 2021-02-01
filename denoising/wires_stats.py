@@ -6,7 +6,7 @@ import torch
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--fname", "-f",  type=str, help="Event root folder",
-                   default="../datasets/20201124/test/evts/p2GeV_cosmics_wire_ev9.npy")
+                   default="../datasets/20201124/test/evts/p2GeV_cosmics_wire_evt9.npy")
 parser.add_argument("--fit", action='store_true',
                     help="Use PyROOT to fit the normalization constant")
 
