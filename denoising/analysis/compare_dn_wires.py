@@ -122,11 +122,11 @@ def image_arrays(dirname):
     return [dn, dn_gc, pandora_wires], clear, noisy
 
 
-def fit_constant(dn, clear):
+def fit_constant(wires, clear):
     from ROOT import TGraph, TF1
 
-    ratios = clear.sum(-1)/dn.sum(-1)
-    masks = dn.sum(-1) != 0
+    ratios = clear.sum(-1)/wires.sum(-1)
+    masks = wires.sum(-1) != 0
 
     fits = []
     for ratio, mask in zip(ratios, masks):
