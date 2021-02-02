@@ -30,31 +30,35 @@ def main(args):
 
     # n = torch.cuda.device_count() // args.local_world_size
     # args.dev_ids = list(range(args.local_rank * n, (args.local_rank + 1) * n))
-    args.dev_ids = [args.dev]
+    # args.dev_ids = [args.dev]
+    args.dev_ids = [0,1,2,3]
 
-    #load datasets
-    set_random_seed(0)
-    loader = PlaneLoader if args.model=="scg" else CropLoader
-    train_data = loader(args.dataset_dir, 'train', args.task,
-                             args.channel, args.threshold)
-    val_data = PlaneLoader(args.dataset_dir, 'val', args.task,
-                           args.channel, args.threshold)
     if args.model == "scg":
         model = SCG_Net(task=args.task, h=args.patch_h, w=args.patch_w)
     elif args.model in ["cnn", "gcnn"]:
         args.patch_size = eval(args.patch_size)
-        val_data.to_crops(args.patch_size)
         model = DenoisingModel(
             args.model, args.task, args.channel, args.patch_size, args.input_channels,
             args.hidden_channels, args.k, args.dataset_dir, args.normalization
                               )
     else:
         raise NotImplementedError("Model not implemented")
+
+
+    #load datasets
+    set_random_seed(0)
+    loader = PlaneLoader if args.model=="scg" else CropLoader
+    kwargs = {} if args.model=="scg" else {"patch_size":args.patch_size}
+    train_data = loader(args.dataset_dir, 'train', args.task,
+                             args.channel, args.threshold)
+    val_data = PlaneLoader(args.dataset_dir, 'val', args.task,
+                           args.channel, args.threshold, **kwargs)
+
     #train
     return train.train(args, train_data, val_data, model)
 
 
-def spmd_main(card, local_rank, local_world_size, model, dev):
+def spmd_main(card, local_rank, local_world_size, dev):
     """ Spawn distributed processes """
     # dist.init_process_group(backend="nccl")
 

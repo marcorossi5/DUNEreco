@@ -62,11 +62,15 @@ def train_gcnn_epoch(args, epoch, train_loader, model, optimizer, balance_ratio,
     print('\n[+] Training')
     start = tm()
     model.train()
-    for _, (clear, noisy) in enumerate(train_loader):
-        clear = clear.to(args.device)
-        noisy = noisy.to(args.device)
+    loss_fn = get_loss(args.loss_fn)(args.a) if task=='dn' else \
+              get_loss("bce")(balance_ratio)
+    for i, (clear, noisy) in enumerate(train_loader):
+        idx = 0 if task == "dn" else 1
+        clear = clear[:,idx:idx+1].to(args.dev_ids[0])
+        noisy = noisy.to(args.dev_ids[0])
         optimizer.zero_grad()
-        loss, out = model(noisy, clear)
+        out = model(noisy)
+        loss = loss_fn(out, clear)
         loss.mean().backward()
         optimizer.step()
     return np.array([loss.mean().item()]), tm() - start
@@ -123,6 +127,9 @@ def compute_val_loss(test_loader, outputs, args, task):
     for (_, target), output in zip(test_loader, outputs):
         # works only with unit batch_size
         output = output.unsqueeze(0).to(args.dev_ids[0])
+        if args.model in ["gcnn", "cnn"]:
+             idx = 0 if task == "dn" else 1
+             target = target[:,idx:idx+1]
         target = target.to(args.dev_ids[0])
         loss.append( loss_fn(output, target).unsqueeze(0) )
         if task == 'dn':
@@ -167,6 +174,8 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
         torch.Tensor: denoised data, shape (batch,C,W,H)
         float: dry inference time
     """
+    if args.model in ["cnn", "gcnn"]:
+        test_data.to_crops()
     # test_sampler = DistributedSampler(dataset=test_data, shuffle=False)
     test_loader = DataLoader(dataset=test_data, # sampler=test_sampler,
                               batch_size=args.test_batch_size,
@@ -187,6 +196,11 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
 
     if dry_inference:
         return outputs, dry_time
+    if args.model in ["cnn", "gcnn"]:
+        test_data.to_planes()
+        test_loader = DataLoader(dataset=test_data, # sampler=test_sampler,
+                              batch_size=1,
+                              num_workers=args.num_workers)
     return compute_val_loss(test_loader, outputs, args, task), outputs, dry_time
 
 
@@ -200,6 +214,7 @@ def train(args, train_data, val_data, model):
     channel = args.channel
     # check if load existing model
     model = MyDataParallel(model, device_ids=args.dev_ids)
+    model = model.to(args.dev_ids[0])
     # model = MyDDP(model.to(args.dev_ids[0]), device_ids=args.dev_ids,
     #               find_unused_parameters=True)
 
@@ -242,9 +257,10 @@ def train(args, train_data, val_data, model):
 
         if args.rank == 0:
             print(f'Loading model at {fname}')
-        map_location = {"cuda:{0:d}": f"cuda:{args.dev:d}"}
+        # map_location = {"cuda:{0:d}": f"cuda:{args.dev:d}"}
         # map_location = {"cuda:{0:d}": f"cuda:{args.local_rank:d}"}
-        model.load_state_dict(torch.load(fname, map_location=map_location))
+        # model.load_state_dict(torch.load(fname, map_location=map_location))
+        model.load_state_dict(torch.load(fname))
     else:
         epoch = 1
         loss_sum = []
@@ -258,17 +274,19 @@ def train(args, train_data, val_data, model):
     best_model_name = os.path.join(args.dir_saved_models,f"{args.model}_-1.dat")
         
     # initialize optimizer
-    optimizer = optimizer_fn(list(model.parameters()), args.lr, args.amsgrad)
+    lr = args.lr_roi if task=="roi" else args.lr_dn
+    optimizer = optimizer_fn(list(model.parameters()), lr, args.amsgrad)
 
     # train_sampler = DistributedSampler(dataset=train_data, shuffle=True)
     train_loader = DataLoader(dataset=train_data, shuffle=True, # sampler=train_sampler,
-                              batch_size=1,
+                              batch_size=args.batch_size,
                               num_workers=args.num_workers)
 
     # main training loop
     while epoch <= args.epochs:
         if epoch % 6 == 0:
-            optimizer = optimizer_fn(list(model.parameters()), args.lr, args.amsgrad)
+            lr = args.lr_dn if task == "dn" else args.lr_roi
+            optimizer = optimizer_fn(list(model.parameters()), lr, args.amsgrad)
 
         # train
         start = tm()

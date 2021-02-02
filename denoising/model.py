@@ -172,7 +172,11 @@ class DenoisingModel(nn.Module):
         self.aa = nn.Parameter(torch.Tensor([0]), requires_grad=False)
         self.bb = nn.Parameter(torch.Tensor([1]), requires_grad=False)
         def combine(x, y):
-            return (1-self.aa)*x + self.bb*y
+            # TODO: DataParallel fails here because fn is not a tensor
+            # and does not get copied on the GPU, but it stays as it
+            # was at creation
+            # return (1-self.aa)*x + self.bb*y
+            return x + y
         self.combine = combine
 
     def forward(self, x):
@@ -186,7 +190,7 @@ class DenoisingModel(nn.Module):
         y = self.combine(y, y_hpf)
         for LPF in self.LPFs:
             y = self.combine( LPF(y), y_hpf )
-        return self.PostProcessBlock(y) + x
+        return self.PostProcessBlock(y) * x
 
 
 class SCG_Net(nn.Module):
