@@ -4,7 +4,6 @@ import numpy as np
 import time as tm
 import matplotlib as mpl
 from matplotlib.lines import Line2D
-import matplotlib.colors as colors
 import matplotlib.pyplot as plt
 
 

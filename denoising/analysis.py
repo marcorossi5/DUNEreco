@@ -8,25 +8,17 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import matplotlib as mpl
-import matplotlib.pyplot as plt
 import time as tm
 
 from args import Args
 from dataloader import PlaneLoader
 from model import *
 from model_utils import MyDataParallel
-from model_utils import split_img
-from model_utils import recombine_img
-from model_utils import plot_wires
 
 from train import test_epoch
 
-import ssim
-
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.utils import compute_psnr
 from utils.utils import get_freer_gpu
-from utils.utils import moving_average
 
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument(

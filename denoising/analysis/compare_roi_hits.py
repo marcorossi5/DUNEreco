@@ -1,8 +1,5 @@
 """ This module compare results on test set of ROI against Pandora recob::hits"""
 from analysis_roi import set_ticks
-from losses import loss_ssim, loss_mse
-from utils.utils import compute_psnr
-from dataloader import PlaneLoader
 import sys
 import os
 import argparse

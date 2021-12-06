@@ -13,10 +13,6 @@ sys.path.append(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from dataloader import PlaneLoader
-from utils.utils import compute_psnr
-from losses import loss_ssim, loss_mse
-
 from analysis_roi import set_ticks
 
 PARSER = argparse.ArgumentParser()

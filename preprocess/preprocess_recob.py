@@ -1,6 +1,5 @@
 """ This module returns the ROIs from recob::hit objects"""
 import os
-import sys
 import argparse
 import numpy as np
 import glob

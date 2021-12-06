@@ -1,4 +1,3 @@
-from math import isnan
 import torch
 from torch import nn
 

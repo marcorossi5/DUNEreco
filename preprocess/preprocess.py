@@ -4,7 +4,6 @@ import argparse
 import time
 import glob
 import numpy as np
-import torch
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

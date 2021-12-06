@@ -5,11 +5,6 @@ import sys
 import argparse
 import time as tm
 
-import torch
-import torch.distributed as dist
-from torch.utils.data.distributed import DistributedSampler
-from torch.utils.data import DataLoader
-
 from distributed import set_random_seed
 
 from dataloader import PlaneLoader, CropLoader
@@ -17,12 +12,10 @@ from model import SCG_Net, DenoisingModel
 from args import Args
 
 from model_utils import print_summary_file
-from model_utils import weight_scan
 
 import train
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.utils import get_freer_gpu
 from utils.utils import load_yaml
 
 

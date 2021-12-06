@@ -1,7 +1,5 @@
 from hyperopt import fmin, tpe, hp, Trials, space_eval, STATUS_OK
 from hyperopt.mongoexp import MongoTrials
-import matplotlib.pyplot as plt
-import numpy as np
 from time import time as tm
 import argparse, os, shutil, sys, datetime, yaml, pprint, pickle
 import denoise

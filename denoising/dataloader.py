@@ -2,12 +2,7 @@ import os
 import torch
 import numpy as np
 
-from model_utils import plot_crops
-from model_utils import plot_wires
-from model_utils import calculate_pad
 from model_utils import Converter
-
-from ssim import _fspecial_gauss_1d, stat_gaussian_filter
 
 ElectronsToADC = 6.8906513e-3
 
@@ -123,7 +118,3 @@ class InferenceCropLoader(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         return self.noisy[index], 0
-
-
-# TODO: is the label generation in the PlaneLoader correct according to the
-# threshold considerations?

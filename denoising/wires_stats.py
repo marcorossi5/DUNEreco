@@ -2,7 +2,6 @@ import numpy as np
 import argparse
 from time import time
 from hitreco import evt2planes, planes2evt
-import torch
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

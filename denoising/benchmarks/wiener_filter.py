@@ -5,7 +5,7 @@ import argparse
 import numpy as np
 import time as tm
 from numpy.fft import fft2, ifft2
-from scipy.signal import gaussian, convolve2d
+from scipy.signal import gaussian
 import matplotlib.pyplot as plt
 import torch
 

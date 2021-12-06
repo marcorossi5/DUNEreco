@@ -1,7 +1,5 @@
-import os
 import argparse
 import time as tm
-import ssim
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
@@ -61,6 +59,7 @@ if __name__ == "__main__":
 
     if torch.cuda.is_available():
         if int(ARGS["device"]) == -1:
+            from utils.utils import get_freer_gpu
             GPU_NUM = get_freer_gpu()
             DEV = torch.device("cuda:{}".format(GPU_NUM))
         elif int(ARGS["device"]) > -1:

@@ -12,7 +12,6 @@ import os
 import argparse
 import numpy as np
 import time as tm
-import matplotlib.pyplot as plt
 import torch
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

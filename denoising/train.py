@@ -1,19 +1,12 @@
-import sys
 import os
 from math import ceil
-from math import isnan
 from math import sqrt
 import numpy as np
 
 import torch
-import torch.distributed as dist
 from torch import optim
-from torch import nn
-from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 
-from model_utils import freeze_weights
-from model_utils import MyDDP
 from model_utils import MyDataParallel
 
 from losses import get_loss

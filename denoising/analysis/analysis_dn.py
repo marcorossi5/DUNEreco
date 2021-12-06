@@ -2,10 +2,9 @@
 import sys
 import os
 import argparse
-import numpy as np
 import time as tm
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 from analysis_roi import set_ticks, training_metrics, training_timings, special_ticks
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

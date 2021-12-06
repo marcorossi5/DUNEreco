@@ -1,7 +1,5 @@
 """ This module compare results on test set of DN against Pandora recob::wires"""
 from analysis_roi import set_ticks
-import sys
-import os
 import argparse
 import numpy as np
 from time import time

@@ -5,7 +5,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 
 from sklearn.metrics import confusion_matrix
 
