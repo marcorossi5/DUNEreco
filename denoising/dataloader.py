@@ -26,27 +26,30 @@ class CropLoader(torch.utils.data.Dataset):
         patch_size = 32
         p = 0.99
 
-        fname = os.path.join(dataset_dir, folder,'crops',
-                             f'{channel}_clear_{patch_size}_{p}.npy')
+        fname = os.path.join(
+            dataset_dir, folder, "crops", f"{channel}_clear_{patch_size}_{p}.npy"
+        )
         clear = torch.Tensor(np.load(fname))
 
-        if task == 'roi':
+        if task == "roi":
             mask = (clear <= threshold) & (clear >= -threshold)
             clear[mask] = 0
             clear[~mask] = 1
-            self.balance_ratio = np.count_nonzero(clear)/clear.numel()
+            self.balance_ratio = np.count_nonzero(clear) / clear.numel()
 
-        fname = os.path.join(dataset_dir, folder,'crops',
-                             f'{channel}_noisy_{patch_size}_{p}.npy')
+        fname = os.path.join(
+            dataset_dir, folder, "crops", f"{channel}_noisy_{patch_size}_{p}.npy"
+        )
         self.noisy = torch.Tensor(np.load(fname))
 
         hits = torch.clone(clear)
-        hits[hits!=0] = 1
+        hits[hits != 0] = 1
 
-        self.clear = torch.cat([clear, hits],1)
+        self.clear = torch.cat([clear, hits], 1)
 
     def __len__(self):
         return len(self.noisy)
+
     def __getitem__(self, index):
         return self.clear[index], self.noisy[index]
 
@@ -66,18 +69,18 @@ class PlaneLoader(torch.utils.data.Dataset):
         # label = "simch" if task=='roi' else "clear"
         label = "clear"
         fname = os.path.join(data_dir, f"planes/{channel}_{label}.npy")
-        clear = torch.Tensor( np.load(fname) )
-        if task == 'roi':
+        clear = torch.Tensor(np.load(fname))
+        if task == "roi":
             mask = (clear <= threshold) & (clear >= -threshold)
             clear[mask] = 0
             clear[~mask] = 1
-            self.balance_ratio = np.count_nonzero(clear)/clear.numel()
+            self.balance_ratio = np.count_nonzero(clear) / clear.numel()
         self.clear = clear
 
         fname = os.path.join(data_dir, f"planes/{channel}_noisy.npy")
         noisy = np.load(fname)
-        medians = np.median(noisy.reshape([noisy.shape[0],-1]), axis=1)
-        self.noisy = torch.Tensor( noisy - medians[:,None,None,None] )
+        medians = np.median(noisy.reshape([noisy.shape[0], -1]), axis=1)
+        self.noisy = torch.Tensor(noisy - medians[:, None, None, None])
 
         if patch_size is not None:
             self.converter = Converter(patch_size)
@@ -91,7 +94,7 @@ class PlaneLoader(torch.utils.data.Dataset):
         """ Eventually called after to_crops function """
         self.noisy = self.converter.tiles2planes(self.noisy)
         self.clear = self.converter.tiles2planes(self.clear)
-        
+
     def __len__(self):
         return len(self.noisy)
 
@@ -101,8 +104,8 @@ class PlaneLoader(torch.utils.data.Dataset):
 
 class InferenceLoader(torch.utils.data.Dataset):
     def __init__(self, noisy):
-        medians = np.median(noisy.reshape([noisy.shape[0],-1]), axis=1)
-        self.noisy = torch.Tensor( noisy - medians[:,None,None,None] )
+        medians = np.median(noisy.reshape([noisy.shape[0], -1]), axis=1)
+        self.noisy = torch.Tensor(noisy - medians[:, None, None, None])
 
     def __len__(self):
         return len(self.noisy)

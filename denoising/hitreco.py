@@ -12,34 +12,26 @@ from dataloader import InferenceLoader, InferenceCropLoader
 from train import inference, gcnn_inference
 from losses import get_loss
 from args import Args
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import load_yaml
 
 # pdune sp architecture
-tdc = 6000 # detector timeticks number
-istep = 800 # channel number in induction plane
-cstep = 960 # channel number in collection plane
+tdc = 6000  # detector timeticks number
+istep = 800  # channel number in induction plane
+cstep = 960  # channel number in collection plane
 apas = 6
-apastep = 2*istep + cstep # number of channels per apa
+apastep = 2 * istep + cstep  # number of channels per apa
 device_ids = [0]
-evstep = apas * apastep # total channel number
-ModelTuple = collections.namedtuple('Model', ['induction', 'collection'])
-ArgsTuple = collections.namedtuple('Args', ['batch_size', 'patch_stride', 'patch_size'])
+evstep = apas * apastep  # total channel number
+ModelTuple = collections.namedtuple("Model", ["induction", "collection"])
+ArgsTuple = collections.namedtuple("Args", ["batch_size", "patch_stride", "patch_size"])
 
 
 model2batch = {
-    "scg":{
-        "dn": 1,
-        "roi": 1
-    },
-    "gcnn": {
-        "dn": 128,
-        "roi": 512
-        },
-    "cnn": {
-        "dn": 376,
-        "roi": 2048
-        }
+    "scg": {"dn": 1, "roi": 1},
+    "gcnn": {"dn": 128, "roi": 512},
+    "cnn": {"dn": 376, "roi": 2048},
 }
 
 
@@ -49,13 +41,13 @@ def evt2planes(event):
     Input:
         event: array-like array
             inputs of shape (evstep, tdc)
-            
+
     Output: np.array
         induction and collection arrays of shape type (N,C,H,W)
     """
-    base = np.arange(apas).reshape(-1,1) * apastep
-    iidxs = [[0, istep, 2*istep]] + base
-    cidxs = [[2*istep, apastep]] + base
+    base = np.arange(apas).reshape(-1, 1) * apastep
+    iidxs = [[0, istep, 2 * istep]] + base
+    cidxs = [[2 * istep, apastep]] + base
     inductions = []
     for start, idx, end in iidxs:
         induction = [event[start:idx], event[idx:end]]
@@ -63,7 +55,7 @@ def evt2planes(event):
     collections = []
     for start, end in cidxs:
         collections.append(event[start:end])
-    return np.stack(inductions)[:,None], np.stack(collections)[:,None]
+    return np.stack(inductions)[:, None], np.stack(collections)[:, None]
 
 
 def median_subtraction(planes):
@@ -77,7 +69,7 @@ def median_subtraction(planes):
     """
     shape = [planes.shape[0], -1]
     medians = np.median(planes.reshape(shape), axis=1)
-    return planes - medians[:,None,None,None]
+    return planes - medians[:, None, None, None]
 
 
 def planes2evt(inductions, collections):
@@ -89,8 +81,8 @@ def planes2evt(inductions, collections):
     Output: np.array
         event array of shape (evstep, tdc)
     """
-    inductions = np.array(inductions).reshape(-1,2*istep,tdc)
-    collections = np.array(collections)[:,0]
+    inductions = np.array(inductions).reshape(-1, 2 * istep, tdc)
+    collections = np.array(collections)[:, 0]
     event = []
     for i, c in zip(inductions, collections):
         event.extend([i, c])
@@ -102,9 +94,9 @@ def get_model_and_args(modeltype, model_prefix, task, channel):
     card = f"{modeltype}_{task}_{channel}.yaml"
     parameters = load_yaml(os.path.join(card_prefix, card))
     parameters["channel"] = channel
-    args =  Args(**parameters)
+    args = Args(**parameters)
 
-    patch_size = 'None' if modeltype == "scg" else eval(args.patch_size)
+    patch_size = "None" if modeltype == "scg" else eval(args.patch_size)
     patch_stride = args.patch_stride if modeltype == "scg" else None
     batch_size = model2batch[modeltype][task]
 
@@ -127,7 +119,7 @@ def get_model_and_args(modeltype, model_prefix, task, channel):
     else:
         raise NotImplementedError("Loss function not implemented")
 
-    model =  MyDataParallel( get_model(modeltype, **kwargs), device_ids=device_ids )
+    model = MyDataParallel(get_model(modeltype, **kwargs), device_ids=device_ids)
     name = f"{modeltype}_{task}_{channel}.pth"
     fname = os.path.join(model_prefix, name)
 
@@ -137,8 +129,8 @@ def get_model_and_args(modeltype, model_prefix, task, channel):
 
 
 def mkModel(modeltype, prefix, task):
-    iargs, imodel = get_model_and_args(modeltype, prefix, task, 'induction')
-    cargs, cmodel = get_model_and_args(modeltype, prefix, task, 'collection')
+    iargs, imodel = get_model_and_args(modeltype, prefix, task, "induction")
+    cargs, cmodel = get_model_and_args(modeltype, prefix, task, "collection")
     return [iargs, cargs], ModelTuple(imodel, cmodel)
 
 
@@ -153,13 +145,13 @@ def _gcnn_inference(planes, loader, model, args, dev):
     # inference is called many times.
     # TODO: think about to make it a DnRoiModel attribute and pass it to the fn
     # TODO: the batch size changes according to task, modeltype
-    sub_planes = torch.Tensor( median_subtraction(planes) )
+    sub_planes = torch.Tensor(median_subtraction(planes))
     converter = Converter(args.patch_size)
     tiles = converter.planes2tiles(sub_planes)
 
     dataset = loader(tiles)
     test = DataLoader(dataset=dataset, batch_size=args.batch_size)
-    res =  gcnn_inference(test, model.to(dev), dev).cpu()
+    res = gcnn_inference(test, model.to(dev), dev).cpu()
     return converter.tiles2planes(res)
 
 
@@ -171,12 +163,12 @@ def get_inference(modeltype, **kwargs):
 
 
 class DnRoiModel:
-    def __init__(self, modeltype, prefix='denoising/best_models'):
+    def __init__(self, modeltype, prefix="denoising/best_models"):
         """
-            Wrapper for inference model
-            Parameters:
-                modeltype: str
-                    "cnn" | "gcnn" | "sgc"
+        Wrapper for inference model
+        Parameters:
+            modeltype: str
+                "cnn" | "gcnn" | "sgc"
         """
         self.modeltype = modeltype
         self.roiargs, self.roi = mkModel(modeltype, prefix, "roi")
@@ -185,42 +177,62 @@ class DnRoiModel:
 
     def roi_selection(self, event, dev):
         """
-            Interface for roi selection inference on a complete event
-            Parameters:
-                event: array-like
-                    event input array of shape [wire num, tdcs]
-                dev: str
-                    "cpu" | "cuda:{n}", device hosting the computation
-            Returns:
-                np.array
-                    event region of interests
+        Interface for roi selection inference on a complete event
+        Parameters:
+            event: array-like
+                event input array of shape [wire num, tdcs]
+            dev: str
+                "cpu" | "cuda:{n}", device hosting the computation
+        Returns:
+            np.array
+                event region of interests
         """
         inductions, collections = evt2planes(event)
-        iout =  get_inference(self.modeltype, planes=inductions, loader=self.loader,
-                              model=self.roi.induction, args=self.roiargs[0],
-                              dev=dev)
-        cout =  get_inference(self.modeltype, planes=collections, loader=self.loader,
-                              model=self.roi.collection, args=self.roiargs[1],
-                              dev=dev)
+        iout = get_inference(
+            self.modeltype,
+            planes=inductions,
+            loader=self.loader,
+            model=self.roi.induction,
+            args=self.roiargs[0],
+            dev=dev,
+        )
+        cout = get_inference(
+            self.modeltype,
+            planes=collections,
+            loader=self.loader,
+            model=self.roi.collection,
+            args=self.roiargs[1],
+            dev=dev,
+        )
         return planes2evt(iout, cout)
 
     def denoise(self, event, dev):
         """
-            Interface for roi selection inference on a complete event
-            Parameters:
-                event: array-like
-                    event input array of shape [wire num, tdcs]
-            Returns:
-                np.array
-                    denoised event
+        Interface for roi selection inference on a complete event
+        Parameters:
+            event: array-like
+                event input array of shape [wire num, tdcs]
+        Returns:
+            np.array
+                denoised event
         """
         inductions, collections = evt2planes(event)
-        iout =  get_inference(self.modeltype, planes=inductions, loader=self.loader,
-                              model=self.dn.induction, args=self.dnargs[0],
-                              dev=dev)
-        cout =  get_inference(self.modeltype, planes=collections, loader=self.loader,
-                              model=self.dn.collection, args=self.dnargs[1],
-                              dev=dev)
+        iout = get_inference(
+            self.modeltype,
+            planes=inductions,
+            loader=self.loader,
+            model=self.dn.induction,
+            args=self.dnargs[0],
+            dev=dev,
+        )
+        cout = get_inference(
+            self.modeltype,
+            planes=collections,
+            loader=self.loader,
+            model=self.dn.collection,
+            args=self.dnargs[1],
+            dev=dev,
+        )
         # masking for gcnn output must be done
         # think how to pass out the norm variables
         # probably the model itself is not correct in the current version
@@ -246,28 +258,30 @@ def print_cfnm(cfnm, channel):
 
 
 def compute_metrics(output, target, task):
-    """ This function takes the two events and computes the metrics between
+    """This function takes the two events and computes the metrics between
     their planes. Separating collection and inductions planes."""
-    if task == 'roi':
-        metrics = ['bce_dice', 'bce', 'softdice', 'cfnm']
-    elif task == 'dn':
-        metrics = ['ssim', 'psnr', 'mse', 'imae']
+    if task == "roi":
+        metrics = ["bce_dice", "bce", "softdice", "cfnm"]
+    elif task == "dn":
+        metrics = ["ssim", "psnr", "mse", "imae"]
     else:
         raise NotImplementedError("Task not implemented")
-    metrics_fns = list(map(lambda x: get_loss(x)(reduction='none'), metrics))
+    metrics_fns = list(map(lambda x: get_loss(x)(reduction="none"), metrics))
     ioutput, coutput = to_cuda(evt2planes(output))
     itarget, ctarget = to_cuda(evt2planes(target))
     iloss = list(map(lambda x: x(ioutput, itarget), metrics_fns))
     closs = list(map(lambda x: x(coutput, ctarget), metrics_fns))
     print(f"Task {task}")
-    if task == 'roi':
+    if task == "roi":
         print_cfnm(iloss[-1], "induction")
         iloss.pop(-1)
         print_cfnm(closs[-1], "collection")
         closs.pop(-1)
+
     def reduce(loss):
         sqrtn = sqrt(len(loss))
-        return [loss.mean(), loss.std()/sqrtn]
+        return [loss.mean(), loss.std() / sqrtn]
+
     iloss = list(map(reduce, iloss))
     closs = list(map(reduce, closs))
     print("Induction planes:")
@@ -277,5 +291,5 @@ def compute_metrics(output, target, task):
     for metric, loss in zip(metrics, closs):
         print(f"\t\t loss {metric:7}: {loss[0]:.5} +- {loss[1]:.5}")
 
-  
+
 # TODO: must fix argument passing in inference

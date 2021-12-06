@@ -7,8 +7,13 @@ import glob
 import time as tm
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--dirname", "-p", default="../datasets/backup/test/benchmark",
-                    type=str, help='Directory path to datasets')
+parser.add_argument(
+    "--dirname",
+    "-p",
+    default="../datasets/backup/test/benchmark",
+    type=str,
+    help="Directory path to datasets",
+)
 
 N_CHANNELS = 2560
 N_INDUCTION = 800
@@ -23,13 +28,13 @@ def process_hits(fname):
     ROIs = np.zeros((N_APAS, N_COLLECTION, N_TICKS))
 
     for apa in range(N_APAS):
-        first_ch = N_CHANNELS*apa + 2*N_INDUCTION
-        last_ch = N_CHANNELS*(apa+1)
+        first_ch = N_CHANNELS * apa + 2 * N_INDUCTION
+        last_ch = N_CHANNELS * (apa + 1)
         mask = np.logical_and(hits[:, 0] >= first_ch, hits[:, 0] < last_ch)
 
         for hit in hits[mask]:
             ch = hit[0] - first_ch
-            ROIs[apa, ch, hit[1]:hit[2]] = 1
+            ROIs[apa, ch, hit[1] : hit[2]] = 1
     return ROIs[:, None]
 
 
@@ -39,12 +44,12 @@ def process_wires(fname):
     coll_wires = []
     for apa in range(N_APAS):
         coll_wire = np.zeros((N_COLLECTION, N_TICKS))
-        first_ch = N_CHANNELS*apa + 2*N_INDUCTION
-        last_ch = N_CHANNELS*(apa+1)
-        mask = np.logical_and(wires[:,1] >= first_ch, wires[:, 1] < last_ch)
+        first_ch = N_CHANNELS * apa + 2 * N_INDUCTION
+        last_ch = N_CHANNELS * (apa + 1)
+        mask = np.logical_and(wires[:, 1] >= first_ch, wires[:, 1] < last_ch)
 
         valid = wires[mask]
-        coll_wire[valid[:,1]-first_ch] = valid[:,2:]
+        coll_wire[valid[:, 1] - first_ch] = valid[:, 2:]
         coll_wires.append(coll_wire[None])
 
     return coll_wires
@@ -53,7 +58,7 @@ def process_wires(fname):
 def process_hits_and_dump(dirname):
     """
     Processes hits to cast them into an array of shape (N_CHANNELS, N_TICKS).
-    Saves an array named collection_hits in benchmark/hits folder with all 
+    Saves an array named collection_hits in benchmark/hits folder with all
     collection region of interests in the datasetto be used as a benchmark.
     Shape: (ALL_APAS, N_COLLECTION, N_TICKS)
     """
@@ -96,8 +101,8 @@ def main(dirname):
     process_wires_and_dump(dirname)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     args = vars(parser.parse_args())
     START = tm.time()
     main(**args)
-    print('Program done in %f' % (tm.time()-START))
+    print("Program done in %f" % (tm.time() - START))

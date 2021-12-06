@@ -2,12 +2,15 @@ from math import isnan
 import torch
 from torch import nn
 
+
 class SCG_Block(nn.Module):
-    def __init__(self, in_ch, hidden_ch=6, node_size=(32,32), add_diag=True, dropout=0.2):
+    def __init__(
+        self, in_ch, hidden_ch=6, node_size=(32, 32), add_diag=True, dropout=0.2
+    ):
         super(SCG_Block, self).__init__()
         self.node_size = node_size
         self.hidden = hidden_ch
-        self.nodes = node_size[0]*node_size[1]
+        self.nodes = node_size[0] * node_size[1]
         self.add_diag = add_diag
         self.pool = nn.AdaptiveMaxPool2d(node_size)
 
@@ -27,7 +30,7 @@ class SCG_Block(nn.Module):
         if self.training:
             std = torch.exp(log_var.reshape(B, self.nodes, self.hidden))
             eps = torch.randn_like(std)
-            z = mu.reshape(B, self.nodes, self.hidden) + std*eps
+            z = mu.reshape(B, self.nodes, self.hidden) + std * eps
         else:
             z = mu.reshape(B, self.nodes, self.hidden)
         A = torch.matmul(z, z.permute(0, 2, 1))
@@ -36,10 +39,18 @@ class SCG_Block(nn.Module):
         mean = torch.mean(Ad, dim=1)
         gamma = torch.sqrt(1 + 1.0 / mean).unsqueeze(-1).unsqueeze(-1)
         if self.training:
-            dl_loss = gamma.mean() * torch.log(Ad[Ad<1]+ 1.e-7).sum() / (A.size(0) * A.size(1) * A.size(2))
-            kl_loss = -0.5 / self.nodes * torch.mean(
-                torch.sum(1 + 2 * log_var - mu.pow(2) - log_var.exp().pow(2), 1)
-                    )
+            dl_loss = (
+                gamma.mean()
+                * torch.log(Ad[Ad < 1] + 1.0e-7).sum()
+                / (A.size(0) * A.size(1) * A.size(2))
+            )
+            kl_loss = (
+                -0.5
+                / self.nodes
+                * torch.mean(
+                    torch.sum(1 + 2 * log_var - mu.pow(2) - log_var.exp().pow(2), 1)
+                )
+            )
         loss = kl_loss - dl_loss if self.training else None
         if self.add_diag:
             diag = []
@@ -47,15 +58,17 @@ class SCG_Block(nn.Module):
                 diag.append(torch.diag(Ad[i, :]).unsqueeze(0))
             A = A + gamma * torch.cat(diag, 0)
         A = self.laplacian_matrix(A, self_loop=True)
-        z_hat = gamma.mean() * \
-                mu.reshape(B, self.nodes, self.hidden) * \
-                (1. - log_var.reshape(B, self.nodes, self.hidden))
+        z_hat = (
+            gamma.mean()
+            * mu.reshape(B, self.nodes, self.hidden)
+            * (1.0 - log_var.reshape(B, self.nodes, self.hidden))
+        )
         return A, gx, loss, z_hat
 
     def laplacian_matrix(self, A, self_loop=False):
-        '''
-            Computes normalized Laplacian matrix: A (B, N, N)
-        '''
+        """
+        Computes normalized Laplacian matrix: A (B, N, N)
+        """
         if self_loop:
             A = A + torch.eye(A.size(1), device=A.device).unsqueeze(0)
         deg_inv_sqrt = (torch.sum(A, 1) + 1e-5).pow(-0.5)
@@ -64,8 +77,9 @@ class SCG_Block(nn.Module):
 
 
 class GCN_Layer(nn.Module):
-    def __init__(self, in_features, out_features, bnorm=True,
-                 activation=nn.ReLU(), dropout=None):
+    def __init__(
+        self, in_features, out_features, bnorm=True, activation=nn.ReLU(), dropout=None
+    ):
         super(GCN_Layer, self).__init__()
         self.bnorm = bnorm
         fc = [nn.Linear(in_features, out_features)]
@@ -85,7 +99,7 @@ class GCN_Layer(nn.Module):
 
 
 class BatchNorm_GCN(nn.BatchNorm1d):
-    '''Batch normalization over GCN features'''
+    """Batch normalization over GCN features"""
 
     def __init__(self, num_features):
         super(BatchNorm_GCN, self).__init__(num_features)
@@ -103,10 +117,12 @@ class Pooling_Block(nn.Module):
             w: int, output width
         """
         super(Pooling_Block, self).__init__()
-        self.pooling = nn.Sequential(nn.AdaptiveMaxPool2d((h,w)),
-                                     nn.Conv2d(c, c, 3, padding=1, bias=False),
-                                     nn.BatchNorm2d(c),
-                                     nn.ReLU())
+        self.pooling = nn.Sequential(
+            nn.AdaptiveMaxPool2d((h, w)),
+            nn.Conv2d(c, c, 3, padding=1, bias=False),
+            nn.BatchNorm2d(c),
+            nn.ReLU(),
+        )
 
     def forward(self, x):
         return self.pooling(x)
@@ -118,12 +134,13 @@ class Recombination_Layer(nn.Module):
     convolution. It first concatenates the two inputs along the channel
     dimension and then it applies the convolution.
     """
+
     def __init__(self):
         super(Recombination_Layer, self).__init__()
-        self.conv = nn.Conv2d(2,1,1)
+        self.conv = nn.Conv2d(2, 1, 1)
 
-    def  forward(self, x, y):
-        return self.conv( torch.cat([x,y], axis=1) )
+    def forward(self, x, y):
+        return self.conv(torch.cat([x, y], axis=1))
 
 
 def weight_xavier_init(*models):
@@ -138,4 +155,3 @@ def weight_xavier_init(*models):
             elif isinstance(module, nn.BatchNorm2d):
                 module.weight.data.fill_(1)
                 module.bias.data.zero_()
-

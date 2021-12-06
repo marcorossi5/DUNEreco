@@ -1,29 +1,31 @@
 import os
 from datetime import datetime as dtm
 
+
 def check(check_instance, check_list):
     if not check_instance in check_list:
         raise NotImplementedError("Operation not implemented")
 
+
 class Args:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
-        
+
         check(self.model, ["cnn", "gcnn", "scg"])
         check(self.task, ["roi", "dn"])
 
         self.w = 6000
-        self.patch_h = 800 if self.channel=='induction' else 960
+        self.patch_h = 800 if self.channel == "induction" else 960
 
         self.num_workers = 8
 
-        #model parameters
+        # model parameters
         self.a = 0.5
         self.k = 8
         self.input_channels = 1
         self.hidden_channels = 32
-        
-        #logs
+
+        # logs
         self.plot_dataset = False
         self.plot_acts = True
 
@@ -37,12 +39,15 @@ class Args:
         self.load_epoch = 100
 
         self.save = True
-        #self.epoch_save = 5
+        # self.epoch_save = 5
 
     def build_directories(self, build=True):
-        #build directories
-        t = dtm.now().strftime("%y%m%d_%H%M%S") if self.out_name is None \
+        # build directories
+        t = (
+            dtm.now().strftime("%y%m%d_%H%M%S")
+            if self.out_name is None
             else self.out_name
+        )
         self.dir_output = f"./denoising/output/{t}/{self.channel}"
 
         def mkdir_fn(name, build):
@@ -50,6 +55,7 @@ class Args:
             if not os.path.isdir(dirname) and build:
                 os.makedirs(dirname)
             return dirname
+
         mkdir_fn("", build)
         self.dir_timings = mkdir_fn("timings", build)
         self.dir_testing = mkdir_fn("testing", build)

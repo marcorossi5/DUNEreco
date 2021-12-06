@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import random
 
+
 def set_random_seed(random_seed=0):
     torch.manual_seed(random_seed)
     torch.backends.cudnn.deterministic = True
