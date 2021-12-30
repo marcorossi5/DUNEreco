@@ -315,6 +315,19 @@ def stat_ssim(
     if win is None:
         win = _fspecial_gauss_1d(win_size, win_sigma)
         win = win.repeat(X.shape[1], 1, 1, 1)
+    
+        if data_range == 1.:
+            # rescale inputs in unit range
+            # no effect on previously rescaled data
+            xmax = X.flatten(1,-1).max(-1).values.reshape([-1,1,1,1])
+            ymax = Y.flatten(1,-1).max(-1).values.reshape([-1,1,1,1])
+            maxes = torch.max(xmax, ymax)
+            xmin = X.flatten(1,-1).min(-1).values.reshape([-1,1,1,1])
+            ymin = Y.flatten(1,-1).min(-1).values.reshape([-1,1,1,1])
+            mins = torch.min(xmin, ymin)
+            X = (X - mins) / (maxes - mins)
+            Y = (Y - mins) / (maxes - mins)
+
 
     ssim_per_channel, cs = _stat_ssim(
         X, Y, data_range=data_range, win=win, reduction=False, K=K

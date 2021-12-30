@@ -97,6 +97,11 @@ def inference(test_loader, stride, model, dev):
     return torch.cat(outs)
 
 
+def identity_inference(test_loader):
+    outs = [noisy for noisy, _ in test_loader]
+    return torch.cat(outs)
+
+
 def gcnn_inference(test_loader, model, dev):
     outs = []
     for noisy, _ in test_loader:

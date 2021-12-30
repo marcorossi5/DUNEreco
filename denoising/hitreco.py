@@ -9,7 +9,7 @@ from model import get_model
 from model_utils import MyDataParallel
 from model_utils import Converter
 from dataloader import InferenceLoader, InferenceCropLoader
-from train import inference, gcnn_inference
+from train import inference, identity_inference, gcnn_inference
 from losses import get_loss
 from args import Args
 
@@ -22,7 +22,6 @@ istep = 800  # channel number in induction plane
 cstep = 960  # channel number in collection plane
 apas = 6
 apastep = 2 * istep + cstep  # number of channels per apa
-device_ids = [0]
 evstep = apas * apastep  # total channel number
 ModelTuple = collections.namedtuple("Model", ["induction", "collection"])
 ArgsTuple = collections.namedtuple("Args", ["batch_size", "patch_stride", "patch_size"])
@@ -106,6 +105,7 @@ def get_model_and_args(modeltype, model_prefix, task, channel):
         kwargs["task"] = args.task
         kwargs["h"] = args.patch_h
         kwargs["w"] = args.w
+        device_ids = [0]
     elif modeltype in ["cnn", "gcnn"]:
         kwargs["model"] = modeltype
         kwargs["task"] = task
@@ -116,6 +116,7 @@ def get_model_and_args(modeltype, model_prefix, task, channel):
         kwargs["k"] = args.k
         kwargs["dataset_dir"] = args.dataset_dir
         kwargs["normalization"] = args.normalization
+        device_ids = [0, 1, 2, 3]
     else:
         raise NotImplementedError("Loss function not implemented")
 
@@ -129,6 +130,8 @@ def get_model_and_args(modeltype, model_prefix, task, channel):
 
 
 def mkModel(modeltype, prefix, task):
+    if modeltype == "id":
+        return None, None
     iargs, imodel = get_model_and_args(modeltype, prefix, task, "induction")
     cargs, cmodel = get_model_and_args(modeltype, prefix, task, "collection")
     return [iargs, cargs], ModelTuple(imodel, cmodel)
@@ -155,11 +158,20 @@ def _gcnn_inference(planes, loader, model, args, dev):
     return converter.tiles2planes(res)
 
 
+def _identity_inference(planes, loader, args, dev):
+    dataset = loader(planes)
+    test = DataLoader(dataset=dataset, batch_size=args.batch_size)
+    return identity_inference(test).cpu()
+
+
 def get_inference(modeltype, **kwargs):
     if modeltype == "scg":
         return _scg_inference(**kwargs)
     elif modeltype in ["cnn", "gcnn"]:
         return _gcnn_inference(**kwargs)
+    elif modeltype == "id":
+        return _identity_inference(**kwargs)
+
 
 
 class DnRoiModel:
@@ -293,3 +305,4 @@ def compute_metrics(output, target, task):
 
 
 # TODO: must fix argument passing in inference
+# TODO: must think about saving to output paths
