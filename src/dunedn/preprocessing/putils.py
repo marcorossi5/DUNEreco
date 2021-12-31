@@ -1,8 +1,5 @@
 import glob
-
 import numpy as np
-
-from skimage.feature import canny
 
 event_step = 15360
 collection_step = 960

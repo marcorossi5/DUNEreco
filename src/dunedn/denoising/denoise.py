@@ -5,15 +5,12 @@ import sys
 import argparse
 import time as tm
 
-from distributed import set_random_seed
-
-from dataloader import PlaneLoader, CropLoader
-from model import SCG_Net, DenoisingModel
-from args import Args
-
-from model_utils import print_summary_file
-
-import train
+from dunedn.denoising.distributed import set_random_seed
+from dunedn.denoising.dataloader import PlaneLoader, CropLoader
+from dunedn.denoising.model import SCG_Net, DenoisingModel
+from dunedn.denoising.args import Args
+from dunedn.denoising.model_utils import print_summary_file
+from dunedn.denoising.train import train
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import load_yaml
@@ -57,7 +54,7 @@ def main(args):
     )
 
     # train
-    return train.train(args, train_data, val_data, model)
+    return train(args, train_data, val_data, model)
 
 
 def spmd_main(card, local_rank, local_world_size, dev):

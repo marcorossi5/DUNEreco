@@ -1,20 +1,17 @@
 import os
-import sys
 import collections
 from math import sqrt
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from model import get_model
-from model_utils import MyDataParallel
-from model_utils import Converter
-from dataloader import InferenceLoader, InferenceCropLoader
-from train import inference, identity_inference, gcnn_inference
-from losses import get_loss
-from args import Args
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.utils import load_yaml
+from dunedn.denoising.model import get_model
+from dunedn.denoising.model_utils import MyDataParallel
+from dunedn.denoising.model_utils import Converter
+from dunedn.denoising.dataloader import InferenceLoader, InferenceCropLoader
+from dunedn.denoising.train import inference, identity_inference, gcnn_inference
+from dunedn.denoising.losses import get_loss
+from dunedn.denoising.args import Args
+from dunedn.utils.utils import load_yaml
 
 # pdune sp architecture
 tdc = 6000  # detector timeticks number
@@ -173,78 +170,51 @@ def get_inference(modeltype, **kwargs):
         return _identity_inference(**kwargs)
 
 
-
-class DnRoiModel:
-    def __init__(self, modeltype, prefix="denoising/best_models"):
+class BaseModel:
+    def __init__(self, modeltype, ckpt=None):
         """
-        Wrapper for inference model
-        Parameters:
-            modeltype: str
-                "cnn" | "gcnn" | "sgc"
+        Wrapper for base model.
+
+        Parameters
+        ----------
+            - modeltype: str, valid options: "cnn" | "gcnn" | "sgc"
+            - ckpt: Path, saved checkpoint path. If None, an un-trained model
+                    will be used
         """
         self.modeltype = modeltype
-        self.roiargs, self.roi = mkModel(modeltype, prefix, "roi")
-        self.dnargs, self.dn = mkModel(modeltype, prefix, "dn")
         self.loader = InferenceLoader if modeltype == "scg" else InferenceCropLoader
 
-    def roi_selection(self, event, dev):
+    def inference(self, event, dev):
         """
-        Interface for roi selection inference on a complete event
-        Parameters:
-            event: array-like
-                event input array of shape [wire num, tdcs]
-            dev: str
-                "cpu" | "cuda:{n}", device hosting the computation
-        Returns:
-            np.array
-                event region of interests
-        """
-        inductions, collections = evt2planes(event)
-        iout = get_inference(
-            self.modeltype,
-            planes=inductions,
-            loader=self.loader,
-            model=self.roi.induction,
-            args=self.roiargs[0],
-            dev=dev,
-        )
-        cout = get_inference(
-            self.modeltype,
-            planes=collections,
-            loader=self.loader,
-            model=self.roi.collection,
-            args=self.roiargs[1],
-            dev=dev,
-        )
-        return planes2evt(iout, cout)
+        Interface for roi selection inference on a complete event.
 
-    def denoise(self, event, dev):
-        """
-        Interface for roi selection inference on a complete event
-        Parameters:
-            event: array-like
-                event input array of shape [wire num, tdcs]
-        Returns:
-            np.array
-                denoised event
+        Parameters
+        ----------
+            - event: array-like, event input array of shape=(nb wires, nb tdc ticks)
+            - dev: str, device hosting the computation
+
+        Returns
+        -------
+            - np.array, denoised event of shape=(nb wires, nb tdc ticks)
         """
         inductions, collections = evt2planes(event)
         iout = get_inference(
             self.modeltype,
             planes=inductions,
             loader=self.loader,
-            model=self.dn.induction,
-            args=self.dnargs[0],
+            model=self.model.induction,
+            args=self.args[0],
             dev=dev,
         )
         cout = get_inference(
             self.modeltype,
             planes=collections,
             loader=self.loader,
-            model=self.dn.collection,
-            args=self.dnargs[1],
+            model=self.model.collection,
+            args=self.args[1],
             dev=dev,
         )
+        # TODO: for the denoising model
         # masking for gcnn output must be done
         # think how to pass out the norm variables
         # probably the model itself is not correct in the current version
@@ -252,6 +222,51 @@ class DnRoiModel:
         #     dn = dn * (norm[1]-norm[0]) + norm[0]
         #     dn [dn <= args.threshold] = 0
         return planes2evt(iout, cout)
+
+
+class DnModel(BaseModel):
+    def __init__(self, modeltype, ckpt=None):
+        """
+        Wrapper for denoising model.
+
+        Parameters
+        ----------
+            - modeltype: str, valid options: "cnn" | "gcnn" | "sgc"
+            - ckpt: Path, saved checkpoint path. If None, an un-trained model
+                    will be used
+        """
+        super(DnModel, self).__init__(modeltype, ckpt)
+        self.args, self.model = mkModel(modeltype, ckpt, "dn")
+
+
+class RoiModel(BaseModel):
+    def __init__(self, modeltype, ckpt=None):
+        """
+        Wrapper for ROI selection model.
+
+        Parameters
+        ----------
+            - modeltype: str, valid options: "cnn" | "gcnn" | "sgc"
+            - ckpt: Path, saved checkpoint path. If None, an un-trained model
+                    will be used
+        """
+        super(RoiModel, self).__init__(modeltype, ckpt)
+        self.args, self.model = mkModel(modeltype, ckpt, "dn")
+
+
+class DnRoiModel:
+    def __init__(self, modeltype, ckpt="denoising/best_models"):
+        """
+        Wrapper for inference model.
+
+        Parameters
+        ----------
+            - modeltype: str, valid options: "cnn" | "gcnn" | "sgc"
+            - ckpt: Path, saved checkpoint path. If None, an un-trained model
+                    will be used
+        """
+        self.dn = DnModel(modeltype, ckpt)
+        self.roi = RoiModel(modeltype, ckpt)
 
 
 def to_cuda(*args):

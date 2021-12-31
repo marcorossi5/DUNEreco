@@ -4,9 +4,13 @@ import torch
 from torch import nn
 from torchvision.models import resnext50_32x4d
 
-from model_utils import choose_norm, choose, NonLocalGraph
-
-from SCG_Net import SCG_Block, GCN_Layer, Pooling_Block, Recombination_Layer
+from dunedn.denoising.model_utils import choose_norm, choose, NonLocalGraph
+from dunedn.denoising.SCG_Net import (
+    SCG_Block,
+    GCN_Layer,
+    Pooling_Block,
+    Recombination_Layer,
+)
 
 
 class PreProcessBlock(nn.Module):

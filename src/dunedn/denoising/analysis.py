@@ -2,7 +2,6 @@
 This module computes inference either for roi and dn, saves results and metrics
 """
 import os
-import sys
 import argparse
 import numpy as np
 import torch
@@ -10,15 +9,12 @@ from torch.utils.data import DataLoader
 import matplotlib as mpl
 import time as tm
 
-from args import Args
-from dataloader import PlaneLoader
-from model import *
-from model_utils import MyDataParallel
+from dunedn.denoising.args import Args
+from dunedn.denoising.dataloader import PlaneLoader
+from dunedn.denoising.model_utils import MyDataParallel
+from dunedn.denoising.train import test_epoch
 
-from train import test_epoch
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.utils import get_freer_gpu
+from dunedn.utils.utils import get_freer_gpu
 
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument(
@@ -94,6 +90,7 @@ def inference(args, model, channel):
 def main(args):
     mpl.rcParams.update({"font.size": 22})
 
+    # this does not work !!
     model = eval("get_" + args.model)(args)
     model = MyDataParallel(model, device_ids=args.dev_ids)
     model = model.to(args.device)

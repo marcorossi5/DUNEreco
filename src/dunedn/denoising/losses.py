@@ -3,9 +3,9 @@
 import torch
 import numpy as np
 from torch import nn
-import ssim
 from abc import ABC, abstractmethod
-from analysis.analysis_roi import confusion_matrix
+from dunedn.denoising.ssim import stat_ssim
+from dunedn.denoising.analysis.analysis_roi import confusion_matrix
 
 
 EPS = torch.Tensor([torch.finfo(torch.float64).eps])
@@ -57,7 +57,7 @@ class loss_ssim(loss):
         super().__init__(a, data_range, reduction)
 
     def __call__(self, *args):
-        return 1 - ssim.stat_ssim(
+        return 1 - stat_ssim(
             *args, data_range=self.data_range, reduction=self.reduction
         )
 
@@ -67,7 +67,7 @@ class loss_ssim_l2(loss):
         super().__init__(a, data_range, reduction)
 
     def __call__(self, *args):
-        loss1 = 1 - ssim.stat_ssim(
+        loss1 = 1 - stat_ssim(
             *args, data_range=self.data_range, reduction=self.reduction
         )
         loss2 = nn.MSELoss(reduction=self.reduction)(*args)
@@ -82,7 +82,7 @@ class loss_ssim_l1(loss):
         super().__init__(a, data_range, reduction)
 
     def __call__(self, *args):
-        loss1 = 1 - ssim.stat_ssim(
+        loss1 = 1 - stat_ssim(
             *args, data_range=self.data_range, reduction=self.reduction
         )
         loss2 = (args[0] - args[1]).abs()
@@ -203,7 +203,7 @@ class loss_psnr(loss):
 
 
 class loss_cfnm(loss):
-    def __init__(self, reduction: "mean"):
+    def __init__(self, reduction="mean"):
         pass
 
     def __call__(self, output, target):

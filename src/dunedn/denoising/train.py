@@ -1,17 +1,14 @@
 import os
-from math import ceil
-from math import sqrt
+from math import ceil, sqrt
+from time import time as tm
 import numpy as np
 
 import torch
 from torch import optim
 from torch.utils.data import DataLoader
 
-from model_utils import MyDataParallel
-
-from losses import get_loss
-
-from time import time as tm
+from dunedn.denoising.model_utils import MyDataParallel
+from dunedn.denoising.losses import get_loss
 
 
 def time_windows(plane, w, stride):

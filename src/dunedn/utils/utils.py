@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import yaml
+from hyperopt import hp
 
 
 def get_freer_gpu():

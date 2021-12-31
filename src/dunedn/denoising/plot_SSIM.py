@@ -4,11 +4,9 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
-from args import Args
-
-from ssim import stat_ssim
-
-from dataloader import PlaneLoader
+from dunedn.denoising.args import Args
+from dunedn.denoising.ssim import stat_ssim
+from dunedn.denoising.dataloader import PlaneLoader
 
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument(
@@ -60,6 +58,7 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
         if int(ARGS["device"]) == -1:
             from utils.utils import get_freer_gpu
+
             GPU_NUM = get_freer_gpu()
             DEV = torch.device("cuda:{}".format(GPU_NUM))
         elif int(ARGS["device"]) > -1:

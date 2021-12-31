@@ -1,31 +1,46 @@
-import os
-import sys
-import argparse
-import time
+import os, glob
 import glob
 import numpy as np
+from dunedn.preprocessing.putils import get_crop
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--dir_name",
-    "-p",
-    default="../datasets/denoising",
-    type=str,
-    help="Directory path to datasets",
-)
-parser.add_argument(
-    "--n_crops", "-n", default=5000, type=int, help="number of crops for each plane"
-)
-parser.add_argument("--crop_edge", "-c", default=32, type=int, help="crop edge")
-parser.add_argument(
-    "--percentage", "-x", default=0.5, type=float, help="percentage of signal"
-)
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+def add_arguments_preprocess(parser):
+    parser.add_argument(
+        "-p",
+        default="../datasets/denoising",
+        type=str,
+        help="directory path to datasets",
+        metavar="DIR_NAME",
+    )
+    parser.add_argument(
+        "-n",
+        default=5000,
+        type=int,
+        help="number of crops for each plane",
+        metavar="N_CROPS",
+    )
+    parser.add_argument(
+        "-c", default=32, type=int, help="crop edge", metavar="CROP_EDGE"
+    )
+    parser.add_argument(
+        "-x", default=0.5, type=float, help="percentage of signal", metavar="PERCENTAGE"
+    )
+    parser.set_defaults(func=preprocess)
 
-import putils
-from utils.utils import get_freer_gpu
-from denoising.ssim import _fspecial_gauss_1d, stat_gaussian_filter
+
+def preprocess(args):
+    # TODO: remove this step and pass NameSpace object
+    args = vars(args)
+    args.pop("func")
+    print("Args:")
+    for k in args.keys():
+        print(k, args[k])
+    preprocess_main(**args)
+
+
+# TODO: remove this global variables, write a config.py and a geometry_helper.py
+# files. The geometry_helper module should contain the functions for converting
+# events array into planes and back.
 
 # patch_size = (32,32)
 apas = 6
@@ -130,7 +145,7 @@ def crop_planes_and_dump(dir_name, n_crops, patch_size, p):
         ccrops = []
         ncrops = []
         for cplane, nplane in zip(cplanes, nplanes):
-            idx = putils.get_crop(cplane, n_crops=n_crops, patch_size=patch_size, p=p)
+            idx = get_crop(cplane, n_crops=n_crops, patch_size=patch_size, p=p)
             ccrops.append(cplane[idx])
             ncrops.append(nplane[idx])
 
@@ -151,7 +166,7 @@ def crop_planes_and_dump(dir_name, n_crops, patch_size, p):
         np.save(fname, [m, M])
 
 
-def main(dir_name, n_crops, crop_edge, percentage):
+def preprocess_main(dir_name, n_crops, crop_edge, percentage):
     patch_size = (crop_edge, crop_edge)
     for i in ["train/crops", "train/planes", "val/planes", "test/planes"]:
         if not os.path.isdir(os.path.join(dir_name, i)):
@@ -176,16 +191,4 @@ def main(dir_name, n_crops, crop_edge, percentage):
         np.save(fname, [n.mean(), n.std()])
 
     dname = os.path.join(dir_name, "train")
-    # crop_planes_and_dump(dname, n_crops, patch_size, percentage)
-
-
-if __name__ == "__main__":
-    args = vars(parser.parse_args())
-
-    print("Args:")
-    for k in args.keys():
-        print(k, args[k])
-
-    start = time.time()
-    main(**args)
-    print("Program done in %f" % (time.time() - start))
+    crop_planes_and_dump(dname, n_crops, patch_size, percentage)

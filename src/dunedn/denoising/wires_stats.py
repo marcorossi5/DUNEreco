@@ -1,7 +1,7 @@
 import numpy as np
 import argparse
-from time import time
-from hitreco import evt2planes, planes2evt
+from time import time as tm
+from dunedn.denoising.hitreco import evt2planes, planes2evt
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -91,6 +91,6 @@ def main(fname, fit):
 
 if __name__ == "__main__":
     args = vars(parser.parse_args())
-    start = time()
+    start = tm()
     main(**args)
-    print(f"Program done in {time() - start}")
+    print(f"Program done in {tm() - start}")

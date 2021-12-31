@@ -2,7 +2,7 @@ import os
 import torch
 import numpy as np
 
-from model_utils import Converter
+from dunedn.denoising.model_utils import Converter
 
 ElectronsToADC = 6.8906513e-3
 

@@ -2,10 +2,9 @@ from hyperopt import fmin, tpe, hp, Trials, space_eval, STATUS_OK
 from hyperopt.mongoexp import MongoTrials
 from time import time as tm
 import argparse, os, shutil, sys, datetime, yaml, pprint, pickle
-import denoise
-import analysis
-
-from args import Args
+import dunedn.denoising.denoise as denoise
+import dunedn.denoising.analysis as analysis
+from dunedn.denoising.args import Args
 
 
 def run_hyperparameter_scan(search_space, max_evals, cluster, folder):
