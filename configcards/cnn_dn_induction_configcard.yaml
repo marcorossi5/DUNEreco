@@ -1,0 +1,27 @@
+dataset_dir: "../datasets/20201124"
+
+task: "dn" # roi | dn
+
+model: "cnn" # cnn | gcnn | uscg
+
+epochs: 2 # number of training epochs
+
+loss_fn: "ssim_l2" # mse | ssim | ssim_l1 | ssim_l2
+
+lr: 0.001
+
+out_name: "202011/cnn" # output dirname in denoising/output folder
+
+load_path: None # "denoising/best_models/scg_dn_induction.pth" # torch .dat absolute filepath
+
+threshold: 3.5 # 500 e- | 3.5 ADC counts
+
+amsgrad: True
+
+channel: "induction" # induction | collection
+
+scan: False
+
+patch_size: 32
+
+patch_stride: 1000
