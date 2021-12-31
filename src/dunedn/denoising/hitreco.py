@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import collections
 from math import sqrt
 import numpy as np
@@ -25,7 +26,7 @@ ArgsTuple = collections.namedtuple("Args", ["batch_size", "patch_stride", "patch
 
 
 model2batch = {
-    "scg": {"dn": 1, "roi": 1},
+    "uscg": {"dn": 1, "roi": 1},
     "gcnn": {"dn": 128, "roi": 512},
     "cnn": {"dn": 376, "roi": 2048},
 }
@@ -85,52 +86,67 @@ def planes2evt(inductions, collections):
     return np.concatenate(event)
 
 
-def get_model_and_args(modeltype, model_prefix, task, channel):
-    card_prefix = "./denoising/configcards"
-    card = f"{modeltype}_{task}_{channel}.yaml"
-    parameters = load_yaml(os.path.join(card_prefix, card))
+def get_model_and_args(modeltype, task, channel, ckpt=None):
+    card_prefix = Path(os.environ.get("DUNEDN_PATH"))
+    card = f"configcards/{modeltype}_{task}_{channel}_configcard.yaml"
+    parameters = load_yaml(card_prefix / card)
     parameters["channel"] = channel
     args = Args(**parameters)
 
-    patch_size = "None" if modeltype == "scg" else eval(args.patch_size)
-    patch_stride = args.patch_stride if modeltype == "scg" else None
+    patch_size = None if modeltype == "uscg" else args.patch_size
+    patch_stride = args.patch_stride if modeltype == "uscg" else None
     batch_size = model2batch[modeltype][task]
 
     # TODO: when changing the models inputs, this has to be changed accordingly
     kwargs = {}
-    if modeltype == "scg":
+    if modeltype == "uscg":
         kwargs["task"] = args.task
         kwargs["h"] = args.patch_h
-        kwargs["w"] = args.w
+        kwargs["w"] = args.patch_w
         device_ids = [0]
     elif modeltype in ["cnn", "gcnn"]:
         kwargs["model"] = modeltype
         kwargs["task"] = task
-        kwargs["channel"] = channel
+        # kwargs["channel"] = channel
         kwargs["patch_size"] = patch_size
         kwargs["input_channels"] = args.input_channels
         kwargs["hidden_channels"] = args.hidden_channels
         kwargs["k"] = args.k
-        kwargs["dataset_dir"] = args.dataset_dir
-        kwargs["normalization"] = args.normalization
+        # kwargs["dataset_dir"] = args.dataset_dir
+        # kwargs["normalization"] = args.normalization
         device_ids = [0, 1, 2, 3]
     else:
         raise NotImplementedError("Loss function not implemented")
 
     model = MyDataParallel(get_model(modeltype, **kwargs), device_ids=device_ids)
-    name = f"{modeltype}_{task}_{channel}.pth"
-    fname = os.path.join(model_prefix, name)
 
-    state_dict = torch.load(fname)
-    model.load_state_dict(state_dict)
+    if ckpt is not None:
+        fname = ckpt / f"{channel}.pth"
+        state_dict = torch.load(fname)
+        model.load_state_dict(state_dict)
     return ArgsTuple(batch_size, patch_stride, patch_size), model
 
 
-def mkModel(modeltype, prefix, task):
+def mkModel(modeltype, task, ckpt=None):
+    """
+    Instantiate a new model of type modeltype.
+
+    Parameters
+    ----------
+        - modeltype: str, valid options: "uscg" | "cnn" | "gcnn" | "id"
+        - task: str, valid options: "dn" | "roi"
+        - ckpt: Path, checkpoint path
+    
+    Returns
+    -------
+        - list, of arguments to call model.inference for induction and collection
+                respectively
+        - ModelTuple, induction and collection models instances
+    """
     if modeltype == "id":
-        return None, None
-    iargs, imodel = get_model_and_args(modeltype, prefix, task, "induction")
-    cargs, cmodel = get_model_and_args(modeltype, prefix, task, "collection")
+        return [None, None], ModelTuple(None, None)
+    iargs, imodel = get_model_and_args(modeltype, task, "induction", ckpt)
+    cargs, cmodel = get_model_and_args(modeltype, task, "collection", ckpt)
     return [iargs, cargs], ModelTuple(imodel, cmodel)
 
 
@@ -155,14 +171,14 @@ def _gcnn_inference(planes, loader, model, args, dev):
     return converter.tiles2planes(res)
 
 
-def _identity_inference(planes, loader, args, dev):
+def _identity_inference(planes, loader, **kwargs):
     dataset = loader(planes)
-    test = DataLoader(dataset=dataset, batch_size=args.batch_size)
+    test = DataLoader(dataset=dataset)
     return identity_inference(test).cpu()
 
 
 def get_inference(modeltype, **kwargs):
-    if modeltype == "scg":
+    if modeltype == "uscg":
         return _scg_inference(**kwargs)
     elif modeltype in ["cnn", "gcnn"]:
         return _gcnn_inference(**kwargs)
@@ -171,18 +187,20 @@ def get_inference(modeltype, **kwargs):
 
 
 class BaseModel:
-    def __init__(self, modeltype, ckpt=None):
+    def __init__(self, modeltype, task, ckpt=None):
         """
         Wrapper for base model.
 
         Parameters
         ----------
-            - modeltype: str, valid options: "cnn" | "gcnn" | "sgc"
+            - modeltype: str, valid options: "cnn" | "gcnn" | "usgc"
+            - task: str, valid options "dn" | "roi"
             - ckpt: Path, saved checkpoint path. If None, an un-trained model
                     will be used
         """
         self.modeltype = modeltype
-        self.loader = InferenceLoader if modeltype == "scg" else InferenceCropLoader
+        self.args, self.model = mkModel(modeltype, task, ckpt)
+        self.loader = InferenceLoader if modeltype == "uscg" else InferenceCropLoader
 
     def inference(self, event, dev):
         """
@@ -232,12 +250,12 @@ class DnModel(BaseModel):
         Parameters
         ----------
             - modeltype: str, valid options: "cnn" | "gcnn" | "sgc"
-            - ckpt: Path, saved checkpoint path. If None, an un-trained model
-                    will be used
+            - ckpt: Path, saved checkpoint path. The path should point to a folder
+                    containing a collection and an induction .pth file. If None,
+                    an un-trained model will be used. 
         """
-        super(DnModel, self).__init__(modeltype, ckpt)
-        self.args, self.model = mkModel(modeltype, ckpt, "dn")
-
+        super(DnModel, self).__init__(modeltype, "dn", ckpt)
+        
 
 class RoiModel(BaseModel):
     def __init__(self, modeltype, ckpt=None):
@@ -250,12 +268,11 @@ class RoiModel(BaseModel):
             - ckpt: Path, saved checkpoint path. If None, an un-trained model
                     will be used
         """
-        super(RoiModel, self).__init__(modeltype, ckpt)
-        self.args, self.model = mkModel(modeltype, ckpt, "dn")
+        super(RoiModel, self).__init__(modeltype, "roi", ckpt)
 
 
 class DnRoiModel:
-    def __init__(self, modeltype, ckpt="denoising/best_models"):
+    def __init__(self, modeltype, roi_ckpt=None, dn_ckpt=None):
         """
         Wrapper for inference model.
 
@@ -265,11 +282,13 @@ class DnRoiModel:
             - ckpt: Path, saved checkpoint path. If None, an un-trained model
                     will be used
         """
-        self.dn = DnModel(modeltype, ckpt)
-        self.roi = RoiModel(modeltype, ckpt)
+        self.roi = RoiModel(modeltype, roi_ckpt)
+        self.dn = DnModel(modeltype, dn_ckpt)
 
 
 def to_cuda(*args):
+    if not torch.cuda.is_available():
+        return args
     dev = "cuda:0"
     args = list(map(torch.Tensor, args[0]))
     return list(map(lambda x: x.to(dev), args))
@@ -321,3 +340,6 @@ def compute_metrics(output, target, task):
 
 # TODO: must fix argument passing in inference
 # TODO: must think about saving to output paths
+# TODO: check the purpose of to_cuda function
+# TODO: think about adding the first two columns in the output array with:
+# event number, wire number

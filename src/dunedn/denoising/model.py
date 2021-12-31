@@ -4,7 +4,7 @@ import torch
 from torch import nn
 from torchvision.models import resnext50_32x4d
 
-from dunedn.denoising.model_utils import choose_norm, choose, NonLocalGraph
+from dunedn.denoising.model_utils import choose, NonLocalGraph
 from dunedn.denoising.SCG_Net import (
     SCG_Block,
     GCN_Layer,
@@ -140,16 +140,16 @@ class DenoisingModel(nn.Module):
         self,
         model,
         task,
-        channel,
+        # channel,
         patch_size,
         input_channels,
         hidden_channels,
         k,
-        dataset_dir,
-        normalization,
+        # dataset_dir,
+        # normalization,
     ):
         super(DenoisingModel, self).__init__()
-        self.patch_size = patch_size
+        self.patch_size = (patch_size,)*2
         self.model = model
         self.task = task
         ic = input_channels
@@ -159,7 +159,7 @@ class DenoisingModel(nn.Module):
             if self.model == "gcnn"
             else lambda x: None
         )
-        self.norm_fn = choose_norm(dataset_dir, channel, normalization)
+        # self.norm_fn = choose_norm(dataset_dir, channel, normalization)
         self.ROI = ROI(7, ic, hc, self.getgraph_fn, self.model)
         self.PreProcessBlocks = nn.ModuleList(
             [
@@ -189,7 +189,7 @@ class DenoisingModel(nn.Module):
         self.combine = combine
 
     def forward(self, x):
-        x = self.norm_fn(x)
+        # x = self.norm_fn(x)
         hits = self.ROI(x)
         if self.task == "roi":
             return hits
@@ -309,9 +309,12 @@ class SCG_Net(nn.Module):
 
 
 def get_model(modeltype, **args):
-    if modeltype == "scg":
+    if modeltype == "uscg":
         return SCG_Net(**args)
     elif modeltype in ["gcnn", "cnn"]:
         return DenoisingModel(**args)
     else:
         raise NotImplementedError("Model not implemented")
+
+# TODO: check that for training, the median normalization is done outside the
+# forward pass

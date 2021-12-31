@@ -12,6 +12,7 @@ The package can be installed with Python's pip package manager:
 git clone https://github.com/marcorossi5/DUNEreco.git dunedn
 cd dunedn
 pip install .
+export DUNEDN_PATH=$PWD
 ```
 
 This process will copy the dunedn program to your environment python path.
@@ -33,3 +34,16 @@ dunedn <subcommand> [options]
 ```
 
 Valid subcommands are: `preprocess|train|inference`.
+
+Note: in the current release, the `train` subcommand is not available yet.
+It will be issued in the next release.
+
+## Example inference
+
+```bash
+dunedn inference -i <input.npy> -o <output.npy> -m <modeltype> [--model_path <checkpoint.pth>]
+```
+
+This command takes the `input.npy` array and applies the `modeltype` inference.
+A saved model checkpoint could be loaded providing the checkpoint path with the
+`--model_path` flag.

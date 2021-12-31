@@ -1,5 +1,6 @@
 from copy import deepcopy
 import numpy as np
+import torch
 from pathlib import Path
 from dunedn.denoising.hitreco import DnModel, compute_metrics
 
@@ -64,7 +65,7 @@ def inference_main(input, output, modeltype, ckpt):
     print(f"Denoising event at {input}")
     evt = np.load(input)[:, 2:]
     model = DnModel(modeltype, ckpt)
-    dev = "cuda:0"
+    dev = "cuda:0" if torch.cuda.is_available() else "cpu"
 
     evt_dn = model.inference(evt, dev)
     np.save(output, evt_dn)

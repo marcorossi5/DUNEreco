@@ -11,7 +11,7 @@ class Args:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-        check(self.model, ["cnn", "gcnn", "scg"])
+        check(self.model, ["cnn", "gcnn", "uscg"])
         check(self.task, ["roi", "dn"])
 
         self.w = 6000
