@@ -33,7 +33,7 @@ setup(
     description="ProtoDUNE raw data denoising with DL",
     author="M. Rossi",
     author_email="marco.rossi@cern.ch",
-    url="https://github.com/marcorossi5/dunedn.git",
+    url="https://github.com/marcorossi5/DUNEreco.git",
     entry_points={"console_scripts": ["dunedn = dunedn.scripts.dunedn:main"]},
     package_dir={"": "src"},
     packages=find_packages("src"),
