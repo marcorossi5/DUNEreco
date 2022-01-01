@@ -35,7 +35,7 @@ def add_arguments_inference(parser):
     parser.add_argument(
         "--model_path",
         type=Path,
-        help="(optional) path to the saved model",
+        help="(optional) path to the saved model directory",
         default=None,
         dest="ckpt",
     )

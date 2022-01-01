@@ -45,5 +45,8 @@ dunedn inference -i <input.npy> -o <output.npy> -m <modeltype> [--model_path <ch
 ```
 
 This command takes the `input.npy` array and applies the `modeltype` inference.
-A saved model checkpoint could be loaded providing the checkpoint path with the
-`--model_path` flag.
+A saved model checkpoint could be loaded providing the checkpoint path with the optional `--model_path` flag.
+
+## Saved models
+
+Pretrained models will appear soon in this repository.
