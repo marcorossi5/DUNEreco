@@ -1,3 +1,4 @@
+# This file is part of DUNEdn by M. Rossi
 from math import ceil
 
 import torch

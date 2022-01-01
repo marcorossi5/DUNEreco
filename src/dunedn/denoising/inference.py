@@ -1,3 +1,4 @@
+# This file is part of DUNEdn by M. Rossi
 from copy import deepcopy
 import numpy as np
 import torch

@@ -1,3 +1,4 @@
+# This file is part of DUNEdn by M. Rossi
 """ This module returns the ROIs from recob::hit objects"""
 import os
 import argparse

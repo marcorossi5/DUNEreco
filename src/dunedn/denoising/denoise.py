@@ -1,7 +1,5 @@
-"""This module contains the main denoise function"""
-
+# This file is part of DUNEdn by M. Rossi
 import os
-import sys
 import argparse
 import time as tm
 
@@ -11,20 +9,16 @@ from dunedn.denoising.model import SCG_Net, DenoisingModel
 from dunedn.denoising.args import Args
 from dunedn.denoising.model_utils import print_summary_file
 from dunedn.denoising.train import train
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.utils import load_yaml
+from dunedn.utils.utils import load_yaml
 
 
 def main(args):
-    """This is the main function"""
-
     # n = torch.cuda.device_count() // args.local_world_size
     # args.dev_ids = list(range(args.local_rank * n, (args.local_rank + 1) * n))
     # args.dev_ids = [args.dev]
     args.dev_ids = [0, 1, 2, 3]
 
-    if args.model == "scg":
+    if args.model == "uscg":
         model = SCG_Net(task=args.task, h=args.patch_h, w=args.patch_w)
     elif args.model in ["cnn", "gcnn"]:
         args.patch_size = eval(args.patch_size)
@@ -44,8 +38,8 @@ def main(args):
 
     # load datasets
     set_random_seed(0)
-    loader = PlaneLoader if args.model == "scg" else CropLoader
-    kwargs = {} if args.model == "scg" else {"patch_size": args.patch_size}
+    loader = PlaneLoader if args.model == "uscg" else CropLoader
+    kwargs = {} if args.model == "uscg" else {"patch_size": args.patch_size}
     train_data = loader(
         args.dataset_dir, "train", args.task, args.channel, args.threshold
     )

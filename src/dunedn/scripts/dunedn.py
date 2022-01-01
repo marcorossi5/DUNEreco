@@ -1,3 +1,4 @@
+# This file is part of DUNEdn by M. Rossi
 import argparse
 from time import time as tm
 from dunedn.preprocessing.preprocess import add_arguments_preprocess

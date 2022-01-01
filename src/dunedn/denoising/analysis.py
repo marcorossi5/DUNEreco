@@ -1,3 +1,4 @@
+# This file is part of DUNEdn by M. Rossi
 """
 This module computes inference either for roi and dn, saves results and metrics
 """

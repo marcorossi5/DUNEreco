@@ -1,3 +1,4 @@
+# This file is part of DUNEdn by M. Rossi
 import torch
 from torch import nn
 

@@ -1,3 +1,4 @@
+# This file is part of DUNEdn by M. Rossi
 """ This module implements several losses. Main option is reduction, which could
     be either 'mean' (default) or 'none'."""
 import torch

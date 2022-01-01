@@ -1,20 +1,11 @@
 """ This module compare results on test set of DN against Pandora recob::wires"""
-from analysis_roi import set_ticks
+from analysis_roi import set_ticks, mpl_settings
 import argparse
 import numpy as np
-from time import time
+from time import time as tm
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from operator import itemgetter
-
-PARSER = argparse.ArgumentParser()
-PARSER.add_argument(
-    "--dirname",
-    "-p",
-    default="final",
-    type=str,
-    help="Directory containing results to plot, format: denoising/output/CNN_dn_<XXX>/final_test",
-)
 
 
 def cmap():
@@ -417,20 +408,21 @@ def image_plots(dirname):
 
 
 def main(dirname):
-    mpl.rcParams["text.usetex"] = True
-    mpl.rcParams["savefig.format"] = "pdf"
-    mpl.rcParams["figure.titlesize"] = 20
-    mpl.rcParams["axes.titlesize"] = 14
+    mpl.rcParams.update(mpl_settings)
     mpl.rcParams["ytick.labelsize"] = 17
     mpl.rcParams["xtick.labelsize"] = 17
-    mpl.rcParams["legend.fontsize"] = 14
     metrics_plots(dirname)
-
     image_plots(dirname)
 
 
 if __name__ == "__main__":
-    args = vars(PARSER.parse_args())
-    start = time()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dirname",
+        default="final",
+        help="Directory containing results to plot, format: denoising/output/CNN_dn_<XXX>/final_test",
+    )
+    args = vars(parser.parse_args())
+    start = tm()
     main(**args)
-    print(f"Program done in {time()-start}")
+    print(f"Program done in {tm()-start}")

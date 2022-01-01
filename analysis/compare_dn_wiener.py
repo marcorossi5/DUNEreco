@@ -1,28 +1,11 @@
 """ This module compare results on test set of DN against Wiener filters"""
-import sys
-import os
 import argparse
 import numpy as np
-import time as tm
+from time import time as tm
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from operator import itemgetter
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-)
-
-from analysis_roi import set_ticks
-
-PARSER = argparse.ArgumentParser()
-PARSER.add_argument(
-    "--dirname",
-    "-p",
-    default="final",
-    type=str,
-    help="Directory containing results to plot, format: denoising/output/CNN_dn_<XXX>/final_test",
-)
+from analysis_roi import set_ticks, mpl_settings
 
 
 def metrics_list(dirname):
@@ -198,20 +181,21 @@ def image_plots(dirname):
 
 
 def main(dirname):
-    mpl.rcParams["text.usetex"] = True
-    mpl.rcParams["savefig.format"] = "pdf"
-    mpl.rcParams["figure.titlesize"] = 20
-    mpl.rcParams["axes.titlesize"] = 17
+    mpl.rcParams.update(mpl_settings)
     mpl.rcParams["ytick.labelsize"] = 17
     mpl.rcParams["xtick.labelsize"] = 17
-    mpl.rcParams["legend.fontsize"] = 14
     metrics_plots(dirname)
-
     image_plots(dirname)
 
 
 if __name__ == "__main__":
-    args = vars(PARSER.parse_args())
-    start = tm.time()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dirname",
+        default="final",
+        help="Directory containing results to plot, format: denoising/output/CNN_dn_<XXX>/final_test",
+    )
+    args = vars(parser.parse_args())
+    start = tm()
     main(**args)
-    print(f"Program done in {tm.time()-start}")
+    print(f"Program done in {tm()-start}")

@@ -1,3 +1,4 @@
+# This file is part of DUNEdn by M. Rossi
 from hyperopt import fmin, tpe, hp, Trials, space_eval, STATUS_OK
 from hyperopt.mongoexp import MongoTrials
 from time import time as tm

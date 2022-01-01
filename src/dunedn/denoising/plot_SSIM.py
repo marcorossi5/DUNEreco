@@ -1,3 +1,4 @@
+# This file is part of DUNEdn by M. Rossi
 import argparse
 import time as tm
 import numpy as np

@@ -1,3 +1,4 @@
+# This file is part of DUNEdn by M. Rossi
 import os, glob
 import glob
 import numpy as np

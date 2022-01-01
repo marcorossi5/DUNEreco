@@ -1,28 +1,15 @@
 """ Plot roi confusion metrics statistics as a function of the threshold"""
-import os
-import sys
-import time as tm
-
-# import argparse
+from time import time as tm
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-)
-from analysis_roi import confusion_matrix
-from analysis_roi import testing_res
+from analysis_roi import confusion_matrix, testing_res, mpl_settings
 
 
 def main():
-    mpl.rcParams["text.usetex"] = True
-    mpl.rcParams["savefig.format"] = "pdf"
-    mpl.rcParams["figure.titlesize"] = 20
+    mpl.rcParams.update(mpl_settings)
     mpl.rcParams["axes.titlesize"] = 18
     mpl.rcParams["axes.labelsize"] = 16
-    mpl.rcParams["ytick.labelsize"] = 14
-    mpl.rcParams["xtick.labelsize"] = 14
     mpl.rcParams["legend.fontsize"] = 13
 
     sns_all = []
@@ -51,7 +38,7 @@ def main():
             no_hit_gc = pred_gc[~m]
 
             tp, fp, fn, tn = confusion_matrix(hit, no_hit)
-            tp_gc, fp_gc, fn_gc, tn_gc = confusion_matrix(hit_gc, no_hit_gc)
+            tp_gc, fp_gc, _, tn_gc = confusion_matrix(hit_gc, no_hit_gc)
             sns.append([tp / (tp + fn), tp_gc / (tp + fn)])
             spc.append([1 - fp / (tn + fp), 1 - fp_gc / (tn_gc + fp_gc)])
         sns_all.append(sns)
@@ -137,6 +124,6 @@ def main():
 
 
 if __name__ == "__main__":
-    start = tm.time()
+    start = tm()
     main()
-    print(f"Program done in {tm.time()-start}")
+    print(f"Program done in {tm()-start}")

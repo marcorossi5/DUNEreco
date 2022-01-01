@@ -1,25 +1,9 @@
 """ This module computes the Wiener filter for planes in the test set"""
-import sys
-import os
 import argparse
-import time as tm
+from time import time as tm
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from analysis_roi import set_ticks, training_metrics, training_timings, special_ticks
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-)
-
-PARSER = argparse.ArgumentParser()
-PARSER.add_argument(
-    "--dirname",
-    "-p",
-    default="final",
-    type=str,
-    help="Directory containing results to plot, format: denoising/output/CNN_dn_<XXX>/final_test",
-)
+from analysis_roi import set_ticks, training_metrics, training_timings, special_ticks, mpl_settings
 
 
 def training_plots(dirname):
@@ -386,20 +370,19 @@ def testing_plots():
 
 
 def main(dirname):
-    mpl.rcParams["text.usetex"] = True
-    mpl.rcParams["savefig.format"] = "pdf"
-    mpl.rcParams["figure.titlesize"] = 20
-    mpl.rcParams["axes.titlesize"] = 17
-    mpl.rcParams["ytick.labelsize"] = 14
-    mpl.rcParams["xtick.labelsize"] = 14
-    mpl.rcParams["legend.fontsize"] = 14
+    mpl.rcParams.update(mpl_settings)
     training_plots(dirname)
-
     testing_plots()
 
 
 if __name__ == "__main__":
-    args = vars(PARSER.parse_args())
-    start = tm.time()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dirname",
+        default="final",
+        help="Directory containing results to plot, format: denoising/output/CNN_dn_<XXX>/final_test",
+    )
+    args = vars(parser.parse_args())
+    start = tm()
     main(**args)
-    print(f"Program done in {tm.time()-start}")
+    print(f"Program done in {tm()-start}")
