@@ -3,6 +3,7 @@ import numpy as np
 from time import time as tm
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+from dunedn.utils.utils import confusion_matrix
 
 
 mpl_settings = {
@@ -354,25 +355,21 @@ def testing_res(dirname, threshold):
     return [y_true, y_pred, y_pred_gc]
 
 
-def confusion_matrix(hit, no_hit, t=0.5):
-    """
-    Parameters:
-        hit: np.array, scores of real hits
-        no_hit: np.array, scores of real no-hits
-        t: float, threshold
-    Returns:
-        tp, fp, fn, tn
-    """
-    tp = np.count_nonzero(hit > t)
-    fn = np.size(hit) - tp
-
-    tn = np.count_nonzero(no_hit < t)
-    fp = np.size(no_hit) - tn
-
-    return tp, fp, fn, tn
-
-
 def compute_roc(pred, mask):
+    """
+    Computes ROC curve.
+
+    Parameters
+    ----------
+        - pred: list, of np.array
+        - mask: list, of np.array
+    
+    Returns
+    -------
+        - list, [np.array, np.array] false positive rate curve with error bars
+        - list, [np.array, np.array] true positive rate curve with error bars
+        - list, [float, float] area curve with error
+    """
     fpr = []
     tpr = []
     auc = []
@@ -397,11 +394,8 @@ def compute_roc(pred, mask):
 
         auc.append(((fr[1:] - fr[:-1]) * tr[1:]).sum())
 
-    def expected(x):
-        return np.mean(x, 0)
-
-    def unc(x):
-        return np.std(x, 0) / np.sqrt(len(x))
+    expected = lambda x: np.mean(x, 0)
+    unc = lambda x: np.std(x, 0) / np.sqrt(len(x))
 
     fpr_mean = expected(fpr)
     fpr_std = unc(fpr)

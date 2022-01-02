@@ -5,7 +5,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix
+from dunedn.utils.utils import confusion_matrix
+
+# from sklearn.metrics import confusion_matrix
 
 
 class MinMax(nn.Module):
@@ -432,9 +434,12 @@ def save_ROI_stats(args, epoch, clear, dn, t, ana=False):
         t: threshold, float in [0,1]
     """
     # mpl.rcParams.update(mpl.rcParamsDefault)
-    y_true = clear.detach().cpu().numpy().flatten().astype(int)
+    y_true = clear.detach().cpu().numpy().flatten().astype(bool)
     y_pred = dn.detach().cpu().numpy().flatten()
-    cm = confusion_matrix(y_true, y_pred > t)
+    hit = y_pred[y_true]
+    no_hit = y_pred[~y_true]
+    tp, fp, fn, tn = confusion_matrix(hit, no_hit, t)
+    cm = np.array([[tn, fp], [fn, tp]])
     fname = os.path.join(args.dir_testing, "cm.txt")
     with open(fname, "a+") as f:
         print_cm(cm, f, epoch)
@@ -482,3 +487,5 @@ def freeze_weights(model, task):
     # net = 'roi' if ROI==0 else 'dn'
     # print('Trainable parameters in %s: %d'% (net, params))
     return model
+
+# TODO: check the confusion matrix (there's one implemented in utils/utils.py)

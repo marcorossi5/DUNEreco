@@ -36,6 +36,26 @@ def moving_average(scalars, weight):
     return smoothed
 
 
+def confusion_matrix(hit, no_hit, t=0.5):
+    """
+    Return confusion matrix elements from arrays of scores and threshold value.
+
+    Parameters:
+        hit: np.array, scores of real hits
+        no_hit: np.array, scores of real no-hits
+        t: float, threshold
+    Returns:
+        tp, fp, fn, tn
+    """
+    tp = np.count_nonzero(hit > t)
+    fn = np.size(hit) - tp
+
+    tn = np.count_nonzero(no_hit < t)
+    fp = np.size(no_hit) - tn
+
+    return tp, fp, fn, tn
+
+
 def load_yaml(runcard_file):
     """Loads yaml runcard"""
     with open(runcard_file, "r") as stream:

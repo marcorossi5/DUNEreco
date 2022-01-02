@@ -3,7 +3,8 @@ from time import time as tm
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from analysis_roi import confusion_matrix, testing_res, mpl_settings
+from analysis_roi import testing_res, mpl_settings
+from dunedn.utils.utils import confusion_matrix
 
 
 def main():

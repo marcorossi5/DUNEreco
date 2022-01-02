@@ -6,7 +6,7 @@ import numpy as np
 from torch import nn
 from abc import ABC, abstractmethod
 from dunedn.denoising.ssim import stat_ssim
-from dunedn.denoising.analysis.analysis_roi import confusion_matrix
+from dunedn.utils.utils import confusion_matrix
 
 
 EPS = torch.Tensor([torch.finfo(torch.float64).eps])
