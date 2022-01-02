@@ -4,8 +4,8 @@ import numpy as np
 from time import time as tm
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from operator import itemgetter
 from analysis_roi import set_ticks, mpl_settings
+from operator import itemgetter
 
 
 def metrics_list(dirname):

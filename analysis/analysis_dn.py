@@ -3,7 +3,13 @@ import argparse
 from time import time as tm
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from analysis_roi import set_ticks, training_metrics, training_timings, special_ticks, mpl_settings
+from analysis_roi import (
+    set_ticks,
+    training_metrics,
+    training_timings,
+    special_ticks,
+    mpl_settings,
+)
 
 
 def training_plots(dirname):

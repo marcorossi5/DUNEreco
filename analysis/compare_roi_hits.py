@@ -1,4 +1,3 @@
-
 """ This module compare results on test set of ROI against Pandora recob::hits"""
 from analysis_roi import set_ticks, mpl_settings
 import argparse
