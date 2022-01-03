@@ -363,7 +363,7 @@ def compute_roc(pred, mask):
     ----------
         - pred: list, of np.array
         - mask: list, of np.array
-    
+
     Returns
     -------
         - list, [np.array, np.array] false positive rate curve with error bars

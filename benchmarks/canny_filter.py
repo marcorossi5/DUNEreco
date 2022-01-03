@@ -71,4 +71,4 @@ def main():
 if __name__ == "__main__":
     start = tm()
     main()
-    print("Program done in %f" % (tm()-start))
+    print("Program done in %f" % (tm() - start))

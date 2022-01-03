@@ -8,8 +8,11 @@ import matplotlib.pyplot as plt
 # import analysis_roi module from analysis folder
 import importlib
 from pathlib import Path
+
 root_folder = Path(os.environ.get("DUNEDN_PATH"))
-spec = importlib.util.spec_from_file_location("analysis_roi", root_folder / "analysis/analysis_roi.py")
+spec = importlib.util.spec_from_file_location(
+    "analysis_roi", root_folder / "analysis/analysis_roi.py"
+)
 analysis_roi = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(analysis_roi)
 

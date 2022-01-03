@@ -119,4 +119,4 @@ if __name__ == "__main__":
     args["device"] = torch.device(dev)
     start = tm()
     main(**args)
-    print("Program done in %f" % (tm()-start))
+    print("Program done in %f" % (tm() - start))

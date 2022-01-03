@@ -83,4 +83,4 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
     start = tm()
     main(**args)
-    print("Program done in %f" % (tm()-start))
+    print("Program done in %f" % (tm() - start))
