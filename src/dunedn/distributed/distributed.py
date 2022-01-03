@@ -2,6 +2,7 @@
 import os
 import argparse
 from pathlib import Path
+from shutil import copyfile
 from time import time as tm
 import numpy as np
 import random
@@ -12,7 +13,7 @@ import torch.distributed as dist
 from dunedn.denoising.dataloader import CropLoader, PlaneLoader
 from dunedn.denoising.model import GCNN_Net
 from dunedn.denoising.args import Args
-from dunedn.denoising.model_utils import print_summary_file
+from dunedn.utils.utils import print_summary_file
 from dunedn.denoising.train import train
 from dunedn.utils.utils import load_yaml
 
@@ -45,6 +46,7 @@ def training_distributed(args):
     parameters["local_rank"] = args.local_rank
     parameters["local_world_size"] = args.local_world_size
     parameters["rank"] = dist.get_rank()
+    parameters.update(args)
     args = Args(**parameters)
     args.build_directories()
     if args.rank == 0:
@@ -53,6 +55,7 @@ def training_distributed(args):
     main_distributed_training(args)
     if args.rank == 0:
         print(f"[{os.getpid()}] Process done in {tm()-start}")
+        copyfile(args.runcard, args.dir_output / "input_runcard.yaml")
     dist.destroy_process_group()
 
 

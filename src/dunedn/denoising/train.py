@@ -7,9 +7,8 @@ import torch
 from torch import optim
 from torch.utils.data import DataLoader
 
-from dunedn.denoising.model_utils import MyDataParallel
 from dunedn.denoising.losses import get_loss
-
+from dunedn.denoising.model_utils import model2batch
 
 def time_windows(plane, w, stride):
     """ This function takes a plane and takes time windows """
@@ -39,8 +38,8 @@ def train_scg_epoch(args, epoch, train_loader, model, optimizer, balance_ratio, 
         _, cwindows, _ = time_windows(clear, args.patch_w, args.patch_stride)
         _, nwindows, _ = time_windows(noisy, args.patch_w, args.patch_stride)
         for nwindow, cwindow in zip(nwindows, cwindows):
-            cwindow = cwindow.to(args.dev_ids[0])
-            nwindow = nwindow.to(args.dev_ids[0])
+            cwindow = cwindow.to(args.dev[0])
+            nwindow = nwindow.to(args.dev[0])
             optimizer.zero_grad()
             out, loss0 = model(nwindow)
             loss1 = loss_fn(out, cwindow)
@@ -61,8 +60,8 @@ def train_gcnn_epoch(args, epoch, train_loader, model, optimizer, balance_ratio,
     )
     for i, (clear, noisy) in enumerate(train_loader):
         idx = 0 if task == "dn" else 1
-        clear = clear[:, idx : idx + 1].to(args.dev_ids[0])
-        noisy = noisy.to(args.dev_ids[0])
+        clear = clear[:, idx : idx + 1].to(args.dev[0])
+        noisy = noisy.to(args.dev[0])
         optimizer.zero_grad()
         out = model(noisy)
         loss = loss_fn(out, clear)
@@ -127,11 +126,11 @@ def compute_val_loss(test_loader, outputs, args, task):
         psnr_fn = get_loss("psnr")()
     for (_, target), output in zip(test_loader, outputs):
         # works only with unit batch_size
-        output = output.unsqueeze(0).to(args.dev_ids[0])
+        output = output.unsqueeze(0).to(args.dev[0])
         if args.model in ["gcnn", "cnn"]:
             idx = 0 if task == "dn" else 1
             target = target[:, idx : idx + 1]
-        target = target.to(args.dev_ids[0])
+        target = target.to(args.dev[0])
         loss.append(loss_fn(output, target).unsqueeze(0))
         if task == "dn":
             ssim.append(1 - ssim_fn(output, target).unsqueeze(0))
@@ -188,15 +187,15 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
     # test_sampler = DistributedSampler(dataset=test_data, shuffle=False)
     test_loader = DataLoader(
         dataset=test_data,  # sampler=test_sampler,
-        batch_size=args.test_batch_size,
+        batch_size=model2batch[args.model][args.task],
     )
     if args.rank == 0:
         print("\n[+] Testing")
     start = tm()
     if args.model == "scg":
-        outputs = inference(test_loader, args.patch_stride, model, args.dev_ids[0])
+        outputs = inference(test_loader, args.patch_stride, model, args.dev[0])
     elif args.model in ["cnn", "gcnn"]:
-        outputs = gcnn_inference(test_loader, model, args.dev_ids[0])
+        outputs = gcnn_inference(test_loader, model, args.dev[0])
         outputs = test_data.converter.tiles2planes(outputs)
     # if task == 'dn':
     #     mask = (outputs <= args.threshold) & (outputs >= -args.threshold)
@@ -223,9 +222,9 @@ def train(args, train_data, val_data, model):
     task = args.task
     channel = args.channel
     # check if load existing model
-    model = MyDataParallel(model, device_ids=args.dev_ids)
-    model = model.to(args.dev_ids[0])
-    # model = MyDDP(model.to(args.dev_ids[0]), device_ids=args.dev_ids,
+    # model = MyDataParallel(model, device_ids=args.dev)
+    model = model.to(args.dev[0])
+    # model = MyDDP(model.to(args.dev[0]), device_ids=args.dev,
     #               find_unused_parameters=True)
 
     if args.load:
@@ -283,7 +282,8 @@ def train(args, train_data, val_data, model):
     best_model_name = args.dir_saved_models / f"{args.model}_-1.dat"
 
     # initialize optimizer
-    lr = args.lr_roi if task == "roi" else args.lr_dn
+    # lr = args.lr_roi if task == "roi" else args.lr_dn
+    lr = args.lr
     optimizer = optimizer_fn(list(model.parameters()), lr, args.amsgrad)
 
     # train_sampler = DistributedSampler(dataset=train_data, shuffle=True)

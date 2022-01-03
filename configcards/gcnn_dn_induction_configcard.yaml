@@ -1,19 +1,28 @@
-dataset_dir: "../datasets/20201124" # dataset directory
 task: dn # roi | dn
 scan: False # wether to run hyperopt scan
 channel: induction # induction | collection
-dev: cpu # cpu | cuda:0 | [0,1,2,3]
+dev: 
+     - cpu # cpu | cuda:0 | [0,1,2,3]
      # - 0
      # - 1
      # - 2
      # - 3
 
+# dataset
+dataset_dir: "../test_dataset" # dataset directory
+pct: 0.5 # signal to background crop balance (gcnn | cnn only)
+patch_size: 32 # crop edge size (gcnn | cnn only)
+
+# logging
+load_epoch: 100 # load from epoch number from output directory checkpoints
+save: True # wether to save checkpoints during training
+
 # model architecture
 model: gcnn # cnn | gcnn | uscg
 load_path: null # path to .pth checkpoint
-load_epoch: 100 # load from epoch number from output directory checkpoints
-save: True # wether to save checkpoints during training
-k: 8 # nearest neighbors number
+k: 8 # nearest neighbors number (gcnn only)
+input_channels: 1 # input channels number in (N,C,H,W) (gcnn | cnn only)
+hidden_channels: 32 # (graph) convolution network hidden filters number (gcnn | cnn only)
 
 # trainings
 epochs: 1 # number of training epochs
@@ -21,15 +30,15 @@ epoch_log: 1 # logging epochs interval
 epoch_test_start: 0 # test starting epoch
 epoch_test: 1 # test on epoch end interval
 loss_fn: ssim_l2 # mse | ssim | ssim_l1 | ssim_l2
-a: 0.84 # balancing between loss function contributions (if multiple)
+a: 0.84 # balancing between loss function contributions (if loss has multiple)
 lr: 0.001 # optimizer's learning rate
 amsgrad: True # Adam optimizer option
-batch_size: 1
+batch_size: 32 # 1 (uscg) | 32 (cnn | gcnn)
 
 # inference
 threshold: 3.5 # 500 e- | 3.5 ADC counts (threshold for inference)
 
 # geometry
-patch_size: 32
-input_channels: 1 # input channels number in (N,C,H,W)
-hidden_channels: 32 # (graph) convolution network hidden filters number
+# patch_w: 2000 # inference image width (uscg only)
+# patch_h: 800 # inference image height (uscg only)
+# patch_stride: 1000 # inference stride (uscg only)

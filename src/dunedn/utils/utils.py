@@ -82,3 +82,14 @@ def load_yaml(runcard_file):
             print(key, value)
             runcard[key] = eval(value)
     return runcard
+
+
+def print_summary_file(args):
+    """Export Args object to file. """
+    d = args.__dict__
+    fname = args.dir_output / "readme.txt"
+    with open(fname, "w") as f:
+        f.writelines("Model summary file:\n")
+        for k in d.keys():
+            f.writelines("\n%s     %s" % (str(k), str(d[k])))
+        f.close()

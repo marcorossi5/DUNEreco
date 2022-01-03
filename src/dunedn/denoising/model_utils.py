@@ -10,6 +10,13 @@ from dunedn.utils.utils import confusion_matrix
 # from sklearn.metrics import confusion_matrix
 
 
+model2batch = {
+    "uscg": {"dn": 1, "roi": 1},
+    "gcnn": {"dn": 128, "roi": 512},
+    "cnn": {"dn": 376, "roi": 2048},
+}
+
+
 class MinMax(nn.Module):
     def __init__(self, Min, Max):
         """
@@ -149,6 +156,7 @@ def pairwise_dist(arr, k, local_mask):
     arr: torch.Tensor with shape batch x h*w x features
     """
     dev = arr.get_device()
+    dev = "cpu" if dev == -1 else dev
     local_mask = local_mask.to(dev)
     r_arr = torch.sum(arr * arr, dim=2, keepdim=True)  # (B,N,1)
     mul = torch.matmul(arr, arr.permute(0, 2, 1))  # (B,N,N)
@@ -267,6 +275,11 @@ class Converter:
     """ Groups image to tiles converter functions """
 
     def __init__(self, patch_size):
+        """
+        Parameters
+        ----------
+            - patch_size: tuple, (edge_h, edge_w)
+        """
         self.patch_size = patch_size
 
     def planes2tiles(self, image):
@@ -323,16 +336,6 @@ class MyDDP(nn.parallel.DistributedDataParallel):
             return super(MyDDP, self).__getattr__(name)
         except AttributeError:
             return getattr(self.module, name)
-
-
-def print_summary_file(args):
-    d = args.__dict__
-    fname = os.path.join(args.dir_output, "readme.txt")
-    with open(fname, "w") as f:
-        f.writelines("Model summary file:\n")
-        for k in d.keys():
-            f.writelines("\n%s     %s" % (str(k), str(d[k])))
-        f.close()
 
 
 def plot_crops(out_dir, imgs, name, sample):

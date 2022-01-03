@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 from dunedn.denoising.args import Args
 from dunedn.denoising.model import get_model_from_args
-from dunedn.denoising.model_utils import Converter
+from dunedn.denoising.model_utils import Converter, model2batch
 from dunedn.denoising.dataloader import InferenceLoader, InferenceCropLoader
 from dunedn.denoising.train import inference, identity_inference, gcnn_inference
 from dunedn.denoising.losses import get_loss
@@ -15,13 +15,6 @@ from dunedn.geometry.helpers import evt2planes, planes2evt
 
 ModelTuple = collections.namedtuple("Model", ["induction", "collection"])
 ArgsTuple = collections.namedtuple("Args", ["batch_size", "patch_stride", "patch_size"])
-
-
-model2batch = {
-    "uscg": {"dn": 1, "roi": 1},
-    "gcnn": {"dn": 128, "roi": 512},
-    "cnn": {"dn": 376, "roi": 2048},
-}
 
 
 def get_model_and_args(modeltype, task, channel, ckpt=None):

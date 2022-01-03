@@ -9,23 +9,23 @@ ElectronsToADC = 6.8906513e-3
 
 
 class CropLoader(torch.utils.data.Dataset):
-    def __init__(self, dataset_dir, folder, task, channel, threshold):
+    def __init__(self, dataset_dir, folder, task, channel, threshold, patch_size, pct):
         """
         This function loads the crops for training.
         Parameters:
             args: Args object
-            folder: str, one of ['train','val','test']
-            channel: str, one of ['readout','collection']
+            dataset_dir: Path
+            folder: str, available options train | val | test
+            task: str, available options dn | roi
+            channel: str, available options readout | collection
+            threshold: float
+            pct: float, signal / background percentage
+            patch_size: int
         """
-        # patch_size = args.crop_size[0]
-        # p = args.p
-        patch_size = 32
-        p = 0.99
-
         fname = os.path.join(
-            dataset_dir, folder, "crops", f"{channel}_clear_{patch_size}_{p}.npy"
+            dataset_dir, folder, "crops", f"{channel}_clear_{patch_size}_{pct}.npy"
         )
-        clear = torch.Tensor(np.load(fname))
+        clear = torch.Tensor(np.load(fname))[:50]
 
         if task == "roi":
             mask = (clear <= threshold) & (clear >= -threshold)
@@ -34,9 +34,9 @@ class CropLoader(torch.utils.data.Dataset):
             self.balance_ratio = np.count_nonzero(clear) / clear.numel()
 
         fname = os.path.join(
-            dataset_dir, folder, "crops", f"{channel}_noisy_{patch_size}_{p}.npy"
+            dataset_dir, folder, "crops", f"{channel}_noisy_{patch_size}_{pct}.npy"
         )
-        self.noisy = torch.Tensor(np.load(fname))
+        self.noisy = torch.Tensor(np.load(fname))[:50]
 
         hits = torch.clone(clear)
         hits[hits != 0] = 1
@@ -60,6 +60,7 @@ class PlaneLoader(torch.utils.data.Dataset):
             args: Args object
             folder: str, one of ['train','val','test']
             t: float, threshold to be put on labels
+            patch_size: int, crop edge size
         """
         data_dir = os.path.join(dataset_dir, folder)
         # label = "simch" if task=='roi' else "clear"
@@ -79,7 +80,7 @@ class PlaneLoader(torch.utils.data.Dataset):
         self.noisy = torch.Tensor(noisy - medians[:, None, None, None])
 
         if patch_size is not None:
-            self.converter = Converter(patch_size)
+            self.converter = Converter((patch_size, patch_size))
 
     def to_crops(self):
         """ Function to be called when this is used with cnn | gcnn"""

@@ -19,6 +19,8 @@ class Args:
         check(self.task, ["roi", "dn"])
         check(self.channel, ["induction", "collection"])
 
+        self.dataset_dir = Path(self.dataset_dir)
+
         # model parameters
         # self.a = 0.5 # balancing between loss function contributions
         # self.k = 8 # for cnn | gcnn model only
@@ -46,21 +48,23 @@ class Args:
             - output: Path, name of the output folder
 
         """
-        if output is not None:
-            output_ch = output / f"{self.channel}"
-            if output_ch.is_dir():
+        if self.output is not None:
+            output = self.output / f"{self.channel}"
+            if output.is_dir():
                 if self.force:
-                    # remove the existing folder
-                    print(f"WARNING: Overwriting {output_ch} directory with new model")
-                    shutil.rmtree(output_ch)
+                    print(f"WARNING: Overwriting {output} directory with new model")
+                    shutil.rmtree(output)
                 else:
                     print('Delete or run with "--force" to overwrite.')
                     exit(-1)
+            else:
+                print(f"[+] Creating output directory at {output}")
         else:
             date = dtm.now().strftime("%y%m%d_%H%M%S")
-            output = get_dunedn_path().parent / f"output/{date}"
+            output = get_dunedn_path().parent / f"output/{date}/{self.channel}"
+            print(f"[+] Creating output directory at {output}")
 
-        self.dir_output = output / f"{self.channel}"
+        self.dir_output = output
 
         self.dir_timings = self.dir_output / "timings"
         self.dir_timings.mkdir(parents=True, exist_ok=True)
