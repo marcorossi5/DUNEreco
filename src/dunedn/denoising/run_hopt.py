@@ -1,4 +1,5 @@
 # This file is part of DUNEdn by M. Rossi
+from pathlib import Path
 from hyperopt import fmin, tpe, hp, Trials, space_eval, STATUS_OK
 from hyperopt.mongoexp import MongoTrials
 from time import time as tm
@@ -6,6 +7,7 @@ import argparse, os, shutil, sys, datetime, yaml, pprint, pickle
 import dunedn.denoising.denoise as denoise
 import dunedn.denoising.analysis as analysis
 from dunedn.denoising.args import Args
+from dunedn.utils.utils import load_yaml
 
 
 def run_hyperparameter_scan(search_space, max_evals, cluster, folder):
@@ -34,16 +36,6 @@ def run_hyperparameter_scan(search_space, max_evals, cluster, folder):
     return best_setup
 
 
-def load_yaml(runcard_file):
-    """Loads yaml runcard"""
-    with open(runcard_file, "r") as stream:
-        runcard = yaml.load(stream, Loader=yaml.FullLoader)
-    for key, value in runcard.items():
-        if ("hp." in str(value)) or ("None" == str(value)):
-            runcard[key] = eval(value)
-    return runcard
-
-
 def build_and_train_model(setup):
     """Training model"""
     print("[+] Training model")
@@ -64,7 +56,7 @@ def main():
     """Parsing command line arguments"""
     parser = argparse.ArgumentParser(description="Train a generative model.")
     parser.add_argument(
-        "--runcard", action="store", type=str, help="A yaml file with the setup."
+        "--runcard", type=Path, help="A yaml file with the hopt setup.", required=True
     )
     parser.add_argument(
         "--output", "-o", type=str, required=True, help="The output folder"
@@ -85,7 +77,7 @@ def main():
     args = parser.parse_args()
 
     # check input is coherent
-    if not os.path.isfile(args.runcard):
+    if not args.runcard.is_file():
         raise ValueError("Invalid runcard: not a file.")
     if args.force:
         print("WARNING: Running with --force option will overwrite existing model.")

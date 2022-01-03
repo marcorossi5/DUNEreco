@@ -488,4 +488,5 @@ def freeze_weights(model, task):
     # print('Trainable parameters in %s: %d'% (net, params))
     return model
 
+
 # TODO: check the confusion matrix (there's one implemented in utils/utils.py)

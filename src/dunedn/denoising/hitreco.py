@@ -1,27 +1,18 @@
 # This file is part of DUNEdn by M. Rossi
-import os
-from pathlib import Path
 import collections
 from math import sqrt
-import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from dunedn.denoising.model import get_model
-from dunedn.denoising.model_utils import MyDataParallel
+from dunedn.denoising.args import Args
+from dunedn.denoising.model import get_model_from_args
 from dunedn.denoising.model_utils import Converter
 from dunedn.denoising.dataloader import InferenceLoader, InferenceCropLoader
 from dunedn.denoising.train import inference, identity_inference, gcnn_inference
 from dunedn.denoising.losses import get_loss
-from dunedn.denoising.args import Args
-from dunedn.utils.utils import load_yaml
+from dunedn.utils.utils import load_yaml, median_subtraction
+from dunedn.configdn import get_dunedn_path
+from dunedn.geometry.helpers import evt2planes, planes2evt
 
-# pdune sp architecture
-tdc = 6000  # detector timeticks number
-istep = 800  # channel number in induction plane
-cstep = 960  # channel number in collection plane
-apas = 6
-apastep = 2 * istep + cstep  # number of channels per apa
-evstep = apas * apastep  # total channel number
 ModelTuple = collections.namedtuple("Model", ["induction", "collection"])
 ArgsTuple = collections.namedtuple("Args", ["batch_size", "patch_stride", "patch_size"])
 
@@ -33,62 +24,8 @@ model2batch = {
 }
 
 
-def evt2planes(event):
-    """
-    Convert planes to event
-    Input:
-        event: array-like array
-            inputs of shape (evstep, tdc)
-
-    Output: np.array
-        induction and collection arrays of shape type (N,C,H,W)
-    """
-    base = np.arange(apas).reshape(-1, 1) * apastep
-    iidxs = [[0, istep, 2 * istep]] + base
-    cidxs = [[2 * istep, apastep]] + base
-    inductions = []
-    for start, idx, end in iidxs:
-        induction = [event[start:idx], event[idx:end]]
-        inductions.extend(induction)
-    collections = []
-    for start, end in cidxs:
-        collections.append(event[start:end])
-    return np.stack(inductions)[:, None], np.stack(collections)[:, None]
-
-
-def median_subtraction(planes):
-    """
-    Subtract median value from input planes
-    Input:
-        planes: np.array
-            array of shape (N,C,H,W)
-    Output: np.array
-        median subtracted planes ( =dim(N,C,H,W))
-    """
-    shape = [planes.shape[0], -1]
-    medians = np.median(planes.reshape(shape), axis=1)
-    return planes - medians[:, None, None, None]
-
-
-def planes2evt(inductions, collections):
-    """
-    Convert planes to event
-    Input:
-        inductions, collections: array-like
-            inputs of shape type (N,C,H,W)
-    Output: np.array
-        event array of shape (evstep, tdc)
-    """
-    inductions = np.array(inductions).reshape(-1, 2 * istep, tdc)
-    collections = np.array(collections)[:, 0]
-    event = []
-    for i, c in zip(inductions, collections):
-        event.extend([i, c])
-    return np.concatenate(event)
-
-
 def get_model_and_args(modeltype, task, channel, ckpt=None):
-    card_prefix = Path(os.environ.get("DUNEDN_PATH"))
+    card_prefix = get_dunedn_path()
     card = f"configcards/{modeltype}_{task}_{channel}_configcard.yaml"
     parameters = load_yaml(card_prefix / card)
     parameters["channel"] = channel
@@ -98,28 +35,7 @@ def get_model_and_args(modeltype, task, channel, ckpt=None):
     patch_stride = args.patch_stride if modeltype == "uscg" else None
     batch_size = model2batch[modeltype][task]
 
-    # TODO: when changing the models inputs, this has to be changed accordingly
-    kwargs = {}
-    if modeltype == "uscg":
-        kwargs["task"] = args.task
-        kwargs["h"] = args.patch_h
-        kwargs["w"] = args.patch_w
-        device_ids = [0]
-    elif modeltype in ["cnn", "gcnn"]:
-        kwargs["model"] = modeltype
-        kwargs["task"] = task
-        # kwargs["channel"] = channel
-        kwargs["patch_size"] = patch_size
-        kwargs["input_channels"] = args.input_channels
-        kwargs["hidden_channels"] = args.hidden_channels
-        kwargs["k"] = args.k
-        # kwargs["dataset_dir"] = args.dataset_dir
-        # kwargs["normalization"] = args.normalization
-        device_ids = [0, 1, 2, 3]
-    else:
-        raise NotImplementedError("Loss function not implemented")
-
-    model = MyDataParallel(get_model(modeltype, **kwargs), device_ids=device_ids)
+    model = get_model_from_args(args)
 
     if ckpt is not None:
         fname = ckpt / f"{channel}.pth"
@@ -137,7 +53,7 @@ def mkModel(modeltype, task, ckpt=None):
         - modeltype: str, valid options: "uscg" | "cnn" | "gcnn" | "id"
         - task: str, valid options: "dn" | "roi"
         - ckpt: Path, checkpoint path
-    
+
     Returns
     -------
         - list, of arguments to call model.inference for induction and collection
@@ -253,10 +169,10 @@ class DnModel(BaseModel):
             - modeltype: str, valid options: "cnn" | "gcnn" | "sgc"
             - ckpt: Path, saved checkpoint path. The path should point to a folder
                     containing a collection and an induction .pth file. If None,
-                    an un-trained model will be used. 
+                    an un-trained model will be used.
         """
         super(DnModel, self).__init__(modeltype, "dn", ckpt)
-        
+
 
 class RoiModel(BaseModel):
     def __init__(self, modeltype, ckpt=None):

@@ -1,5 +1,4 @@
 # This file is part of DUNEdn by M. Rossi
-import os
 from math import ceil, sqrt
 from time import time as tm
 import numpy as np
@@ -139,9 +138,9 @@ def compute_val_loss(test_loader, outputs, args, task):
             mse.append(mse_fn(output, target).unsqueeze(0))
             psnr.append(psnr_fn(output, target).unsqueeze(0))
     if args.rank == 0:
-        fname = os.path.join(args.dir_testing, "labels")
+        fname = args.dir_testing / "labels"
         torch.save(target.cpu(), fname)
-        fname = os.path.join(args.dir_testing, "results")
+        fname = args.dir_testing / "results"
         torch.save(output.cpu(), fname)
 
     def all_gather(loss):
@@ -190,7 +189,6 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
     test_loader = DataLoader(
         dataset=test_data,  # sampler=test_sampler,
         batch_size=args.test_batch_size,
-        num_workers=args.num_workers,
     )
     if args.rank == 0:
         print("\n[+] Testing")
@@ -212,7 +210,6 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
         test_loader = DataLoader(
             dataset=test_data,  # sampler=test_sampler,
             batch_size=1,
-            num_workers=args.num_workers,
         )
     return compute_val_loss(test_loader, outputs, args, task), outputs, dry_time
 
@@ -235,28 +232,26 @@ def train(args, train_data, val_data, model):
         if args.load_path is None:
             # resume a previous training from an epoch
             # time train
-            fname = os.path.join(args.dir_timings, "timings_train.npy")
+            fname = args.dir_timings / "timings_train.npy"
             time_train = list(np.load(fname))
 
             # time test
-            fname = os.path.join(args.dir_timings, "timings_test.npy")
+            fname = args.dir_timings / "timings_test.npy"
             time_test = list(np.load(fname))
 
             # loss_sum
-            fname = os.path.join(args.dir_metrics, "loss_sum.npy")
+            fname = args.dir_metrics / "loss_sum.npy"
             loss_sum = list(np.load(fname).T)
 
             # test_epochs
-            fname = os.path.join(args.dir_metrics, "test_epochs.npy")
+            fname = args.dir_metrics / "test_epochs.npy"
             test_epochs = list(np.load(fname))
 
             # test metrics
-            fname = os.path.join(args.dir_metrics, "test_metrics.npy")
+            fname = args.dir_metrics / "test_metrics.npy"
             test_metrics = list(np.load(fname).T)
 
-            fname = os.path.join(
-                args.dir_saved_models, f"{args.model}_{task}_{args.load_epoch}.dat"
-            )
+            fname = args.dir_saved_models / f"{args.model}_{task}_{args.load_epoch}.dat"
             epoch = args.load_epoch + 1
 
         else:
@@ -285,7 +280,7 @@ def train(args, train_data, val_data, model):
 
     best_loss = 1e10
     best_loss_std = 0
-    best_model_name = os.path.join(args.dir_saved_models, f"{args.model}_-1.dat")
+    best_model_name = args.dir_saved_models / f"{args.model}_-1.dat"
 
     # initialize optimizer
     lr = args.lr_roi if task == "roi" else args.lr_dn
@@ -296,7 +291,6 @@ def train(args, train_data, val_data, model):
         dataset=train_data,
         shuffle=True,  # sampler=train_sampler,
         batch_size=args.batch_size,
-        num_workers=args.num_workers,
     )
 
     # main training loop
@@ -347,19 +341,17 @@ def train(args, train_data, val_data, model):
 
                 # switch to keep all the history of saved models
                 # or just the best one
-                fname = os.path.join(
-                    args.dir_saved_models, f"{args.model}_{task}_{epoch}.dat"
-                )
+                fname = args.dir_saved_models / f"{args.model}_{task}_{epoch}.dat"
                 best_model_name = fname
-                bname = os.path.join(args.dir_final_test, "best_model.txt")
+                bname = args.dir_final_test / "best_model.txt"
                 with open(bname, "w") as f:
                     f.write(fname)
                     f.close()
                 if (not args.scan) and args.rank == 0:
                     print("updated best model at: ", bname)
             if args.save and args.rank == 0:
-                fname = os.path.join(
-                    args.dir_saved_models, f"{args.model}_{task}_{channel}_{epoch}.dat"
+                fname = (
+                    args.dir_saved_models / f"{args.model}_{task}_{channel}_{epoch}.dat"
                 )
                 if not args.scan:
                     print("saved model at: %s" % fname)
@@ -370,24 +362,24 @@ def train(args, train_data, val_data, model):
     if args.rank == 0:
         # loss_sum
         loss_sum = np.stack(loss_sum, 1)
-        fname = os.path.join(args.dir_metrics, "loss_sum")
+        fname = args.dir_metrics / "loss_sum"
         np.save(fname, loss_sum)
 
         # test_epochs
-        fname = os.path.join(args.dir_metrics, "test_epochs")
+        fname = args.dir_metrics / "test_epochs"
         np.save(fname, test_epochs)
 
         # test metrics
         test_metrics = np.stack(test_metrics, 1)
-        fname = os.path.join(args.dir_metrics, "test_metrics")
+        fname = args.dir_metrics / "test_metrics"
         np.save(fname, test_metrics)
 
         # time train
-        fname = os.path.join(args.dir_timings, "timings_train")
+        fname = args.dir_timings / "timings_train"
         np.save(fname, time_train)
 
         # time test
-        fname = os.path.join(args.dir_timings, "timings_test")
+        fname = args.dir_timings / "timings_test"
         np.save(fname, time_test)
 
     return best_loss, best_loss_std, best_model_name

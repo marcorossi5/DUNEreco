@@ -9,7 +9,7 @@ from dunedn.utils.utils import median_subtraction
 from dunedn.preprocessing.putils import save_normalization_info
 
 
-def add_arguments_preprocess(parser):
+def add_arguments_preprocessing(parser):
     parser.add_argument(
         "--dir_name", type=Path, help="directory path to datasets", required=True
     )

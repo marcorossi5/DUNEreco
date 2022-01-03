@@ -1,0 +1,42 @@
+# This file is part of DUNEdn by M. Rossi
+from pathlib import Path
+from dunedn.denoising.dataloader import PlaneLoader, CropLoader
+from dunedn.denoising.model import get_model_from_args
+from dunedn.denoising.args import Args
+from dunedn.denoising.model_utils import print_summary_file
+from dunedn.denoising.train import train
+from dunedn.utils.utils import load_yaml
+
+
+def add_arguments_training(parser):
+    parser.add_argument("runcard", type=Path, help="yaml configcard path")
+    parser.add_argument("--output", type=Path, help="output folder", default=None)
+    parser.add_argument(
+        "--force", action="store_true", help="overwrite existing files if present"
+    )
+    parser.set_defaults(func=main_training)
+
+
+def main_training(args):
+    parameters = load_yaml(args.runcard)
+    args = vars(args)
+    args.pop("func")
+    args = Args(**parameters)
+    args.build_directories()
+    print_summary_file(args)
+
+    # create model
+    model = get_model_from_args(args)
+
+    # load datasets
+    loader = PlaneLoader if args.model == "uscg" else CropLoader
+    kwargs = {} if args.model == "uscg" else {"patch_size": args.patch_size}
+    train_data = loader(
+        args.dataset_dir, "train", args.task, args.channel, args.threshold
+    )
+    val_data = PlaneLoader(
+        args.dataset_dir, "val", args.task, args.channel, args.threshold, **kwargs
+    )
+
+    # train
+    return train(args, train_data, val_data, model)
