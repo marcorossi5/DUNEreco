@@ -36,6 +36,23 @@ def moving_average(scalars, weight):
     return smoothed
 
 
+def median_subtraction(planes):
+    """
+    Subtracts median value from input planes.
+
+    Parameters
+    ----------
+        planes: np.array, array of shape=(N,C,H,W)
+
+    Returns
+    -------
+        -np.array, median subtracted planes of shape=(N,C,H,W)
+    """
+    shape = [planes.shape[0], -1]
+    medians = np.median(planes.reshape(shape), axis=1)
+    return planes - medians[:, None, None, None]
+
+
 def confusion_matrix(hit, no_hit, t=0.5):
     """
     Return confusion matrix elements from arrays of scores and threshold value.

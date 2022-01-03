@@ -1,60 +1,63 @@
 # This file is part of DUNEdn by M. Rossi
-import os, glob
-import glob
+import os
+from pathlib import Path
+from glob import glob
 import numpy as np
 from dunedn.preprocessing.putils import get_crop
+from dunedn.geometry.helpers import evt2planes
+from dunedn.utils.utils import median_subtraction
+from dunedn.preprocessing.putils import save_normalization_info
 
 
 def add_arguments_preprocess(parser):
     parser.add_argument(
-        "-p",
-        default="../datasets/denoising",
-        type=str,
-        help="directory path to datasets",
-        metavar="DIR_NAME",
+        "--dir_name", type=Path, help="directory path to datasets", required=True
     )
     parser.add_argument(
-        "-n",
-        default=5000,
+        "--nb_crops",
         type=int,
         help="number of crops for each plane",
-        metavar="N_CROPS",
+        default=5000,
+    )
+    parser.add_argument("--crop_edge", default=32, type=int, help="crop edge")
+    parser.add_argument(
+        "--pct",
+        default=0.5,
+        type=float,
+        help="percentage of signal",
+        metavar="PERCENTAGE",
     )
     parser.add_argument(
-        "-c", default=32, type=int, help="crop edge", metavar="CROP_EDGE"
+        "--save_sample", action="store_true", help="extract a smaller dataset"
     )
     parser.add_argument(
-        "-x", default=0.5, type=float, help="percentage of signal", metavar="PERCENTAGE"
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="print processing status information",
     )
     parser.set_defaults(func=preprocess)
 
 
 def preprocess(args):
-    # TODO: remove this step and pass NameSpace object
     args = vars(args)
     args.pop("func")
-    print("Args:")
-    for k in args.keys():
-        print(k, args[k])
     preprocess_main(**args)
 
 
-# TODO: remove this global variables, write a config.py and a geometry_helper.py
-# files. The geometry_helper module should contain the functions for converting
-# events array into planes and back.
+def get_planes_and_dump(dname, verbose, save_sample):
+    """
+    Populates the "planes" subfolder of dname directory with numpy arrays of
+    planes taken from events in the "events" subfolder. Planes arrays have
+    shape=(N,C,H,W)
 
-# patch_size = (32,32)
-apas = 6
-istep = 800  # induction plane channel number
-cstep = 960  # collection plane channel number
-apastep = 2 * istep + cstep
-
-
-def get_planes_and_dump(dname):
-    base = np.arange(apas).reshape(-1, 1) * apastep
-    iidxs = [[0, istep, 2 * istep]] + base
-    cidxs = [[2 * istep, apastep]] + base
-
+    Parameters
+    ----------
+        - dname: Path, path to train|val|test dataset subfolder
+        - verbose: bool, wether to print status information
+        - save_sample: bool, wether to save a smaller dataset from the original one
+    """
+    # TODO: this function could probably be shortened
     iclear = []
     inoisy = []
     isimch = []
@@ -62,134 +65,133 @@ def get_planes_and_dump(dname):
     cnoisy = []
     csimch = []
 
-    path_clear = glob.glob(os.path.join(dname, "evts/*noiseoff*"))
+    paths_clear = glob((dname / "evts/*noiseoff*").as_posix())
+    assert len(paths_clear) != 0
 
-    assert len(path_clear) != 0
+    print(f"[+] Fetching files from {dname}")
+    for path_clear in paths_clear:
+        path_noisy = Path(path_clear.replace("rawdigit_noiseoff", "rawdigit"))
+        path_simch = Path(path_clear.replace("rawdigit_noiseoff", "simch_labels"))
+        path_clear = Path(path_clear)
 
-    for file_clear in path_clear:
-        file_noisy = file_clear.replace("rawdigit_noiseoff", "rawdigit")
-        file_simch = file_clear.replace("rawdigit_noiseoff", "simch_labels")
-        print(f"Processing files:\n\t{file_clear}\n\t{file_noisy}\n\t{file_simch}")
-        c = np.load(file_clear)[:, 2:]
-        n = np.load(file_noisy)[:, 2:]
-        s = np.load(file_simch)[:, 2:]
-        for start, idx, end in iidxs:
-            iclear.extend([c[start:idx], c[idx:end]])
-            inoisy.extend([n[start:idx], n[idx:end]])
-            isimch.extend([s[start:idx], s[idx:end]])
-        for start, end in cidxs:
-            cclear.append(c[start:end])
-            cnoisy.append(n[start:end])
-            csimch.append(s[start:end])
+        if verbose:
+            print(f"\t{path_clear.name}")
+            print(f"\t{path_noisy.name}")
+            print(f"\t{path_simch.name}")
 
-    cclear = np.stack(cclear, 0)[:, None]
-    cnoisy = np.stack(cnoisy, 0)[:, None]
-    csimch = np.stack(csimch, 0)[:, None]
-    iclear = np.stack(iclear, 0)[:, None]
-    inoisy = np.stack(inoisy, 0)[:, None]
-    isimch = np.stack(isimch, 0)[:, None]
+        c = np.load(path_clear)[:, 2:]
+        n = np.load(path_noisy)[:, 2:]
+        s = np.load(path_simch)[:, 2:]
 
-    print("\tCollection clear planes: ", cclear.shape)
-    print("\tCollection noisy planes: ", cnoisy.shape)
-    print("\tCollection sim::SimChannel planes: ", csimch.shape)
-    print("\tInduction clear planes: ", iclear.shape)
-    print("\tInduction noisy planes: ", inoisy.shape)
-    print("\tInduction sim::SimChannel planes: ", isimch.shape)
+        induction_c, collection_c = evt2planes(c)
+        iclear.append(induction_c)
+        cclear.append(collection_c)
 
-    fname = os.path.join(dname, f"planes/induction_clear")
-    np.save(fname, np.stack(iclear, 0))
+        induction_n, collection_n = evt2planes(n)
+        inoisy.append(induction_n)
+        cnoisy.append(collection_n)
 
-    fname = os.path.join(dname, f"planes/induction_noisy")
-    np.save(fname, np.stack(inoisy, 0))
+        induction_s, collection_s = evt2planes(s)
+        isimch.append(induction_s)
+        csimch.append(collection_s)
 
-    fname = os.path.join(dname, f"planes/induction_simch")
-    np.save(fname, np.stack(isimch, 0))
+    reshape = lambda x: x.reshape((-1,) + x.shape[2:])
+    iclear = reshape(np.stack(iclear))
+    cclear = reshape(np.stack(cclear))
 
-    fname = os.path.join(dname, f"planes/collection_clear")
-    np.save(fname, np.stack(cclear, 0))
+    inoisy = reshape(np.stack(inoisy))
+    cnoisy = reshape(np.stack(cnoisy))
 
-    fname = os.path.join(dname, f"planes/collection_noisy")
-    np.save(fname, np.stack(cnoisy, 0))
+    isimch = reshape(np.stack(isimch))
+    csimch = reshape(np.stack(csimch))
 
-    fname = os.path.join(dname, f"planes/collection_simch")
-    np.save(fname, np.stack(csimch, 0))
+    # at this point planes have shape=(nb_events,N,1,H,W)
+    # with N being the number of induction|collection planes in each event
 
-    fname = os.path.join(dname, f"planes/sample_collection_clear")
-    np.save(fname, np.stack(cclear[:10], 0))
+    print(f"[+] Saving planes to {dname}/planes")
+    if verbose:
+        print("\tCollection clear planes: ", cclear.shape)
+        print("\tCollection noisy planes: ", cnoisy.shape)
+        print("\tCollection sim::SimChannel planes: ", csimch.shape)
+        print("\tInduction clear planes: ", iclear.shape)
+        print("\tInduction noisy planes: ", inoisy.shape)
+        print("\tInduction sim::SimChannel planes: ", isimch.shape)
 
-    fname = os.path.join(dname, f"planes/sample_collection_noisy")
-    np.save(fname, np.stack(cnoisy[:10], 0))
+    # stack all the planes from different events together
+    save = lambda x, y: np.save(dname / f"planes/{x}", y)
 
-    fname = os.path.join(dname, f"planes/sample_collection_simch")
-    np.save(fname, np.stack(csimch[:10], 0))
+    save("induction_clear", iclear)
+    save("collection_clear", cclear)
+
+    save("induction_noisy", inoisy)
+    save("collection_noisy", cnoisy)
+
+    save("induction_simch", isimch)
+    save("collection_simch", csimch)
+
+    if save_sample:
+        # extract a small collection sample from dataset
+        print(f"[+] Saving sample dataset to {dname}/planes")
+        save("sample_collection_clear", cclear[:10])
+        save("sample_collection_noisy", cnoisy[:10])
+        save("sample_collection_simch", csimch[:10])
 
 
-def crop_planes_and_dump(dir_name, n_crops, patch_size, p):
+def crop_planes_and_dump(dir_name, nb_crops, patch_size, pct, verbose):
+    """
+    Populates the "crop" folder: for each plane stored in `dir_name/planes` generate
+    nb_crops of size patch_size. The value of pct fixes the signal / background
+    crops balancing.
+
+    Parameters
+    ----------
+        - dir_name: Path, directory path to datasets
+        - nb_crops: int, number of crops from a single plane
+        - patch_size: list, patch [height, width]
+        - pct: float, signal / background crops balancing
+        - verbose: bool, wether to print status information
+    """
     for s in ["induction", "collection"]:
-        fname = os.path.join(dir_name, f"planes/{s}_clear.npy")
+
+        fname = dir_name / f"planes/{s}_clear.npy"
         cplanes = np.load(fname)[:, 0]
 
-        fname = os.path.join(dir_name, f"planes/{s}_noisy.npy")
-        nplanes = np.load(fname)[:, 0]
+        fname = dir_name / f"planes/{s}_noisy.npy"
+        nplanes = np.load(fname)
 
-        medians = np.median(nplanes.reshape([nplanes.shape[0], -1]), axis=1)
-        medians = medians.reshape([-1, 1, 1])
-        m = (nplanes - medians).min()
-        M = (nplanes - medians).max()
+        print(f"[+] Cropping {s} planes at {fname}")
 
-        # ensure nplanes are not just constant
-        assert (M - m) != 0
-
-        # normalize noisy planes
-        nplanes = nplanes - medians
+        nplanes = median_subtraction(nplanes)[:, 0]
 
         ccrops = []
         ncrops = []
         for cplane, nplane in zip(cplanes, nplanes):
-            idx = get_crop(cplane, n_crops=n_crops, patch_size=patch_size, p=p)
-            ccrops.append(cplane[idx])
-            ncrops.append(nplane[idx])
+            idx = get_crop(cplane, nb_crops=nb_crops, patch_size=patch_size, pct=pct)
+            ccrops.append(cplane[idx][:, None])
+            ncrops.append(nplane[idx][:, None])
 
-        ccrops = np.concatenate(ccrops, 0)[:, None]
-        ncrops = np.concatenate(ncrops, 0)[:, None]
+        ccrops = np.concatenate(ccrops, 0)
+        ncrops = np.concatenate(ncrops, 0)
 
-        print(f"\n{s} clear crops:", ccrops.shape)
-        print(f"{s} noisy crops:", ncrops.shape)
-
-        fname = os.path.join(dir_name, f"crops/{s}_clear_{patch_size[0]}_{p}")
-        np.save(fname, ccrops)
-
-        fname = os.path.join(dir_name, f"crops/{s}_noisy_{patch_size[0]}_{p}")
+        fname = dir_name / f"crops/{s}_noisy_{patch_size[0]}_{pct}"
+        print(f"Saving crops to {dir_name}")
+        if verbose:
+            print(f"{s} clear crops:", ccrops.shape)
+            print(f"{s} noisy crops:", ncrops.shape)
         np.save(fname, ncrops)
 
-        # median normalization
-        fname = os.path.join(dir_name, f"../{s}_mednorm")
-        np.save(fname, [m, M])
+        fname = dir_name / f"crops/{s}_clear_{patch_size[0]}_{pct}"
+        np.save(fname, ccrops)
 
 
-def preprocess_main(dir_name, n_crops, crop_edge, percentage):
+def preprocess_main(dir_name, nb_crops, crop_edge, pct, verbose, save_sample):
     patch_size = (crop_edge, crop_edge)
-    for i in ["train/crops", "train/planes", "val/planes", "test/planes"]:
-        if not os.path.isdir(os.path.join(dir_name, i)):
-            os.mkdir(os.path.join(dir_name, i))
-
-    for s in ["train", "test", "val"]:
-        print(f"\n{s}:")
-        dname = os.path.join(dir_name, s)
-        get_planes_and_dump(dname)
-
-    # save the normalization (this contain info from all the apas)
-    for s in ["induction", "collection"]:
-        fname = os.path.join(dir_name, f"train/planes/{s}_noisy.npy")
-        n = np.load(fname).flatten()
-
-        # MinMax
-        fname = os.path.join(dir_name, f"{s}_minmax")
-        np.save(fname, [n.min(), n.max()])
-
-        # zscore
-        fname = os.path.join(dir_name, f"{s}_zscore")
-        np.save(fname, [n.mean(), n.std()])
-
-    dname = os.path.join(dir_name, "train")
-    crop_planes_and_dump(dname, n_crops, patch_size, percentage)
+    for folder in ["train", "val", "test"]:
+        dname = dir_name / folder
+        (dname / "planes").mkdir(parents=True, exist_ok=True)
+        if folder == "train":
+            (dname / "crops").mkdir(exist_ok=True)
+        get_planes_and_dump(dname, verbose, save_sample)
+    for channel in ["induction", "collection"]:
+        save_normalization_info(dir_name, channel)
+    crop_planes_and_dump(dir_name / "train", nb_crops, patch_size, pct, verbose)
