@@ -34,7 +34,7 @@ save: True # wether to save checkpoints during training
 model: cnn # cnn | gcnn | uscg
 load_path: null # path to .pth checkpoint
 # k: 8 # nearest neighbors number (gcnn only)
-input_channels: 1 # input channels number in (N,C,H,W) (gcnn | cnn only)
+input_channels: 1 # input channels size in (N,C,H,W) (gcnn | cnn only)
 hidden_channels: 32 # (graph) convolution network hidden filters number (gcnn | cnn only)
 
 # trainings

@@ -1,11 +1,15 @@
 # This file is part of DUNEdn by M. Rossi
+"""
+    This module contains utility functions for the inference step.
+"""
 import collections
 from math import sqrt
 import torch
 from torch.utils.data import DataLoader
 from dunedn.denoising.args import Args
-from dunedn.denoising.model import get_model_from_args
-from dunedn.denoising.model_utils import Converter, model2batch
+from dunedn.networks.helpers import get_model_from_args
+from dunedn.networks.model_utils import model2batch
+from dunedn.networks.GCNN_Net_utils import Converter
 from dunedn.denoising.dataloader import InferenceLoader, InferenceCropLoader
 from dunedn.denoising.train import inference, identity_inference, gcnn_inference
 from dunedn.denoising.losses import get_loss
@@ -13,11 +17,27 @@ from dunedn.utils.utils import load_yaml, median_subtraction
 from dunedn.configdn import get_dunedn_path
 from dunedn.geometry.helpers import evt2planes, planes2evt
 
+# tuple containing induction and collection models
 ModelTuple = collections.namedtuple("Model", ["induction", "collection"])
+
+# tuple containing induction and collection inference arguments
 ArgsTuple = collections.namedtuple("Args", ["batch_size", "patch_stride", "crop_size"])
 
 
 def get_model_and_args(modeltype, task, channel, ckpt=None):
+    """
+    Parameters
+    ----------
+        - modeltype: str, available options cnn | gcnn | uscg
+        - task: str, available options dn | roi
+        - channel: str, available options readout | collection
+        - ckpt: Path, path to directory with saved model
+
+    Returns
+    -------
+        - ArgsTuple, tuple containing induction and collection inference arguments
+        - MyDataParallel, the loaded model
+    """
     card_prefix = get_dunedn_path()
     card = f"configcards/{modeltype}_{task}_{channel}_configcard.yaml"
     parameters = load_yaml(card_prefix / card)
@@ -60,13 +80,43 @@ def mkModel(modeltype, task, ckpt=None):
     return [iargs, cargs], ModelTuple(imodel, cmodel)
 
 
-def _scg_inference(planes, loader, model, args, dev):
+def _uscg_inference(planes, loader, model, args, dev):
+    """
+    USCG inference utility function.
+
+    Parameters
+    ----------
+        - planes: np.array, planes array of shape=(N,C,H,W)
+        - loader: InferenceLoader, data loader
+        - model: USCG_Net, network instance
+        - args: ArgsTuple, inference arguments
+        - dev: list | str, host device
+    
+    Returns
+    -------
+        - torch.Tensor, output tensor of shape=(N,C,H,W)
+    """
     dataset = loader(planes)
     test = DataLoader(dataset=dataset, batch_size=args.batch_size)
     return inference(test, args.patch_stride, model.to(dev), dev).cpu()
 
 
 def _gcnn_inference(planes, loader, model, args, dev):
+    """
+    GCNN inference utility function.
+
+    Parameters
+    ----------
+        - planes: np.array, planes array of shape=(N,C,H,W)
+        - loader: InferenceCropLoader, data loader
+        - model: GCNN_Net, network instance
+        - args: ArgsTuple, inference arguments
+        - dev: list | str, host device
+    
+    Returns
+    -------
+        - torch.Tensor, output tensor of shape=(N,C,H,W)
+    """
     # creating a new instance of converter every time could waste time if the
     # inference is called many times.
     # TODO: think about to make it a DnRoiModel attribute and pass it to the fn
@@ -82,29 +132,61 @@ def _gcnn_inference(planes, loader, model, args, dev):
 
 
 def _identity_inference(planes, loader, **kwargs):
+    """
+    USCG inference utility function.
+
+    Parameters
+    ----------
+        - planes: np.array, planes array of shape=(N,C,H,W)
+        - loader: torch.utils.data.DataLoader, data loader
+        - kwargs: dict, kwargs for consistency with other inference functions
+    
+    Returns
+    -------
+        - torch.Tensor, output tensor of shape=(N,C,H,W)
+    """
     dataset = loader(planes)
     test = DataLoader(dataset=dataset)
     return identity_inference(test).cpu()
 
 
 def get_inference(modeltype, **kwargs):
+    """
+    Utility function to retrieve inference from model name and args.
+
+    Parameters
+    ----------
+        - modeltype: str, available options cnn | gcnn | uscg
+        - kwargs: dict, inference kwargs
+
+    Returns
+    -------
+        - inference function
+    
+    Raises
+    ------
+        - NotImplementedError if modeltype is not in ['uscg', 'cnn', 'gcnn']
+    """
     if modeltype == "uscg":
-        return _scg_inference(**kwargs)
+        return _uscg_inference(**kwargs)
     elif modeltype in ["cnn", "gcnn"]:
         return _gcnn_inference(**kwargs)
     elif modeltype == "id":
         return _identity_inference(**kwargs)
+    else:
+        raise NotImplementedError("Inference function not implemented")
 
 
 class BaseModel:
+    """
+    Mother class for inference model.
+    """
     def __init__(self, modeltype, task, ckpt=None):
         """
-        Wrapper for base model.
-
         Parameters
         ----------
-            - modeltype: str, valid options: "cnn" | "gcnn" | "usgc"
-            - task: str, valid options "dn" | "roi"
+            - modeltype: str, available options cnn | gcnn | uscg
+            - task: str, available options dn | roi
             - ckpt: Path, saved checkpoint path. If None, an un-trained model
                     will be used
         """
@@ -153,10 +235,11 @@ class BaseModel:
 
 
 class DnModel(BaseModel):
+    """
+    Wrapper class for denoising model.
+    """
     def __init__(self, modeltype, ckpt=None):
         """
-        Wrapper for denoising model.
-
         Parameters
         ----------
             - modeltype: str, valid options: "cnn" | "gcnn" | "sgc"
@@ -168,10 +251,11 @@ class DnModel(BaseModel):
 
 
 class RoiModel(BaseModel):
+    """
+    Wrapper class for ROI selection model.
+    """
     def __init__(self, modeltype, ckpt=None):
         """
-        Wrapper for ROI selection model.
-
         Parameters
         ----------
             - modeltype: str, valid options: "cnn" | "gcnn" | "sgc"
@@ -182,10 +266,11 @@ class RoiModel(BaseModel):
 
 
 class DnRoiModel:
+    """
+    Wrapper class for denoising and ROI selection model.
+    """
     def __init__(self, modeltype, roi_ckpt=None, dn_ckpt=None):
         """
-        Wrapper for inference model.
-
         Parameters
         ----------
             - modeltype: str, valid options: "cnn" | "gcnn" | "sgc"
@@ -197,6 +282,17 @@ class DnRoiModel:
 
 
 def to_cuda(*args):
+    """
+    Utility class to port list of tensors to cuda.
+
+    Parameters
+    ----------
+        - args: tuple, ((induction tensor, collection tensor))
+    
+    Returns
+    -------
+        - tuple, (tensor, tensor) ported to cuda:0 device if cuda is available
+    """
     if not torch.cuda.is_available():
         return args
     dev = "cuda:0"
@@ -205,6 +301,14 @@ def to_cuda(*args):
 
 
 def print_cfnm(cfnm, channel):
+    """
+    Prints confusion metrics
+
+    Parameters
+    ----------
+        - cfnm: list, computed confusion matrix
+        - channel: str, available options readout | collection
+    """
     tp, fp, fn, tn = cfnm
     print(f"Confusion Matrix on {channel} planes:")
     print(f"\tTrue positives: {tp[0]:.3f} +- {tp[1]:.3f}")
@@ -214,8 +318,17 @@ def print_cfnm(cfnm, channel):
 
 
 def compute_metrics(output, target, task):
-    """This function takes the two events and computes the metrics between
-    their planes. Separating collection and inductions planes."""
+    """
+    Takes the two events and computes the metrics between their planes,
+    separating collection and inductions planes.
+    
+    Parameters
+    ----------
+        - output: np.array, output array of shape=(nb wires, nb tdc ticks)
+        - target: np.array, ground truth labels of shape=(nb wires, nb tdc ticks)
+        - task: str, available options dn | roi
+
+    """
     if task == "roi":
         metrics = ["bce_dice", "bce", "softdice", "cfnm"]
     elif task == "dn":

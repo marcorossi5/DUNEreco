@@ -1,4 +1,8 @@
 # This file is part of DUNEdn by M. Rossi
+"""
+    This module contains the wrapper function for the ``dunedn inference``
+    command.
+"""
 from copy import deepcopy
 import numpy as np
 import torch
@@ -10,6 +14,13 @@ THRESHOLD = 3.5  # the ADC threshold below which the output is put to zero
 
 
 def add_arguments_inference(parser):
+    """
+    Adds inference subparser arguments.
+
+    Parameters
+    ----------
+        - parser: ArgumentParser, inference subparser object
+    """
     parser.add_argument(
         "-i",
         type=Path,
@@ -36,7 +47,7 @@ def add_arguments_inference(parser):
     parser.add_argument(
         "--model_path",
         type=Path,
-        help="(optional) path to the saved model directory",
+        help="(optional) path to directory with saved model",
         default=None,
         dest="ckpt",
     )
@@ -44,6 +55,14 @@ def add_arguments_inference(parser):
 
 
 def inference(args):
+    """
+    Wrapper inference function.
+
+    Parameters
+    ----------
+        - args: NameSpace object, parsed from command line or from code. It
+                should contain input, output and model attributes.
+    """
     args = vars(args)
     args.pop("func")
     inference_main(**args)
@@ -56,8 +75,10 @@ def inference_main(input, output, modeltype, ckpt):
 
     Parameters
     ----------
-        - args: NameSpace object, parsed from command line or from code. It
-                should contain the input, output and model attributes.
+        - input: Path, path to the input event file
+        - output: Path, path to the output event file
+        - modeltype: str, model name. Available options: uscg|gcnn|cnn|id
+        - ckpt: path to directory with saved model
 
     Returns
     -------
@@ -75,6 +96,15 @@ def inference_main(input, output, modeltype, ckpt):
 
 
 def compare_performance_dn(evt_dn, target):
+    """
+    Computes perfromance metrics between denoising inference output and ground
+    truth labels.
+
+    Parameters
+    ----------
+        - evt_roi: np.array, denoised event of shape=(nb wires, nb tdc ticks)
+        - target: np.array, ground truth labels of shape=(nb wires, nb tdc ticks)
+    """
     mask = np.abs(evt_dn) <= THRESHOLD
     # bind evt_dn variable to a copy to prevent in place substitution
     evt_dn = deepcopy(evt_dn)
@@ -82,7 +112,16 @@ def compare_performance_dn(evt_dn, target):
     compute_metrics(evt_dn, target, "dn")
 
 
-def compare_performance_dn(evt_roi, target):
+def compare_performance_roi(evt_roi, target):
+    """
+    Computes perfromance metrics between ROI inference output and ground truth
+    labels.
+
+    Parameters
+    ----------
+        - evt_roi: np.array, event ROI selection of shape=(nb wires, nb tdc ticks)
+        - target: np.array, ground truth labels of shape=(nb wires, nb tdc ticks)
+    """
     mask = np.abs(evt_roi) <= THRESHOLD
     # bind target variable to a copy to prevent in place substitution
     target = deepcopy(target)

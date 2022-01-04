@@ -1,4 +1,8 @@
-# This file is part of DUNEdn by M. Rossi
+"""
+    This module aims to compute the k1, k2 parameters in the ssim function that
+    are needed to stabilize the structural similarity. Plot the ssim behavior
+    as a function of such parameters.
+"""
 import argparse
 import time as tm
 import numpy as np
@@ -58,8 +62,7 @@ if __name__ == "__main__":
 
     if torch.cuda.is_available():
         if int(ARGS["device"]) == -1:
-            from utils.utils import get_freer_gpu
-
+            from dunedn.utils.utils import get_freer_gpu
             GPU_NUM = get_freer_gpu()
             DEV = torch.device("cuda:{}".format(GPU_NUM))
         elif int(ARGS["device"]) > -1:

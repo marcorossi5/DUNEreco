@@ -1,17 +1,25 @@
 # This file is part of DUNEdn by M. Rossi
+"""
+    This module contains the Args class, that keeps track of all runtime settings.
+"""
 from pathlib import Path
 from datetime import datetime as dtm
 from dunedn.configdn import get_dunedn_path
+from dunedn.utils.utils import check
 import shutil
 
 
-def check(check_instance, check_list):
-    if not check_instance in check_list:
-        raise NotImplementedError("Operation not implemented")
-
-
 class Args:
+    """ Class that tracks all the needed runtime settings."""
+
     def __init__(self, **kwargs):
+        """
+        Updates attributes from kwargs.
+
+        Parameters
+        ----------
+            - kwargs: dict, key-value pairs to be stored as object attributes
+        """
         self.__dict__.update(kwargs)
 
         # configcard checks
@@ -22,31 +30,16 @@ class Args:
         self.dataset_dir = Path(self.dataset_dir)
         self.crop_size = (self.crop_edge,) * 2
 
-        # model parameters
-        # self.a = 0.5 # balancing between loss function contributions
-        # self.k = 8 # for cnn | gcnn model only
-        # self.input_channels = 1 # for cnn | gcnn model only
-        # self.hidden_channels = 32 # for cnn | gcnn model only
-
-        # logs
-        # self.epoch_log = 1
-        # self.epoch_test_start = 0
-        # self.epoch_test = 1
-
-        # self.t = 0.5 # shouldn't need this
-
         self.load = False if (self.load_path is None) else True
-        # self.load_epoch = 100
-
-        # self.save = True
 
     def build_directories(self, output=None):
         """
-        Saves in the attributes the output directory tree.
+        Builds the output directory tree to store training results and logs.
 
         Parameters
         ----------
-            - output: Path, name of the output folder
+            - output: Path, name of the output folder. If None, generate a
+                      unique output directory based on the current date and time.
 
         """
         if self.output is not None:

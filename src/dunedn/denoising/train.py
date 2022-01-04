@@ -1,4 +1,7 @@
 # This file is part of DUNEdn by M. Rossi
+"""
+    This module implements the main training loops and inference functions.
+"""
 from math import ceil, sqrt
 from time import time as tm
 import numpy as np
@@ -8,24 +11,56 @@ from torch import optim
 from torch.utils.data import DataLoader
 
 from dunedn.denoising.losses import get_loss
-from dunedn.denoising.model_utils import model2batch
+from dunedn.networks.model_utils import model2batch
 
 
-def time_windows(plane, w, stride):
-    """ This function takes a plane and takes time windows """
-    B, C, H, W = plane.size()
+def time_windows(planes, w, stride):
+    """
+    Takes time windows of given width and stride from a planes.
+    
+    Parameters
+    ----------
+        - planes: torch.Tensor, planes of shape=(N,C,H,W)
+        - w: int, width of the time windows
+        - stride: int, steps between time windows
+    
+    Returns
+    -------
+        - list, masks for time windows each of shape [N,C,H,w]
+        - list, time windows each of shape [N,C,H,w]
+        - list, each elements is [start idx, end idx] of the time window
+    """
+    _, _, _, W = planes.size()
     n = ceil((W - w) / stride) + 1
     base = np.arange(n).reshape([-1, 1]) * stride
     idxs = [[0, w]] + base
     windows = []
-    div = torch.zeros_like(plane)
+    div = torch.zeros_like(planes)
     for start, end in idxs:
-        windows.append(plane[:, :, :, start:end])
+        windows.append(planes[:, :, :, start:end])
         div[:, :, :, start:end] += 1
     return div, windows, idxs
 
 
-def train_scg_epoch(args, epoch, train_loader, model, optimizer, balance_ratio, task):
+def train_uscg_epoch(args, epoch, train_loader, model, optimizer, balance_ratio, task):
+    """
+    Train USCG network.
+
+    Parameters
+    ----------
+        - args: Args, runtime settings
+        - epoch: int, epoch number
+        - train_loader: torch.utils.data.DataLoader, train data loader
+        - model: MyDataParallel, the model to train
+        - optimizer: torch.optim.Adam, the Adam optimizer
+        - balance_ratio: float, categories balancing (roi only, None for dn).
+        - task: str, available options dn | roi
+
+    Returns
+    -------
+        - np.array, training epoch loss of shape=(1,)
+        - float, training epoch time
+    """
     if args.rank == 0:
         print("\n[+] Training")
     start = tm()
@@ -51,6 +86,24 @@ def train_scg_epoch(args, epoch, train_loader, model, optimizer, balance_ratio, 
 
 
 def train_gcnn_epoch(args, epoch, train_loader, model, optimizer, balance_ratio, task):
+    """
+    Train USCG network.
+
+    Parameters
+    ----------
+        - args: Args, runtime settings
+        - epoch: int, epoch number
+        - train_loader: torch.utils.data.DataLoader, train data loader
+        - model: MyDataParallel, the model to train
+        - optimizer: torch.optim.Adam, the Adam optimizer
+        - balance_ratio: float, categories balancing (roi only, None for dn).
+        - task: str, available options dn | roi
+
+    Returns
+    -------
+        - np.array, training epoch loss of shape=(1,)
+        - float, training epoch time
+    """
     print("\n[+] Training")
     start = tm()
     model.train()
@@ -72,8 +125,24 @@ def train_gcnn_epoch(args, epoch, train_loader, model, optimizer, balance_ratio,
 
 
 def choose_train(modeltype, *args):
-    if modeltype == "scg":
-        return train_scg_epoch(*args)
+    """
+    Utility function to retrieve training from model name and args.
+
+    Parameters
+    ----------
+        - modeltype: str, available options cnn | gcnn | uscg
+        - args: list, model's __init__ arguments
+    
+    Returns
+    -------
+        - func, training function
+    
+    Raises
+    ------
+        - NotImplementedError if modeltype is not in ['uscg', 'cnn', 'gcnn']
+    """
+    if modeltype == "uscg":
+        return train_uscg_epoch(*args)
     elif modeltype in ["gcnn", "cnn"]:
         return train_gcnn_epoch(*args)
     else:
@@ -81,6 +150,18 @@ def choose_train(modeltype, *args):
 
 
 def inference(test_loader, stride, model, dev):
+    """
+    Parameters
+    ----------
+        - test_loader: torch.utils.data.DataLoader, inference loader
+        - stride: int, steps between time windows
+        - model: MyDataParallel, the model for inference
+        - dev: str, the host device
+
+    Returns
+    -------
+        - torch.Tensor, output tensor of shape=(N,C,H,W)
+    """
     w = model.w
     model.eval()
     outs = []
@@ -95,11 +176,31 @@ def inference(test_loader, stride, model, dev):
 
 
 def identity_inference(test_loader):
+    """
+    Parameters
+    ----------
+        - test_loader: torch.utils.data.DataLoader, dummy inference loader
+    
+    Returns
+    -------
+        - torch.Tensor, input noisy planes of shape=(N,C,H,W)
+    """
     outs = [noisy for noisy, _ in test_loader]
     return torch.cat(outs)
 
 
 def gcnn_inference(test_loader, model, dev):
+    """
+    Parameters
+    ----------
+        - test_loader: torch.utils.data.DataLoader, inference loader
+        - model: MyDataParallel, the model for inference
+        - dev: str, the host device
+
+    Returns
+    -------
+        - torch.Tensor, output tensor of shape=(N,C,H,W)
+    """
     outs = []
     for noisy, _ in test_loader:
         noisy = noisy.to(dev)
@@ -109,6 +210,21 @@ def gcnn_inference(test_loader, model, dev):
 
 
 def compute_val_loss(test_loader, outputs, args, task):
+    """
+    Computes validation losses.
+
+    Parameters
+    ----------
+        - test_loader: torch.utils.data.DataLoader, validation loader
+        - outputs: torch.Tensor, output tensor of shape=(N,C,H,W)
+        - args: Args, runtime settings
+        - task: str, available options dn | roi
+
+    Returns
+    -------
+        - list, of computed metrics with their uncertainties
+                [loss, loss unc, ssim, ssim unc, psnr, psnr unc, mse, mse unc]
+    """
     # if task == 'roi':
     #     metrics = ['bce', 'softdice']
     # elif task == 'dn':
@@ -175,13 +291,21 @@ def compute_val_loss(test_loader, outputs, args, task):
 
 def test_epoch(test_data, model, args, task, dry_inference=True):
     """
-    Parameters:
-        test_data: torch.utils.data.DataLoader, based on PlaneLoader
-        task: str, either roi or dn
-    Outputs:
-        np.array: n metrics, shape (2*n)
-        torch.Tensor: denoised data, shape (batch,C,W,H)
-        float: dry inference time
+    Consume test data and output metrics.
+
+    Parameters
+    ----------
+        - test_data: torch.utils.data.DataLoader, based on PlaneLoader
+        - model: MyDataParallel, the model for inference
+        - args: Args, runtime settings
+        - task: str, available options dn | roi
+        - dry_inference: bool, if true do not compute metrics
+    
+    Returns
+    -------
+        - list, of computed metrics with their uncertainties
+        - torch.Tensor, output tensor of shape=(N,C,H,W)
+        - float, dry inference time
     """
     if args.model in ["cnn", "gcnn"]:
         test_data.to_crops()
@@ -193,7 +317,7 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
     if args.rank == 0:
         print("\n[+] Testing")
     start = tm()
-    if args.model == "scg":
+    if args.model == "uscg":
         outputs = inference(test_loader, args.patch_stride, model, args.dev[0])
     elif args.model in ["cnn", "gcnn"]:
         outputs = gcnn_inference(test_loader, model, args.dev[0])
@@ -215,11 +339,40 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
 
 
 def optimizer_fn(params, lr, amsgrad):
+    """
+    Utility function to retrieve optimizer.
+
+    Parameters
+    ----------
+        - params: list, parameters to optimize
+        - lr: float, learning rate
+        - amsgrad: bool, whether to use the AMSGrad variant of this algorithm
+    
+    Returns
+    -------
+        - torch.optim.Adam, the optimizer
+    """
     return optim.Adam(params, lr=lr, amsgrad=amsgrad)
 
 
 ########### main train function
 def train(args, train_data, val_data, model):
+    """
+    Training function.
+
+    Parameters
+    ----------
+        - args: Args, runtime settings
+        - train_data: CropLoader | PlaneLoader, training data loader
+        - val_data: PlaneLoader, validation data loader
+        - model: MyDataParallel, the model to train
+
+    Returns
+    -------
+        - float, minimum loss over training
+        - float, uncertainty over minimum loss
+        - str, best checkpoint file name
+    """
     task = args.task
     channel = args.channel
     # check if load existing model

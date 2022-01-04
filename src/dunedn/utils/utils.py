@@ -1,9 +1,28 @@
 # This file is part of DUNEdn by M. Rossi
+""" This module contains utility functions of general interest. """
 import os
 from pathlib import Path
 import numpy as np
 import yaml
 from hyperopt import hp
+
+
+def check(check_instance, check_list):
+    """
+    Checks that check_list contains check_instance object. If not, raises
+    NotImplementedError.
+
+    Parameters
+    ----------
+        - check_instance: obj, object to check
+        - check_list: list, available options
+
+    Raises
+    ------
+        - NotImplementedError, if check_instance is not in check_list
+    """
+    if not check_instance in check_list:
+        raise NotImplementedError("Operation not implemented")
 
 
 def get_freer_gpu():
@@ -97,7 +116,7 @@ def get_runcard(fname):
     Parameters
     ----------
         - fname: Path, path to runcard yaml file.
-    
+
     Returns
     -------
         - dict, the parsed runcard
@@ -118,7 +137,9 @@ def get_runcard(fname):
         candidate = Path(base) / fname.name
         if candidate.is_file():
             return load_yaml(candidate)
-    raise FileNotFoundError(f"Runcard {fname} not found. Please, update DUNEDN_SEARCH_PATH variable.")
+    raise FileNotFoundError(
+        f"Runcard {fname} not found. Please, update DUNEDN_SEARCH_PATH variable."
+    )
 
 
 def print_summary_file(args):

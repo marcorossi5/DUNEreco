@@ -11,7 +11,7 @@ import torch
 import torch.distributed as dist
 
 from dunedn.denoising.dataloader import CropLoader, PlaneLoader
-from dunedn.denoising.model import GCNN_Net
+from dunedn.networks.models import GCNN_Net
 from dunedn.denoising.args import Args
 from dunedn.utils.utils import print_summary_file
 from dunedn.denoising.train import train

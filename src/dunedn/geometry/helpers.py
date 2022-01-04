@@ -1,5 +1,8 @@
 # This file is part of DUNEdn by M. Rossi
-"""This module contains the geometry helper functions."""
+"""
+    This module contains the geometry helper functions that transform events into
+    planes and vice versa.
+"""
 
 import numpy as np
 from dunedn.geometry.pdune import (
@@ -12,12 +15,16 @@ from dunedn.geometry.pdune import (
 
 def evt2planes(event):
     """
-    Convert planes to event
-    Input:
-        event: array-like array
-            inputs of shape (nb_event_channels, nb_tdc_ticks)
-    Output: np.array
-        induction and collection arrays of shape type (N,C,H,W)
+    Converts event array to planes.
+    
+    Parameters
+    ----------
+        - event: np.array, of shape=(nb_event_channels, nb_tdc_ticks)
+
+    Returns
+    -------
+        - np.array, induction array of shape=(N,C,H,W)
+        - np.array, collection array of shape=(N,C,H,W)
     """
     base = np.arange(nb_apas).reshape(-1, 1) * nb_apa_channels
     iidxs = [[0, nb_ichannels, 2 * nb_ichannels]] + base
@@ -34,12 +41,16 @@ def evt2planes(event):
 
 def planes2evt(inductions, collections):
     """
-    Convert planes to event
-    Input:
-        inductions, collections: array-like
-            inputs of shape type (N,C,H,W)
-    Output: np.array
-        event array of shape (nb_event_channels, nb_tdc_ticks)
+    Converts planes back to event.
+
+    Parameters
+    ----------
+        - inductions: np.array, induction planes of shape=(N,C,H,W)
+        - collections: np.array, collection planes of shape=(N,C,H,W)
+
+    Returns
+    -------
+        - np.array, event array of shape=(nb_event_channels, nb_tdc_ticks)
     """
     inductions = np.array(inductions).reshape(-1, 2 * nb_ichannels, nb_tdc_ticks)
     collections = np.array(collections)[:, 0]

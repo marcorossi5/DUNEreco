@@ -1,26 +1,31 @@
 # This file is part of DUNEdn by M. Rossi
+"""
+    This module contains classes inheriting from torch.utils.Dataset needed to
+    run networks training and inference.
+"""
 import os
 import torch
 import numpy as np
 
-from dunedn.denoising.model_utils import Converter
-
-ElectronsToADC = 6.8906513e-3
+from dunedn.networks.GCNN_Net_utils import Converter
 
 
 class CropLoader(torch.utils.data.Dataset):
+    """
+    Loads the crops for training.
+    """
     def __init__(self, dataset_dir, folder, task, channel, threshold, crop_edge, pct):
         """
-        This function loads the crops for training.
-        Parameters:
-            args: Args object
-            dataset_dir: Path
-            folder: str, available options train | val | test
-            task: str, available options dn | roi
-            channel: str, available options readout | collection
-            threshold: float
-            pct: float, signal / background percentage
-            crop_edge: int
+        Parameters
+        ----------
+            - args: Args, runtime settings
+            - dataset_dir: Path, path to dataset directory
+            - folder: str, available options train | val | test
+            - task: str, available options dn | roi
+            - channel: str, available options readout | collection
+            - threshold: float
+            - crop_edge: int, crop edge size
+            - pct: float, signal / background percentage
         """
         fname = os.path.join(
             dataset_dir, folder, "crops", f"{channel}_clear_{crop_edge}_{pct}.npy"
@@ -51,16 +56,21 @@ class CropLoader(torch.utils.data.Dataset):
 
 
 class PlaneLoader(torch.utils.data.Dataset):
+    """
+    Loads the planes for training.
+    Only noisy planes are normalized since clear planes don't need to be
+    scaled at inference time.
+    """
     def __init__(self, dataset_dir, folder, task, channel, threshold, crop_edge=None):
         """
-        This function loads the planes for inference.
-        Only noisy planes are normalized since clear planes don't
-        need to be scaled at inference time.
-        Parameters:
-            args: Args object
-            folder: str, one of ['train','val','test']
-            t: float, threshold to be put on labels
-            crop_edge: int, crop edge size
+        Parameters
+        ----------
+            - dataset_dir: Path, path to dataset directory
+            - folder: str, available options train | val | test
+            - task: str, available options dn | roi
+            - channel: str, available options readout | collection
+            - threshold: float
+            - crop_edge: int
         """
         data_dir = os.path.join(dataset_dir, folder)
         # label = "simch" if task=='roi' else "clear"
@@ -83,12 +93,17 @@ class PlaneLoader(torch.utils.data.Dataset):
             self.converter = Converter((crop_edge, crop_edge))
 
     def to_crops(self):
-        """ Function to be called when this is used with cnn | gcnn"""
+        """
+        Function to be called when this is used with cnn | gcnn. Converts planes
+        into crops.
+        """
         self.noisy = self.converter.planes2tiles(self.noisy)
         self.clear = self.converter.planes2tiles(self.clear)
 
     def to_planes(self):
-        """ Eventually called after to_crops function """
+        """
+        Eventually called after to_crops function. Converts crops into planes.
+        """
         self.noisy = self.converter.tiles2planes(self.noisy)
         self.clear = self.converter.tiles2planes(self.clear)
 
@@ -100,7 +115,15 @@ class PlaneLoader(torch.utils.data.Dataset):
 
 
 class InferenceLoader(torch.utils.data.Dataset):
+    """
+    Loads the planes for inference.
+    """
     def __init__(self, noisy):
+        """
+        Parameters
+        ----------
+            - noisy: np.array, noisy planes of shape=(N,C,H,W)
+        """
         medians = np.median(noisy.reshape([noisy.shape[0], -1]), axis=1)
         self.noisy = torch.Tensor(noisy - medians[:, None, None, None])
 
@@ -112,7 +135,15 @@ class InferenceLoader(torch.utils.data.Dataset):
 
 
 class InferenceCropLoader(torch.utils.data.Dataset):
+    """
+    Loads the crops for inference.
+    """
     def __init__(self, noisy):
+        """
+        Parameters
+        ----------
+            - noisy: np.array, noisy crops of shape=(N,C,H,W)
+        """
         self.noisy = noisy
 
     def __len__(self):

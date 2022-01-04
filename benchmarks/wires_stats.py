@@ -1,4 +1,7 @@
-# This file is part of DUNEdn by M. Rossi
+"""
+    This modules fits a constant with pyROOT to match the clear truths and
+    recob::wires product.
+"""
 import numpy as np
 import argparse
 from time import time as tm
@@ -8,7 +11,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--fname",
     "-f",
-    type=str,
     help="Event root folder",
     default="../datasets/20201124/test/evts/p2GeV_cosmics_wire_evt9.npy",
 )
@@ -85,7 +87,7 @@ def main(fname, fit):
     cnormalized = cwires * ck[:, :1, None, None]
     normalized = planes2evt(inormalized, cnormalized)
 
-    from hitreco import compute_metrics
+    from dunedn.denoising.hitreco import compute_metrics
 
     compute_metrics(normalized, labels, "dn")
 

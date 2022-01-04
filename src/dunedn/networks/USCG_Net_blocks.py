@@ -1,4 +1,7 @@
 # This file is part of DUNEdn by M. Rossi
+"""
+    This module contains the USCG Net building blocks.
+"""
 import torch
 from torch import nn
 
@@ -98,16 +101,6 @@ class GCN_Layer(nn.Module):
         return [y, A]
 
 
-class BatchNorm_GCN(nn.BatchNorm1d):
-    """Batch normalization over GCN features"""
-
-    def __init__(self, num_features):
-        super(BatchNorm_GCN, self).__init__(num_features)
-
-    def forward(self, x):
-        return super(BatchNorm_GCN, self).forward(x.permute(0, 2, 1)).permute(0, 2, 1)
-
-
 class Pooling_Block(nn.Module):
     def __init__(self, c, h, w):
         """
@@ -142,16 +135,14 @@ class Recombination_Layer(nn.Module):
     def forward(self, x, y):
         return self.conv(torch.cat([x, y], axis=1))
 
+# ==============================================================================
+# functions and classes to be called within this module only
 
-def weight_xavier_init(*models):
-    for model in models:
-        for module in model.modules():
-            if isinstance(module, nn.Conv2d) or isinstance(module, nn.Linear):
-                # nn.init.xavier_normal_(module.weight)
-                nn.init.orthogonal_(module.weight)
-                # nn.init.kaiming_normal_(module.weight)
-                if module.bias is not None:
-                    module.bias.data.zero_()
-            elif isinstance(module, nn.BatchNorm2d):
-                module.weight.data.fill_(1)
-                module.bias.data.zero_()
+class BatchNorm_GCN(nn.BatchNorm1d):
+    """Batch normalization over GCN features"""
+
+    def __init__(self, num_features):
+        super(BatchNorm_GCN, self).__init__(num_features)
+
+    def forward(self, x):
+        return super(BatchNorm_GCN, self).forward(x.permute(0, 2, 1)).permute(0, 2, 1)

@@ -1,11 +1,14 @@
 # This file is part of DUNEdn by M. Rossi
+"""
+    This module contains the models classes CNN, GCNN and USCG Net, along with
+    the helper functions to retrieve a model from its model name.
+"""
 from math import ceil
 import torch
 from torch import nn
 from torchvision.models import resnext50_32x4d
-from dunedn.denoising.model_utils import MyDataParallel, NonLocalGraph
-from dunedn.denoising.GCNN_Net import PreProcessBlock, ROI, HPF, LPF, PostProcessBlock
-from dunedn.denoising.SCG_Net import (
+from dunedn.networks.GCNN_Net_blocks import PreProcessBlock, ROI, HPF, LPF, PostProcessBlock, NonLocalGraph
+from dunedn.networks.USCG_Net_blocks import (
     SCG_Block,
     GCN_Layer,
     Pooling_Block,
@@ -15,10 +18,8 @@ from dunedn.denoising.SCG_Net import (
 
 class GCNN_Net(nn.Module):
     """
-    Generic neural network: based on args passed when running __init__, it
-    switches between cnn|gcnn and roi|dn as well
+    Generic neural network: it switches between cnn|gcnn and roi|dn as well
     """
-
     def __init__(
         self,
         model,
@@ -31,7 +32,12 @@ class GCNN_Net(nn.Module):
         """
         Parameters
         ----------
-            - crop_edge: int
+            - model: str, available options cnn | gcnn
+            - task: str, available options dn | roi
+            - crop_edge: int, crop edge size
+            - input_channels: int, inputh channel dimension size
+            - hidden_channels: int, convolutions hidden filters number
+            - k: int, nearest neighbor number. None if model is cnn.
         """
         super(GCNN_Net, self).__init__()
         self.crop_size = (crop_edge,) * 2
@@ -66,6 +72,17 @@ class GCNN_Net(nn.Module):
         self.combine = lambda x, y: x + y
 
     def forward(self, x):
+        """
+        Forwards pass.
+
+        Parameters
+        ----------
+            - x: torch.Tensor, input tensor of shape=(N,C,H,W)
+        
+        Returns
+        -------
+            - torch.Tensor, output tensor of shape=(N,C,H,W)
+        """
         # x = self.norm_fn(x)
         hits = self.ROI(x)
         if self.task == "roi":
@@ -79,7 +96,10 @@ class GCNN_Net(nn.Module):
         return self.PostProcessBlock(y) * x
 
 
-class SCG_Net(nn.Module):
+class USCG_Net(nn.Module):
+    """
+    U-shape Self Constructing Graph Network: it switches between roi|dn
+    """
     def __init__(
         self,
         out_channels=1,
@@ -93,14 +113,19 @@ class SCG_Net(nn.Module):
         aux_pred=True,
     ):
         """
-        Parameters:
-            out_channels: int, output image channels number
-            h: int, input image height
-            w: int, input image width
-            pretrained: bool, if True, download weight of pretrained resnet
-            nodes: tuple, (height, width) of the image input of SCG block
+        Parameters
+        ----------
+            - out_channels: int, output image channels number
+            - h: int, input image height
+            - w: int, input image width
+            - pretrained: bool, if True, download weight of pretrained resnet
+            - task: str, available options dn | roi
+            - nodes: tuple, (height, width) of the image input of SCG block
+            - dropout: float, percentage of neurons turned off in graph layer
+            - enhance_diag: bool, SCG_block flag
+            - aux_pred: bool, SCG_block flag
         """
-        super(SCG_Net, self).__init__()
+        super(USCG_Net, self).__init__()
         self.h = h
         self.w = w
         self.task = task
@@ -156,6 +181,17 @@ class SCG_Net(nn.Module):
         self.act = nn.Sigmoid() if task == "roi" else nn.Identity()
 
     def forward(self, x):
+        """
+        Forwards pass.
+
+        Parameters
+        ----------
+            - x: torch.Tensor, input tensor of shape=(N,C,H,W)
+        
+        Returns
+        -------
+            - torch.Tensor, output tensor of shape=(N,C,H,W)
+        """
         if self.task == "roi":
             x /= 3197 + 524  # normalizing according to dataset
         i = x
@@ -183,45 +219,6 @@ class SCG_Net(nn.Module):
         if self.training:
             return self.act(x * i), loss
         return self.act(x * i).cpu().data
-
-
-def get_model(modeltype, **args):
-    if modeltype == "uscg":
-        return SCG_Net(**args)
-    elif modeltype in ["gcnn", "cnn"]:
-        return GCNN_Net(**args)
-    else:
-        raise NotImplementedError("Model not implemented")
-
-
-def get_model_from_args(args):
-    """
-    Load model from args.
-
-    Parameters
-    ----------
-        - modeltype: str,
-        - args: Args
-
-    Returns
-    -------
-        - MyDataParallel, the loaded model
-    """
-    kwargs = {}
-    if args.model == "uscg":
-        kwargs["task"] = args.task
-        kwargs["h"] = args.patch_h
-        kwargs["w"] = args.patch_w
-    elif args.model in ["cnn", "gcnn"]:
-        kwargs["model"] = args.model
-        kwargs["task"] = args.task
-        kwargs["crop_edge"] = args.crop_edge
-        kwargs["input_channels"] = args.input_channels
-        kwargs["hidden_channels"] = args.hidden_channels
-        kwargs["k"] = args.k if args.model == "gcnn" else None
-    else:
-        raise NotImplementedError("Loss function not implemented")
-    return MyDataParallel(get_model(args.model, **kwargs), device_ids=args.dev)
 
 
 # TODO: check that for training, the median normalization is done outside the

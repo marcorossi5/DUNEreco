@@ -1,14 +1,24 @@
 # This file is part of DUNEdn by M. Rossi
+"""
+    This module contains the wrapper function for the ``dunedn train`` command.
+"""
 from pathlib import Path
 from shutil import copyfile
 from dunedn.denoising.dataloader import PlaneLoader, CropLoader
-from dunedn.denoising.model import get_model_from_args
+from dunedn.networks.helpers import get_model_from_args
 from dunedn.denoising.args import Args
 from dunedn.denoising.train import train
 from dunedn.utils.utils import get_runcard
 
 
 def add_arguments_training(parser):
+    """
+    Adds training subparser arguments.
+
+    Parameters
+    ----------
+        - parser: ArgumentParser, training subparser object
+    """
     parser.add_argument("runcard", type=Path, help="yaml configcard path")
     parser.add_argument("--output", type=Path, help="output folder", default=None)
     parser.add_argument(
@@ -18,6 +28,14 @@ def add_arguments_training(parser):
 
 
 def main_training(args):
+    """
+    Wrapper training function. Reads settings from runcard
+
+    Parameters
+    ----------
+        - args: NameSpace object, command line parsed arguments. It should
+                contain runcard file name, output path and force boolean option.
+    """
     parameters = get_runcard(args.runcard)
     args = vars(args)
     args.pop("func")
