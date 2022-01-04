@@ -4,7 +4,7 @@ from glob import glob
 import numpy as np
 from dunedn.preprocessing.putils import get_crop
 from dunedn.geometry.helpers import evt2planes
-from dunedn.utils.utils import median_subtraction, load_yaml
+from dunedn.utils.utils import median_subtraction, get_runcard
 from dunedn.preprocessing.putils import save_normalization_info
 
 
@@ -24,7 +24,7 @@ def add_arguments_preprocessing(parser):
 
 
 def preprocess(args):
-    p = load_yaml(args.runcard)
+    p = get_runcard(args.runcard)
     preprocess_main(
         p["dataset_dir"],
         p["nb_crops"],

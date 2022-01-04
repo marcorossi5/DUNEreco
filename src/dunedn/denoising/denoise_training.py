@@ -5,7 +5,7 @@ from dunedn.denoising.dataloader import PlaneLoader, CropLoader
 from dunedn.denoising.model import get_model_from_args
 from dunedn.denoising.args import Args
 from dunedn.denoising.train import train
-from dunedn.utils.utils import load_yaml
+from dunedn.utils.utils import get_runcard
 
 
 def add_arguments_training(parser):
@@ -18,7 +18,7 @@ def add_arguments_training(parser):
 
 
 def main_training(args):
-    parameters = load_yaml(args.runcard)
+    parameters = get_runcard(args.runcard)
     args = vars(args)
     args.pop("func")
     parameters.update(args)

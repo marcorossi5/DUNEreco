@@ -1,5 +1,6 @@
 # This file is part of DUNEdn by M. Rossi
 import os
+from pathlib import Path
 import numpy as np
 import yaml
 from hyperopt import hp
@@ -82,6 +83,42 @@ def load_yaml(runcard_file):
             print(key, value)
             runcard[key] = eval(value)
     return runcard
+
+
+def get_runcard(fname):
+    """
+    Looks recursively into DUNEDN_SEARCH_PATH environment variable to find the
+    first match for runcard file.
+    DUNEDN_SEARCH_PATH environment variable should be a colon separated list of
+    directories.
+    At first, if fname is not found, it removes the parent folder structure and
+    then searches the name in all directories in DUNEDN_SEARCH_PATH.
+
+    Parameters
+    ----------
+        - fname: Path, path to runcard yaml file.
+    
+    Returns
+    -------
+        - dict, the parsed runcard
+
+    Raises
+    ------
+        FileNotFoundError, if fname is not found.
+    """
+    if fname.is_file():
+        return load_yaml(fname)
+    # get directories from colon separated list
+    search_path = os.environ.get("DUNEDN_SEARCH_PATH").split(":")
+    # prepend current directory
+    search_path.insert(0, ".")
+    # remove duplicates
+    search_path = list(dict.fromkeys(search_path))
+    for base in search_path:
+        candidate = Path(base) / fname.name
+        if candidate.is_file():
+            return load_yaml(candidate)
+    raise FileNotFoundError(f"Runcard {fname} not found. Please, update DUNEDN_SEARCH_PATH variable.")
 
 
 def print_summary_file(args):

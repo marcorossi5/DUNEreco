@@ -15,7 +15,7 @@ from dunedn.denoising.model import GCNN_Net
 from dunedn.denoising.args import Args
 from dunedn.utils.utils import print_summary_file
 from dunedn.denoising.train import train
-from dunedn.utils.utils import load_yaml
+from dunedn.utils.utils import get_runcard
 
 
 def set_random_seed(random_seed=0):
@@ -42,7 +42,7 @@ def training_distributed(args):
     args = vars(args)
     args.pop("func")
     dist.init_process_group(backend="nccl")
-    parameters = load_yaml(args.card)
+    parameters = get_runcard(args.card)
     parameters["local_rank"] = args.local_rank
     parameters["local_world_size"] = args.local_world_size
     parameters["rank"] = dist.get_rank()
