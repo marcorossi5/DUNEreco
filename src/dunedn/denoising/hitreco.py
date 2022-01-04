@@ -14,7 +14,7 @@ from dunedn.configdn import get_dunedn_path
 from dunedn.geometry.helpers import evt2planes, planes2evt
 
 ModelTuple = collections.namedtuple("Model", ["induction", "collection"])
-ArgsTuple = collections.namedtuple("Args", ["batch_size", "patch_stride", "patch_size"])
+ArgsTuple = collections.namedtuple("Args", ["batch_size", "patch_stride", "crop_size"])
 
 
 def get_model_and_args(modeltype, task, channel, ckpt=None):
@@ -24,7 +24,7 @@ def get_model_and_args(modeltype, task, channel, ckpt=None):
     parameters["channel"] = channel
     args = Args(**parameters)
 
-    patch_size = None if modeltype == "uscg" else args.patch_size
+    crop_size = None if modeltype == "uscg" else args.crop_size
     patch_stride = args.patch_stride if modeltype == "uscg" else None
     batch_size = model2batch[modeltype][task]
 
@@ -34,7 +34,7 @@ def get_model_and_args(modeltype, task, channel, ckpt=None):
         fname = ckpt / f"{channel}.pth"
         state_dict = torch.load(fname)
         model.load_state_dict(state_dict)
-    return ArgsTuple(batch_size, patch_stride, patch_size), model
+    return ArgsTuple(batch_size, patch_stride, crop_size), model
 
 
 def mkModel(modeltype, task, ckpt=None):
@@ -72,7 +72,7 @@ def _gcnn_inference(planes, loader, model, args, dev):
     # TODO: think about to make it a DnRoiModel attribute and pass it to the fn
     # TODO: the batch size changes according to task, modeltype
     sub_planes = torch.Tensor(median_subtraction(planes))
-    converter = Converter(args.patch_size)
+    converter = Converter(args.crop_size)
     tiles = converter.planes2tiles(sub_planes)
 
     dataset = loader(tiles)

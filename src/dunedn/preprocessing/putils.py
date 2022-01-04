@@ -32,7 +32,7 @@ def save_normalization_info(dir_name, channel):
     np.save(fname, [med_min, med_max])
 
 
-def get_crop(clear_plane, nb_crops=1000, patch_size=(32, 32), pct=0.5):
+def get_crop(clear_plane, nb_crops=1000, crop_size=(32, 32), pct=0.5):
     """
     Finds crops centers indeces and return crops around them.
 
@@ -40,14 +40,16 @@ def get_crop(clear_plane, nb_crops=1000, patch_size=(32, 32), pct=0.5):
     ----------
         - clear_plane: np.array, clear plane of shape=(H,W)
         - nb_crops: int, number of crops
+        - crop_size: list, crop [height, width]
+        - pct: float, signal / background crops balancing
 
     Returns
     -------
-        - tuple, (idx_h, idx_w). idx_h of shape=(nb_crops, patch_edge, 1).
-                 idx_w of shape=(nb_crops, 1, patch_edge).
+        - tuple, (idx_h, idx_w). idx_h of shape=(nb_crops, crop_edge, 1).
+                 idx_w of shape=(nb_crops, 1, crop_edge).
     """
     x, y = clear_plane.shape
-    c_x, c_y = patch_size[0] // 2, patch_size[1] // 2
+    c_x, c_y = crop_size[0] // 2, crop_size[1] // 2
 
     im = clear_plane != 0
 

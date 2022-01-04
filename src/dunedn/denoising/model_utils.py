@@ -164,7 +164,7 @@ def pairwise_dist(arr, k, local_mask):
     D = D * local_mask - (1 - local_mask)
     del mul, r_arr
     # this is the euclidean distance wrt the feature vector of the current pixel
-    # then the matrix has to be of shape (B,N,N), where N=prod(patch_size)
+    # then the matrix has to be of shape (B,N,N), where N=prod(crop_size)
     return D.topk(k=k, dim=-1)[1]  # (B,N,K)
 
 
@@ -181,8 +181,8 @@ def batched_index_select(t, dim, inds):
     return out
 
 
-def local_mask(patch_size):
-    x, y = patch_size
+def local_mask(crop_size):
+    x, y = crop_size
     N = x * y
 
     local_mask = torch.ones([N, N])
@@ -229,9 +229,9 @@ def local_mask(patch_size):
 
 
 class NonLocalGraph:
-    def __init__(self, k, patch_size):
+    def __init__(self, k, crop_size):
         self.k = k
-        self.local_mask = local_mask(patch_size)
+        self.local_mask = local_mask(crop_size)
 
     def __call__(self, arr):
         arr = arr.data.permute(0, 2, 3, 1)
@@ -274,22 +274,22 @@ def calculate_pad(shape1, shape2):
 class Converter:
     """ Groups image to tiles converter functions """
 
-    def __init__(self, patch_size):
+    def __init__(self, crop_size):
         """
         Parameters
         ----------
-            - patch_size: tuple, (edge_h, edge_w)
+            - crop_size: tuple, (edge_h, edge_w)
         """
-        self.patch_size = patch_size
+        self.crop_size = crop_size
 
     def planes2tiles(self, image):
         """
         Parameters:
             image: shape (N,C,W,H)
         """
-        p_x, p_y = self.patch_size
+        p_x, p_y = self.crop_size
         N, C, _, _ = image.shape
-        self.pad = calculate_pad(image.shape, self.patch_size)
+        self.pad = calculate_pad(image.shape, self.crop_size)
         image = F.pad(image, self.pad, mode="constant", value=image.mean())
 
         splits = torch.stack(torch.split(image, p_y, -1), 1)

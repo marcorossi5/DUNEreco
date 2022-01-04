@@ -127,17 +127,17 @@ def get_planes_and_dump(dname, verbose, save_sample):
         save("sample_collection_simch", csimch[:10])
 
 
-def crop_planes_and_dump(dir_name, nb_crops, patch_size, pct, verbose):
+def crop_planes_and_dump(dir_name, nb_crops, crop_size, pct, verbose):
     """
     Populates the "crop" folder: for each plane stored in `dir_name/planes` generate
-    nb_crops of size patch_size. The value of pct fixes the signal / background
+    nb_crops of size crop_size. The value of pct fixes the signal / background
     crops balancing.
 
     Parameters
     ----------
         - dir_name: Path, directory path to datasets
         - nb_crops: int, number of crops from a single plane
-        - patch_size: list, patch [height, width]
+        - crop_size: list, crop [height, width]
         - pct: float, signal / background crops balancing
         - verbose: bool, wether to print status information
     """
@@ -156,26 +156,26 @@ def crop_planes_and_dump(dir_name, nb_crops, patch_size, pct, verbose):
         ccrops = []
         ncrops = []
         for cplane, nplane in zip(cplanes, nplanes):
-            idx = get_crop(cplane, nb_crops=nb_crops, patch_size=patch_size, pct=pct)
+            idx = get_crop(cplane, nb_crops=nb_crops, crop_size=crop_size, pct=pct)
             ccrops.append(cplane[idx][:, None])
             ncrops.append(nplane[idx][:, None])
 
         ccrops = np.concatenate(ccrops, 0)
         ncrops = np.concatenate(ncrops, 0)
 
-        fname = dir_name / f"crops/{s}_noisy_{patch_size[0]}_{pct}"
+        fname = dir_name / f"crops/{s}_noisy_{crop_size[0]}_{pct}"
         print(f"Saving crops to {dir_name}")
         if verbose:
             print(f"{s} clear crops:", ccrops.shape)
             print(f"{s} noisy crops:", ncrops.shape)
         np.save(fname, ncrops)
 
-        fname = dir_name / f"crops/{s}_clear_{patch_size[0]}_{pct}"
+        fname = dir_name / f"crops/{s}_clear_{crop_size[0]}_{pct}"
         np.save(fname, ccrops)
 
 
 def preprocess_main(dir_name, nb_crops, crop_edge, pct, verbose, save_sample):
-    patch_size = (crop_edge, crop_edge)
+    crop_size = (crop_edge, crop_edge)
     for folder in ["train", "val", "test"]:
         dname = dir_name / folder
         (dname / "planes").mkdir(parents=True, exist_ok=True)
@@ -184,4 +184,4 @@ def preprocess_main(dir_name, nb_crops, crop_edge, pct, verbose, save_sample):
         get_planes_and_dump(dname, verbose, save_sample)
     for channel in ["induction", "collection"]:
         save_normalization_info(dir_name, channel)
-    crop_planes_and_dump(dir_name / "train", nb_crops, patch_size, pct, verbose)
+    crop_planes_and_dump(dir_name / "train", nb_crops, crop_size, pct, verbose)

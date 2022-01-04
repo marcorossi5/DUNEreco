@@ -23,22 +23,25 @@ class GCNN_Net(nn.Module):
         self,
         model,
         task,
-        patch_size,
+        crop_edge,
         input_channels,
         hidden_channels,
         k=None,
     ):
+        """
+        Parameters
+        ----------
+            - crop_edge: int
+        """
         super(GCNN_Net, self).__init__()
-        self.patch_size = (patch_size,) * 2
+        self.crop_size = (crop_edge,) * 2
         self.model = model
         self.task = task
         ic = input_channels
         hc = hidden_channels
         self.k = k
         self.getgraph_fn = (
-            NonLocalGraph(k, self.patch_size)
-            if self.model == "gcnn"
-            else lambda x: None
+            NonLocalGraph(k, self.crop_size) if self.model == "gcnn" else lambda x: None
         )
         # self.norm_fn = choose_norm(dataset_dir, channel, normalization)
         self.ROI = ROI(7, ic, hc, self.getgraph_fn, self.model)
@@ -212,7 +215,7 @@ def get_model_from_args(args):
     elif args.model in ["cnn", "gcnn"]:
         kwargs["model"] = args.model
         kwargs["task"] = args.task
-        kwargs["patch_size"] = args.patch_size
+        kwargs["crop_edge"] = args.crop_edge
         kwargs["input_channels"] = args.input_channels
         kwargs["hidden_channels"] = args.hidden_channels
         kwargs["k"] = args.k if args.model == "gcnn" else None

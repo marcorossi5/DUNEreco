@@ -20,6 +20,7 @@ class Args:
         check(self.channel, ["induction", "collection"])
 
         self.dataset_dir = Path(self.dataset_dir)
+        self.crop_size = (self.crop_edge,) * 2
 
         # model parameters
         # self.a = 0.5 # balancing between loss function contributions
