@@ -1,4 +1,7 @@
-import os
+# This file is part of DUNEdn by M. Rossi
+"""
+    This module implements the main training loops and inference functions.
+"""
 from math import ceil, sqrt
 from time import time as tm
 import numpy as np
@@ -7,25 +10,57 @@ import torch
 from torch import optim
 from torch.utils.data import DataLoader
 
-from dunedn.denoising.model_utils import MyDataParallel
 from dunedn.denoising.losses import get_loss
+from dunedn.networks.model_utils import model2batch
 
 
-def time_windows(plane, w, stride):
-    """ This function takes a plane and takes time windows """
-    B, C, H, W = plane.size()
+def time_windows(planes, w, stride):
+    """
+    Takes time windows of given width and stride from a planes.
+    
+    Parameters
+    ----------
+        - planes: torch.Tensor, planes of shape=(N,C,H,W)
+        - w: int, width of the time windows
+        - stride: int, steps between time windows
+    
+    Returns
+    -------
+        - list, masks for time windows each of shape [N,C,H,w]
+        - list, time windows each of shape [N,C,H,w]
+        - list, each elements is [start idx, end idx] of the time window
+    """
+    _, _, _, W = planes.size()
     n = ceil((W - w) / stride) + 1
     base = np.arange(n).reshape([-1, 1]) * stride
     idxs = [[0, w]] + base
     windows = []
-    div = torch.zeros_like(plane)
+    div = torch.zeros_like(planes)
     for start, end in idxs:
-        windows.append(plane[:, :, :, start:end])
+        windows.append(planes[:, :, :, start:end])
         div[:, :, :, start:end] += 1
     return div, windows, idxs
 
 
-def train_scg_epoch(args, epoch, train_loader, model, optimizer, balance_ratio, task):
+def train_uscg_epoch(args, epoch, train_loader, model, optimizer, balance_ratio, task):
+    """
+    Train USCG network.
+
+    Parameters
+    ----------
+        - args: Args, runtime settings
+        - epoch: int, epoch number
+        - train_loader: torch.utils.data.DataLoader, train data loader
+        - model: MyDataParallel, the model to train
+        - optimizer: torch.optim.Adam, the Adam optimizer
+        - balance_ratio: float, categories balancing (roi only, None for dn).
+        - task: str, available options dn | roi
+
+    Returns
+    -------
+        - np.array, training epoch loss of shape=(1,)
+        - float, training epoch time
+    """
     if args.rank == 0:
         print("\n[+] Training")
     start = tm()
@@ -39,8 +74,8 @@ def train_scg_epoch(args, epoch, train_loader, model, optimizer, balance_ratio, 
         _, cwindows, _ = time_windows(clear, args.patch_w, args.patch_stride)
         _, nwindows, _ = time_windows(noisy, args.patch_w, args.patch_stride)
         for nwindow, cwindow in zip(nwindows, cwindows):
-            cwindow = cwindow.to(args.dev_ids[0])
-            nwindow = nwindow.to(args.dev_ids[0])
+            cwindow = cwindow.to(args.dev[0])
+            nwindow = nwindow.to(args.dev[0])
             optimizer.zero_grad()
             out, loss0 = model(nwindow)
             loss1 = loss_fn(out, cwindow)
@@ -51,6 +86,24 @@ def train_scg_epoch(args, epoch, train_loader, model, optimizer, balance_ratio, 
 
 
 def train_gcnn_epoch(args, epoch, train_loader, model, optimizer, balance_ratio, task):
+    """
+    Train USCG network.
+
+    Parameters
+    ----------
+        - args: Args, runtime settings
+        - epoch: int, epoch number
+        - train_loader: torch.utils.data.DataLoader, train data loader
+        - model: MyDataParallel, the model to train
+        - optimizer: torch.optim.Adam, the Adam optimizer
+        - balance_ratio: float, categories balancing (roi only, None for dn).
+        - task: str, available options dn | roi
+
+    Returns
+    -------
+        - np.array, training epoch loss of shape=(1,)
+        - float, training epoch time
+    """
     print("\n[+] Training")
     start = tm()
     model.train()
@@ -61,8 +114,8 @@ def train_gcnn_epoch(args, epoch, train_loader, model, optimizer, balance_ratio,
     )
     for i, (clear, noisy) in enumerate(train_loader):
         idx = 0 if task == "dn" else 1
-        clear = clear[:, idx : idx + 1].to(args.dev_ids[0])
-        noisy = noisy.to(args.dev_ids[0])
+        clear = clear[:, idx : idx + 1].to(args.dev[0])
+        noisy = noisy.to(args.dev[0])
         optimizer.zero_grad()
         out = model(noisy)
         loss = loss_fn(out, clear)
@@ -72,8 +125,24 @@ def train_gcnn_epoch(args, epoch, train_loader, model, optimizer, balance_ratio,
 
 
 def choose_train(modeltype, *args):
-    if modeltype == "scg":
-        return train_scg_epoch(*args)
+    """
+    Utility function to retrieve training from model name and args.
+
+    Parameters
+    ----------
+        - modeltype: str, available options cnn | gcnn | uscg
+        - args: list, model's __init__ arguments
+    
+    Returns
+    -------
+        - func, training function
+    
+    Raises
+    ------
+        - NotImplementedError if modeltype is not in ['uscg', 'cnn', 'gcnn']
+    """
+    if modeltype == "uscg":
+        return train_uscg_epoch(*args)
     elif modeltype in ["gcnn", "cnn"]:
         return train_gcnn_epoch(*args)
     else:
@@ -81,6 +150,18 @@ def choose_train(modeltype, *args):
 
 
 def inference(test_loader, stride, model, dev):
+    """
+    Parameters
+    ----------
+        - test_loader: torch.utils.data.DataLoader, inference loader
+        - stride: int, steps between time windows
+        - model: MyDataParallel, the model for inference
+        - dev: str, the host device
+
+    Returns
+    -------
+        - torch.Tensor, output tensor of shape=(N,C,H,W)
+    """
     w = model.w
     model.eval()
     outs = []
@@ -95,11 +176,31 @@ def inference(test_loader, stride, model, dev):
 
 
 def identity_inference(test_loader):
+    """
+    Parameters
+    ----------
+        - test_loader: torch.utils.data.DataLoader, dummy inference loader
+    
+    Returns
+    -------
+        - torch.Tensor, input noisy planes of shape=(N,C,H,W)
+    """
     outs = [noisy for noisy, _ in test_loader]
     return torch.cat(outs)
 
 
 def gcnn_inference(test_loader, model, dev):
+    """
+    Parameters
+    ----------
+        - test_loader: torch.utils.data.DataLoader, inference loader
+        - model: MyDataParallel, the model for inference
+        - dev: str, the host device
+
+    Returns
+    -------
+        - torch.Tensor, output tensor of shape=(N,C,H,W)
+    """
     outs = []
     for noisy, _ in test_loader:
         noisy = noisy.to(dev)
@@ -109,6 +210,21 @@ def gcnn_inference(test_loader, model, dev):
 
 
 def compute_val_loss(test_loader, outputs, args, task):
+    """
+    Computes validation losses.
+
+    Parameters
+    ----------
+        - test_loader: torch.utils.data.DataLoader, validation loader
+        - outputs: torch.Tensor, output tensor of shape=(N,C,H,W)
+        - args: Args, runtime settings
+        - task: str, available options dn | roi
+
+    Returns
+    -------
+        - list, of computed metrics with their uncertainties
+                [loss, loss unc, ssim, ssim unc, psnr, psnr unc, mse, mse unc]
+    """
     # if task == 'roi':
     #     metrics = ['bce', 'softdice']
     # elif task == 'dn':
@@ -127,20 +243,20 @@ def compute_val_loss(test_loader, outputs, args, task):
         psnr_fn = get_loss("psnr")()
     for (_, target), output in zip(test_loader, outputs):
         # works only with unit batch_size
-        output = output.unsqueeze(0).to(args.dev_ids[0])
+        output = output.unsqueeze(0).to(args.dev[0])
         if args.model in ["gcnn", "cnn"]:
             idx = 0 if task == "dn" else 1
             target = target[:, idx : idx + 1]
-        target = target.to(args.dev_ids[0])
+        target = target.to(args.dev[0])
         loss.append(loss_fn(output, target).unsqueeze(0))
         if task == "dn":
             ssim.append(1 - ssim_fn(output, target).unsqueeze(0))
             mse.append(mse_fn(output, target).unsqueeze(0))
             psnr.append(psnr_fn(output, target).unsqueeze(0))
     if args.rank == 0:
-        fname = os.path.join(args.dir_testing, "labels")
+        fname = args.dir_testing / "labels"
         torch.save(target.cpu(), fname)
-        fname = os.path.join(args.dir_testing, "results")
+        fname = args.dir_testing / "results"
         torch.save(output.cpu(), fname)
 
     def all_gather(loss):
@@ -175,29 +291,36 @@ def compute_val_loss(test_loader, outputs, args, task):
 
 def test_epoch(test_data, model, args, task, dry_inference=True):
     """
-    Parameters:
-        test_data: torch.utils.data.DataLoader, based on PlaneLoader
-        task: str, either roi or dn
-    Outputs:
-        np.array: n metrics, shape (2*n)
-        torch.Tensor: denoised data, shape (batch,C,W,H)
-        float: dry inference time
+    Consume test data and output metrics.
+
+    Parameters
+    ----------
+        - test_data: torch.utils.data.DataLoader, based on PlaneLoader
+        - model: MyDataParallel, the model for inference
+        - args: Args, runtime settings
+        - task: str, available options dn | roi
+        - dry_inference: bool, if true do not compute metrics
+    
+    Returns
+    -------
+        - list, of computed metrics with their uncertainties
+        - torch.Tensor, output tensor of shape=(N,C,H,W)
+        - float, dry inference time
     """
     if args.model in ["cnn", "gcnn"]:
         test_data.to_crops()
     # test_sampler = DistributedSampler(dataset=test_data, shuffle=False)
     test_loader = DataLoader(
         dataset=test_data,  # sampler=test_sampler,
-        batch_size=args.test_batch_size,
-        num_workers=args.num_workers,
+        batch_size=model2batch[args.model][args.task],
     )
     if args.rank == 0:
         print("\n[+] Testing")
     start = tm()
-    if args.model == "scg":
-        outputs = inference(test_loader, args.patch_stride, model, args.dev_ids[0])
+    if args.model == "uscg":
+        outputs = inference(test_loader, args.patch_stride, model, args.dev[0])
     elif args.model in ["cnn", "gcnn"]:
-        outputs = gcnn_inference(test_loader, model, args.dev_ids[0])
+        outputs = gcnn_inference(test_loader, model, args.dev[0])
         outputs = test_data.converter.tiles2planes(outputs)
     # if task == 'dn':
     #     mask = (outputs <= args.threshold) & (outputs >= -args.threshold)
@@ -211,51 +334,77 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
         test_loader = DataLoader(
             dataset=test_data,  # sampler=test_sampler,
             batch_size=1,
-            num_workers=args.num_workers,
         )
     return compute_val_loss(test_loader, outputs, args, task), outputs, dry_time
 
 
 def optimizer_fn(params, lr, amsgrad):
+    """
+    Utility function to retrieve optimizer.
+
+    Parameters
+    ----------
+        - params: list, parameters to optimize
+        - lr: float, learning rate
+        - amsgrad: bool, whether to use the AMSGrad variant of this algorithm
+    
+    Returns
+    -------
+        - torch.optim.Adam, the optimizer
+    """
     return optim.Adam(params, lr=lr, amsgrad=amsgrad)
 
 
 ########### main train function
 def train(args, train_data, val_data, model):
+    """
+    Training function.
+
+    Parameters
+    ----------
+        - args: Args, runtime settings
+        - train_data: CropLoader | PlaneLoader, training data loader
+        - val_data: PlaneLoader, validation data loader
+        - model: MyDataParallel, the model to train
+
+    Returns
+    -------
+        - float, minimum loss over training
+        - float, uncertainty over minimum loss
+        - str, best checkpoint file name
+    """
     task = args.task
     channel = args.channel
     # check if load existing model
-    model = MyDataParallel(model, device_ids=args.dev_ids)
-    model = model.to(args.dev_ids[0])
-    # model = MyDDP(model.to(args.dev_ids[0]), device_ids=args.dev_ids,
+    # model = MyDataParallel(model, device_ids=args.dev)
+    model = model.to(args.dev[0])
+    # model = MyDDP(model.to(args.dev[0]), device_ids=args.dev,
     #               find_unused_parameters=True)
 
     if args.load:
         if args.load_path is None:
             # resume a previous training from an epoch
             # time train
-            fname = os.path.join(args.dir_timings, "timings_train.npy")
+            fname = args.dir_timings / "timings_train.npy"
             time_train = list(np.load(fname))
 
             # time test
-            fname = os.path.join(args.dir_timings, "timings_test.npy")
+            fname = args.dir_timings / "timings_test.npy"
             time_test = list(np.load(fname))
 
             # loss_sum
-            fname = os.path.join(args.dir_metrics, "loss_sum.npy")
+            fname = args.dir_metrics / "loss_sum.npy"
             loss_sum = list(np.load(fname).T)
 
             # test_epochs
-            fname = os.path.join(args.dir_metrics, "test_epochs.npy")
+            fname = args.dir_metrics / "test_epochs.npy"
             test_epochs = list(np.load(fname))
 
             # test metrics
-            fname = os.path.join(args.dir_metrics, "test_metrics.npy")
+            fname = args.dir_metrics / "test_metrics.npy"
             test_metrics = list(np.load(fname).T)
 
-            fname = os.path.join(
-                args.dir_saved_models, f"{args.model}_{task}_{args.load_epoch}.dat"
-            )
+            fname = args.dir_saved_models / f"{args.model}_{task}_{args.load_epoch}.dat"
             epoch = args.load_epoch + 1
 
         else:
@@ -284,10 +433,11 @@ def train(args, train_data, val_data, model):
 
     best_loss = 1e10
     best_loss_std = 0
-    best_model_name = os.path.join(args.dir_saved_models, f"{args.model}_-1.dat")
+    best_model_name = args.dir_saved_models / f"{args.model}_-1.dat"
 
     # initialize optimizer
-    lr = args.lr_roi if task == "roi" else args.lr_dn
+    # lr = args.lr_roi if task == "roi" else args.lr_dn
+    lr = args.lr
     optimizer = optimizer_fn(list(model.parameters()), lr, args.amsgrad)
 
     # train_sampler = DistributedSampler(dataset=train_data, shuffle=True)
@@ -295,7 +445,6 @@ def train(args, train_data, val_data, model):
         dataset=train_data,
         shuffle=True,  # sampler=train_sampler,
         batch_size=args.batch_size,
-        num_workers=args.num_workers,
     )
 
     # main training loop
@@ -346,19 +495,17 @@ def train(args, train_data, val_data, model):
 
                 # switch to keep all the history of saved models
                 # or just the best one
-                fname = os.path.join(
-                    args.dir_saved_models, f"{args.model}_{task}_{epoch}.dat"
-                )
+                fname = args.dir_saved_models / f"{args.model}_{task}_{epoch}.dat"
                 best_model_name = fname
-                bname = os.path.join(args.dir_final_test, "best_model.txt")
+                bname = args.dir_final_test / "best_model.txt"
                 with open(bname, "w") as f:
                     f.write(fname)
                     f.close()
                 if (not args.scan) and args.rank == 0:
                     print("updated best model at: ", bname)
             if args.save and args.rank == 0:
-                fname = os.path.join(
-                    args.dir_saved_models, f"{args.model}_{task}_{channel}_{epoch}.dat"
+                fname = (
+                    args.dir_saved_models / f"{args.model}_{task}_{channel}_{epoch}.dat"
                 )
                 if not args.scan:
                     print("saved model at: %s" % fname)
@@ -369,24 +516,24 @@ def train(args, train_data, val_data, model):
     if args.rank == 0:
         # loss_sum
         loss_sum = np.stack(loss_sum, 1)
-        fname = os.path.join(args.dir_metrics, "loss_sum")
+        fname = args.dir_metrics / "loss_sum"
         np.save(fname, loss_sum)
 
         # test_epochs
-        fname = os.path.join(args.dir_metrics, "test_epochs")
+        fname = args.dir_metrics / "test_epochs"
         np.save(fname, test_epochs)
 
         # test metrics
         test_metrics = np.stack(test_metrics, 1)
-        fname = os.path.join(args.dir_metrics, "test_metrics")
+        fname = args.dir_metrics / "test_metrics"
         np.save(fname, test_metrics)
 
         # time train
-        fname = os.path.join(args.dir_timings, "timings_train")
+        fname = args.dir_timings / "timings_train"
         np.save(fname, time_train)
 
         # time test
-        fname = os.path.join(args.dir_timings, "timings_test")
+        fname = args.dir_timings / "timings_test"
         np.save(fname, time_test)
 
     return best_loss, best_loss_std, best_model_name

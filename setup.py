@@ -1,4 +1,4 @@
-# This file is part of DUNEreco by M. Rossi
+# This file is part of DUNEdn by M. Rossi
 from setuptools import setup, find_packages
 from sys import version_info
 import os
@@ -33,7 +33,7 @@ setup(
     description="ProtoDUNE raw data denoising with DL",
     author="M. Rossi",
     author_email="marco.rossi@cern.ch",
-    url="https://github.com/marcorossi5/DUNEreco.git",
+    url="https://github.com/marcorossi5/DUNEdn.git",
     entry_points={"console_scripts": ["dunedn = dunedn.scripts.dunedn:main"]},
     package_dir={"": "src"},
     packages=find_packages("src"),

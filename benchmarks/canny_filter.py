@@ -1,14 +1,9 @@
 """ This module computes the Canny filter for planes in the test set"""
 import os
-import sys
 import numpy as np
-import matplotlib.pyplot as plt
 from skimage.feature import canny
-import time as tm
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from analysis.analysis_roi import confusion_matrix
+from time import time as tm
+from dunedn.utils.utils import confusion_matrix
 
 
 def main():
@@ -74,6 +69,6 @@ def main():
 
 
 if __name__ == "__main__":
-    START = tm.time()
+    start = tm()
     main()
-    print("Program done in %f" % (tm.time() - START))
+    print("Program done in %f" % (tm() - start))

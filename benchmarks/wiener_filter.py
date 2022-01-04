@@ -1,27 +1,14 @@
 """ This module computes the Wiener filter for planes in the test set"""
-import sys
 import os
 import argparse
 import numpy as np
-import time as tm
+from time import time as tm
 from numpy.fft import fft2, ifft2
 from scipy.signal import gaussian
 import matplotlib.pyplot as plt
 import torch
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-)
-from losses import loss_mse, loss_ssim
-
-from utils.utils import compute_psnr
-
-PARSER = argparse.ArgumentParser()
-PARSER.add_argument("--device", "-d", default="0", type=str, help="gpu number")
-PARSER.add_argument(
-    "--kernel_size", "-k", default=3, type=int, help="size of the gaussian filter"
-)
+from dunedn.denoising.losses import loss_mse, loss_ssim
+from dunedn.utils.utils import compute_psnr
 
 
 def wiener_filter(img, kernel, K):
@@ -120,11 +107,16 @@ def main(device, kernel_size):
 
 
 if __name__ == "__main__":
-    ARGS = vars(PARSER.parse_args())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--device", "-d", default="0", help="gpu number")
+    parser.add_argument(
+        "--kernel_size", "-k", default=3, type=int, help="size of the gaussian filter"
+    )
+    args = vars(parser.parse_args())
     gpu = torch.cuda.is_available()
-    dev = ARGS["device"]
+    dev = args["device"]
     dev = f"cuda:{dev}" if gpu else "cpu"
-    ARGS["device"] = torch.device(dev)
-    START = tm.time()
-    main(**ARGS)
-    print("Program done in %f" % (tm.time() - START))
+    args["device"] = torch.device(dev)
+    start = tm()
+    main(**args)
+    print("Program done in %f" % (tm() - start))

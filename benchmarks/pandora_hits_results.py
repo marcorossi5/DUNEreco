@@ -7,37 +7,17 @@ hit with signal.
 Output file contains accuracy, sensitivity and specificity provided
 with mean values and uncertainties.
 """
-import os
-import sys
 import argparse
 import numpy as np
-import time as tm
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from analysis.analysis_roi import confusion_matrix
-
-
-PARSER = argparse.ArgumentParser()
-PARSER.add_argument(
-    "--dirname",
-    "-p",
-    default="../datasets/backup/test",
-    type=str,
-    help="Directory path to datasets",
-)
-PARSER.add_argument(
-    "--threshold",
-    "-t",
-    default=3.5,
-    type=float,
-    help="Threshold to distinguish signal/noise in labels",
-)
+from time import time as tm
+from pathlib import Path
+from dunedn.utils.utils import confusion_matrix
 
 
 def main(dirname, threshold):
     # Load true hits
     # TODO: must subtract pedestal!
-    file_name = os.path.join(dirname, "planes", "collection_clear.npy")
+    file_name = dirname / "planes/collection_clear.npy"
     true_hits = np.load(file_name)
     mask = np.logical_and(true_hits >= 0, true_hits <= threshold)
     true_hits[mask] = 0
@@ -52,8 +32,7 @@ def main(dirname, threshold):
     # TODO: calculate acc, sns, spc (mean +- inc)
 
     # Load recob::hits
-    file_name = os.path.join(dirname, "benchmark/hits", "pandora_collection_hits.npy")
-
+    file_name = dirname / "benchmark/hits/pandora_collection_hits.npy"
     pandora_hits = np.load(file_name)
 
     acc = []
@@ -88,7 +67,20 @@ def main(dirname, threshold):
 
 
 if __name__ == "__main__":
-    args = vars(PARSER.parse_args())
-    START = tm.time()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dirname",
+        default="../datasets/backup/test",
+        type=Path,
+        help="Directory path to datasets",
+    )
+    parser.add_argument(
+        "--threshold",
+        default=3.5,
+        type=float,
+        help="Threshold to distinguish signal/noise in labels",
+    )
+    args = vars(parser.parse_args())
+    start = tm()
     main(**args)
-    print("Program done in %f" % (tm.time() - START))
+    print("Program done in %f" % (tm() - start))

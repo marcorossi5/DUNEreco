@@ -1,15 +1,20 @@
 import os
-import sys
 import numpy as np
 import time as tm
 import matplotlib as mpl
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 
+# import analysis_roi module from analysis folder
+import importlib
+from pathlib import Path
 
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+root_folder = Path(os.environ.get("DUNEDN_PATH"))
+spec = importlib.util.spec_from_file_location(
+    "analysis_roi", root_folder / "analysis/analysis_roi.py"
 )
+analysis_roi = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(analysis_roi)
 
 
 def cmap():
@@ -35,15 +40,15 @@ def cmap():
 
 
 def main():
-    mpl.rcParams["text.usetex"] = True
-    mpl.rcParams["savefig.format"] = "pdf"
-    mpl.rcParams["figure.figsize"] = [4.8, 4.8]
-    mpl.rcParams["figure.titlesize"] = 18
-    mpl.rcParams["legend.fontsize"] = 14
-    mpl.rcParams["axes.titlesize"] = 16
-    mpl.rcParams["axes.labelsize"] = 16
-    mpl.rcParams["ytick.labelsize"] = 14
-    mpl.rcParams["xtick.labelsize"] = 14
+    mpl.rcParams.update(analysis_roi.mpl_settings)
+    mpl.rcParams.update(
+        {
+            "figure.figsize": [4.8, 4.8],
+            "figure.titlesize": 18,
+            "axes.titlesize": 16,
+            "axes.labelsize": 16,
+        }
+    )
 
     clear = np.load("../datasets/denoising/test/planes/collection_clear.npy")[0, 0]
     noisy = np.load("../datasets/denoising/test/planes/collection_noisy.npy")[0, 0]

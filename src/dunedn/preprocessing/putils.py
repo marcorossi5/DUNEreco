@@ -1,127 +1,73 @@
-import glob
+# This file is part of DUNEdn by M. Rossi
+"""
+    This module contains the utility functions for the preprocessing step.
+"""
+from pathlib import Path
+from glob import glob
 import numpy as np
-
-event_step = 15360
-collection_step = 960
-induction_step = 800
-time_len = 6000
-ada_step = event_step // (2 * induction_step + collection_step)
-# c_pedestal = 500
-# r_pedestal = 1800
+from dunedn.geometry.helpers import evt2planes
+from dunedn.utils.utils import median_subtraction
 
 
-def normalize(planes, m=None, M=None):
-    if M == None:
-        M = planes.max()
-    if M == 0:
-        return planes, 0, M
-    if m == None:
-        m = planes.min()
-    return (planes - m) / (M - m), m, M
-
-
-def get_normalization(planes):
-    return planes.min(), planes.max()
-
-
-def load_files(path_clear, path_noise):
-    clear_files = glob.glob(path_clear)
-    noised_files = glob.glob(path_noise)
-
-    for f_clear, f_noise in zip(clear_files, noised_files):
-        clear_data = np.load(f_clear)[:, 2:]
-        noised_data = np.load(f_noise)[:, 2:]
-        yield clear_data, noised_data
-
-
-def plane_idx():
-    signal_planes = [i for i in range(ada_step)]
-
-    induction = []
-    collection = []
-    cpp = 2 * induction_step + collection_step  # channel per plane
-
-    for i in range(ada_step):
-        induction.extend(range(cpp * i, cpp * i + 2 * induction_step))
-        collection.extend(
-            range(
-                cpp * i + 2 * induction_step,
-                cpp * i + 2 * induction_step + collection_step,
-            )
-        )
-
-    return induction, collection
-
-
-def stack_planes(clear_file, noised_file, r_idx, c_idx):
-    r_clear = clear_file[r_idx]
-    r_noised = noised_file[r_idx]
-
-    c_clear = clear_file[c_idx]
-    c_noised = noised_file[c_idx]
-
-    r_n_clear = []
-    r_n_noised = []
-
-    c_n_clear = []
-    c_n_noised = []
-
-    for i in range(int(r_clear.shape[0] / induction_step)):
-        if r_clear[i * induction_step : (i + 1) * induction_step].max() == 0:
-            print("skipped")
-            continue
-        r_n_clear.append(r_clear[i * induction_step : (i + 1) * induction_step])
-        r_n_noised.append(r_noised[i * induction_step : (i + 1) * induction_step])
-
-    for i in range(int(c_clear.shape[0] / collection_step)):
-        if c_clear[i * collection_step : (i + 1) * collection_step].max() == 0:
-            print("skipped")
-            continue
-        c_n_clear.append(c_clear[i * collection_step : (i + 1) * collection_step])
-        c_n_noised.append(c_noised[i * collection_step : (i + 1) * collection_step])
-
-    return (
-        np.stack(r_n_clear),
-        np.stack(r_n_noised),
-        np.stack(c_n_clear),
-        np.stack(c_n_noised),
-    )
-
-
-def get_planes(clear_file, noised_file):
+def save_normalization_info(dir_name, channel):
     """
-    Returning the three separate nonempty planes
+    Store on disk useful information to apply dataset normalization. Available
+    normalizations are MinMax | Zscore | Mednorm
+
+    Parameters
+    ----------
+        - dir_name: Path, directory path to datasets
+        - channel: str, induction | collection
     """
-    r_idx, c_idx = plane_idx()
+    print(f"[+] Saving normalization info to {dir_name}")
+    fname = dir_name / f"train/planes/{channel}_noisy.npy"
+    n = np.load(fname).flatten()
 
-    return stack_planes(clear_file, noised_file, r_idx, c_idx)
+    # MinMax
+    fname = dir_name / f"{channel}_minmax"
+    np.save(fname, [n.min(), n.max()])
+
+    # Zscore
+    fname = dir_name / f"{channel}_zscore"
+    np.save(fname, [n.mean(), n.std()])
+
+    # Mednorm
+    medians = np.median(n.reshape([n.shape[0], -1]), axis=1)
+    med_min = (n - medians).min()
+    med_max = (n - medians).max()
+    fname = dir_name / f"{channel}_mednorm"
+    np.save(fname, [med_min, med_max])
 
 
-def get_crop(clear_plane, n_crops=1000, patch_size=(32, 32), p=0.5):
+def get_crop(clear_plane, nb_crops=1000, crop_size=(32, 32), pct=0.5):
     """
-    This functions finds crops centers indeces
-    Input:
-        clear_plane: array of shape (N,H,W)
+    Finds crops centers indeces and return crops around them.
 
-    Returns:
-        numpy array of shape (N,C,H,W)
+    Parameters
+    ----------
+        - clear_plane: np.array, clear plane of shape=(H,W)
+        - nb_crops: int, number of crops
+        - crop_size: list, crop [height, width]
+        - pct: float, signal / background crops balancing
+
+    Returns
+    -------
+        - tuple, (idx_h, idx_w). idx_h of shape=(nb_crops, crop_edge, 1).
+                 idx_w of shape=(nb_crops, 1, crop_edge).
     """
     x, y = clear_plane.shape
-    c_x, c_y = patch_size[0] // 2, patch_size[1] // 2
+    c_x, c_y = crop_size[0] // 2, crop_size[1] // 2
 
-    im = np.copy(clear_plane)
-    im[im != 0] = 1
-    # clear_plane = np.copy(clear_plane)
-    # im = canny(clear_plane).astype(float)
+    im = clear_plane != 0
 
-    sgn = np.transpose(np.where(im == 1))
-    bkg = np.transpose(np.where(im == 0))
+    sgn = np.transpose(np.where(im == True))
+    bkg = np.transpose(np.where(im == False))
 
     samples = []
-    sample = np.random.choice(len(sgn), size=int(n_crops * p))
+    sample = np.random.choice(len(sgn), size=int(nb_crops * pct))
     samples.append(sgn[sample])
 
-    sample = np.random.choice(len(bkg), size=int(n_crops * (1 - p)))
+    sample = np.random.choice(len(bkg), size=int(nb_crops * (1 - pct)))
     samples.append(bkg[sample])
 
     samples = np.concatenate(samples)
@@ -131,7 +77,145 @@ def get_crop(clear_plane, n_crops=1000, patch_size=(32, 32), p=0.5):
         np.minimum(np.maximum(samples[:, 1], c_y), y - c_y),
     )  # crops centers
 
-    return (
-        (w[0][:, None] + np.arange(-c_x, c_x)[None])[:, :, None],
-        (w[1][:, None] + np.arange(-c_y, c_y)[None])[:, None, :],
-    )
+    idx_h = (w[0][:, None] + np.arange(-c_x, c_x)[None])[:, :, None]
+    idx_w = (w[1][:, None] + np.arange(-c_y, c_y)[None])[:, None, :]
+    return (idx_h, idx_w)
+
+
+def get_planes_and_dump(dname, verbose, save_sample):
+    """
+    Populates the "planes" subfolder of dname directory with numpy arrays of
+    planes taken from events in the "events" subfolder. Planes arrays have
+    shape=(N,C,H,W)
+
+    Parameters
+    ----------
+        - dname: Path, path to train|val|test dataset subfolder
+        - verbose: bool, wether to print status information
+        - save_sample: bool, wether to save a smaller dataset from the original one
+    """
+    # TODO: this function could probably be shortened
+    iclear = []
+    inoisy = []
+    isimch = []
+    cclear = []
+    cnoisy = []
+    csimch = []
+
+    paths_clear = glob((dname / "evts/*noiseoff*").as_posix())
+    assert len(paths_clear) != 0
+
+    print(f"[+] Fetching files from {dname}")
+    for path_clear in paths_clear:
+        path_noisy = Path(path_clear.replace("rawdigit_noiseoff", "rawdigit"))
+        path_simch = Path(path_clear.replace("rawdigit_noiseoff", "simch_labels"))
+        path_clear = Path(path_clear)
+
+        if verbose:
+            print(f"\t{path_clear.name}")
+            print(f"\t{path_noisy.name}")
+            print(f"\t{path_simch.name}")
+
+        c = np.load(path_clear)[:, 2:]
+        n = np.load(path_noisy)[:, 2:]
+        s = np.load(path_simch)[:, 2:]
+
+        induction_c, collection_c = evt2planes(c)
+        iclear.append(induction_c)
+        cclear.append(collection_c)
+
+        induction_n, collection_n = evt2planes(n)
+        inoisy.append(induction_n)
+        cnoisy.append(collection_n)
+
+        induction_s, collection_s = evt2planes(s)
+        isimch.append(induction_s)
+        csimch.append(collection_s)
+
+    reshape = lambda x: x.reshape((-1,) + x.shape[2:])
+    iclear = reshape(np.stack(iclear))
+    cclear = reshape(np.stack(cclear))
+
+    inoisy = reshape(np.stack(inoisy))
+    cnoisy = reshape(np.stack(cnoisy))
+
+    isimch = reshape(np.stack(isimch))
+    csimch = reshape(np.stack(csimch))
+
+    # at this point planes have shape=(nb_events,N,1,H,W)
+    # with N being the number of induction|collection planes in each event
+
+    print(f"[+] Saving planes to {dname}/planes")
+    if verbose:
+        print("\tCollection clear planes: ", cclear.shape)
+        print("\tCollection noisy planes: ", cnoisy.shape)
+        print("\tCollection sim::SimChannel planes: ", csimch.shape)
+        print("\tInduction clear planes: ", iclear.shape)
+        print("\tInduction noisy planes: ", inoisy.shape)
+        print("\tInduction sim::SimChannel planes: ", isimch.shape)
+
+    # stack all the planes from different events together
+    save = lambda x, y: np.save(dname / f"planes/{x}", y)
+
+    save("induction_clear", iclear)
+    save("collection_clear", cclear)
+
+    save("induction_noisy", inoisy)
+    save("collection_noisy", cnoisy)
+
+    save("induction_simch", isimch)
+    save("collection_simch", csimch)
+
+    if save_sample:
+        # extract a small collection sample from dataset
+        print(f"[+] Saving sample dataset to {dname}/planes")
+        save("sample_collection_clear", cclear[:10])
+        save("sample_collection_noisy", cnoisy[:10])
+        save("sample_collection_simch", csimch[:10])
+
+
+def crop_planes_and_dump(dir_name, nb_crops, crop_size, pct, verbose):
+    """
+    Populates the "crop" folder: for each plane stored in `dir_name/planes` generate
+    nb_crops of size crop_size. The value of pct fixes the signal / background
+    crops balancing.
+
+    Parameters
+    ----------
+        - dir_name: Path, directory path to datasets
+        - nb_crops: int, number of crops from a single plane
+        - crop_size: list, crop [height, width]
+        - pct: float, signal / background crops balancing
+        - verbose: bool, wether to print status information
+    """
+    for s in ["induction", "collection"]:
+
+        fname = dir_name / f"planes/{s}_clear.npy"
+        cplanes = np.load(fname)[:, 0]
+
+        fname = dir_name / f"planes/{s}_noisy.npy"
+        nplanes = np.load(fname)
+
+        print(f"[+] Cropping {s} planes at {fname}")
+
+        nplanes = median_subtraction(nplanes)[:, 0]
+
+        ccrops = []
+        ncrops = []
+        for cplane, nplane in zip(cplanes, nplanes):
+            idx = get_crop(cplane, nb_crops=nb_crops, crop_size=crop_size, pct=pct)
+            ccrops.append(cplane[idx][:, None])
+            ncrops.append(nplane[idx][:, None])
+
+        ccrops = np.concatenate(ccrops, 0)
+        ncrops = np.concatenate(ncrops, 0)
+
+        fname = dir_name / f"crops/{s}_noisy_{crop_size[0]}_{pct}"
+        print(f"Saving crops to {dir_name}")
+        if verbose:
+            print(f"{s} clear crops:", ccrops.shape)
+            print(f"{s} noisy crops:", ncrops.shape)
+        np.save(fname, ncrops)
+
+        fname = dir_name / f"crops/{s}_clear_{crop_size[0]}_{pct}"
+        np.save(fname, ccrops)

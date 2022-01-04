@@ -7,38 +7,23 @@ hit with signal.
 Output file contains ssim, psnr and mse provided with mean values
 and uncertainties.
 """
-import sys
 import os
 import argparse
+from pathlib import Path
 import numpy as np
-import time as tm
+from time import time as tm
 import torch
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-)
-from utils.utils import compute_psnr
-from losses import loss_mse, loss_ssim
-
-PARSER = argparse.ArgumentParser()
-PARSER.add_argument(
-    "--dirname",
-    "-p",
-    default="../datasets/backup/test",
-    type=str,
-    help="Directory path to datasets",
-)
-PARSER.add_argument("--device", "-d", default="0", type=str, help="gpu number")
+from dunedn.utils.utils import compute_psnr
+from dunedn.denoising.losses import loss_mse, loss_ssim
 
 
 def main(dirname, device):
     # Load targets: raw::RawDigits w/o noise
-    file_name = os.path.join(dirname, "planes", "collection_clear.npy")
+    file_name = dirname / "planes/collection_clear.npy"
     digits = np.load(file_name)
 
     # Load recob::wires
-    file_name = os.path.join(dirname, "benchmark/wires", "pandora_collection_wires.npy")
+    file_name = dirname / "benchmark/wires/pandora_collection_wires.npy"
     wires = np.load(file_name)
 
     # input images should be 4-d tensors
@@ -69,11 +54,19 @@ def main(dirname, device):
 
 
 if __name__ == "__main__":
-    ARGS = vars(PARSER.parse_args())
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dirname",
+        default="../datasets/backup/test",
+        type=Path,
+        help="Directory path to datasets",
+    )
+    parser.add_argument("--device", default="0", help="gpu number")
+    args = vars(parser.parse_args())
     gpu = torch.cuda.is_available()
-    dev = ARGS["device"]
+    dev = args["device"]
     dev = f"cuda:{dev}" if gpu else "cpu"
-    ARGS["device"] = torch.device(dev)
+    args["device"] = torch.device(dev)
     START = tm.time()
-    main(**ARGS)
+    main(**args)
     print("Program done in %f" % (tm.time() - START))

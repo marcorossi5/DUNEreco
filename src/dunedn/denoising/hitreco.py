@@ -1,130 +1,60 @@
-import os
-from pathlib import Path
+# This file is part of DUNEdn by M. Rossi
+"""
+    This module contains utility functions for the inference step.
+"""
 import collections
 from math import sqrt
-import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from dunedn.denoising.model import get_model
-from dunedn.denoising.model_utils import MyDataParallel
-from dunedn.denoising.model_utils import Converter
+from dunedn.denoising.args import Args
+from dunedn.networks.helpers import get_model_from_args
+from dunedn.networks.model_utils import model2batch
+from dunedn.networks.GCNN_Net_utils import Converter
 from dunedn.denoising.dataloader import InferenceLoader, InferenceCropLoader
 from dunedn.denoising.train import inference, identity_inference, gcnn_inference
 from dunedn.denoising.losses import get_loss
-from dunedn.denoising.args import Args
-from dunedn.utils.utils import load_yaml
+from dunedn.utils.utils import load_yaml, median_subtraction
+from dunedn.configdn import get_dunedn_path
+from dunedn.geometry.helpers import evt2planes, planes2evt
 
-# pdune sp architecture
-tdc = 6000  # detector timeticks number
-istep = 800  # channel number in induction plane
-cstep = 960  # channel number in collection plane
-apas = 6
-apastep = 2 * istep + cstep  # number of channels per apa
-evstep = apas * apastep  # total channel number
+# tuple containing induction and collection models
 ModelTuple = collections.namedtuple("Model", ["induction", "collection"])
-ArgsTuple = collections.namedtuple("Args", ["batch_size", "patch_stride", "patch_size"])
 
-
-model2batch = {
-    "uscg": {"dn": 1, "roi": 1},
-    "gcnn": {"dn": 128, "roi": 512},
-    "cnn": {"dn": 376, "roi": 2048},
-}
-
-
-def evt2planes(event):
-    """
-    Convert planes to event
-    Input:
-        event: array-like array
-            inputs of shape (evstep, tdc)
-
-    Output: np.array
-        induction and collection arrays of shape type (N,C,H,W)
-    """
-    base = np.arange(apas).reshape(-1, 1) * apastep
-    iidxs = [[0, istep, 2 * istep]] + base
-    cidxs = [[2 * istep, apastep]] + base
-    inductions = []
-    for start, idx, end in iidxs:
-        induction = [event[start:idx], event[idx:end]]
-        inductions.extend(induction)
-    collections = []
-    for start, end in cidxs:
-        collections.append(event[start:end])
-    return np.stack(inductions)[:, None], np.stack(collections)[:, None]
-
-
-def median_subtraction(planes):
-    """
-    Subtract median value from input planes
-    Input:
-        planes: np.array
-            array of shape (N,C,H,W)
-    Output: np.array
-        median subtracted planes ( =dim(N,C,H,W))
-    """
-    shape = [planes.shape[0], -1]
-    medians = np.median(planes.reshape(shape), axis=1)
-    return planes - medians[:, None, None, None]
-
-
-def planes2evt(inductions, collections):
-    """
-    Convert planes to event
-    Input:
-        inductions, collections: array-like
-            inputs of shape type (N,C,H,W)
-    Output: np.array
-        event array of shape (evstep, tdc)
-    """
-    inductions = np.array(inductions).reshape(-1, 2 * istep, tdc)
-    collections = np.array(collections)[:, 0]
-    event = []
-    for i, c in zip(inductions, collections):
-        event.extend([i, c])
-    return np.concatenate(event)
+# tuple containing induction and collection inference arguments
+ArgsTuple = collections.namedtuple("Args", ["batch_size", "patch_stride", "crop_size"])
 
 
 def get_model_and_args(modeltype, task, channel, ckpt=None):
-    card_prefix = Path(os.environ.get("DUNEDN_PATH"))
+    """
+    Parameters
+    ----------
+        - modeltype: str, available options cnn | gcnn | uscg
+        - task: str, available options dn | roi
+        - channel: str, available options readout | collection
+        - ckpt: Path, path to directory with saved model
+
+    Returns
+    -------
+        - ArgsTuple, tuple containing induction and collection inference arguments
+        - MyDataParallel, the loaded model
+    """
+    card_prefix = get_dunedn_path()
     card = f"configcards/{modeltype}_{task}_{channel}_configcard.yaml"
     parameters = load_yaml(card_prefix / card)
     parameters["channel"] = channel
     args = Args(**parameters)
 
-    patch_size = None if modeltype == "uscg" else args.patch_size
+    crop_size = None if modeltype == "uscg" else args.crop_size
     patch_stride = args.patch_stride if modeltype == "uscg" else None
     batch_size = model2batch[modeltype][task]
 
-    # TODO: when changing the models inputs, this has to be changed accordingly
-    kwargs = {}
-    if modeltype == "uscg":
-        kwargs["task"] = args.task
-        kwargs["h"] = args.patch_h
-        kwargs["w"] = args.patch_w
-        device_ids = [0]
-    elif modeltype in ["cnn", "gcnn"]:
-        kwargs["model"] = modeltype
-        kwargs["task"] = task
-        # kwargs["channel"] = channel
-        kwargs["patch_size"] = patch_size
-        kwargs["input_channels"] = args.input_channels
-        kwargs["hidden_channels"] = args.hidden_channels
-        kwargs["k"] = args.k
-        # kwargs["dataset_dir"] = args.dataset_dir
-        # kwargs["normalization"] = args.normalization
-        device_ids = [0, 1, 2, 3]
-    else:
-        raise NotImplementedError("Loss function not implemented")
-
-    model = MyDataParallel(get_model(modeltype, **kwargs), device_ids=device_ids)
+    model = get_model_from_args(args)
 
     if ckpt is not None:
-        fname = ckpt / f"{channel}.pth"
+        fname = ckpt / f"{channel}/{ckpt.name}_{task}_{channel}.pth"
         state_dict = torch.load(fname)
         model.load_state_dict(state_dict)
-    return ArgsTuple(batch_size, patch_stride, patch_size), model
+    return ArgsTuple(batch_size, patch_stride, crop_size), model
 
 
 def mkModel(modeltype, task, ckpt=None):
@@ -136,7 +66,7 @@ def mkModel(modeltype, task, ckpt=None):
         - modeltype: str, valid options: "uscg" | "cnn" | "gcnn" | "id"
         - task: str, valid options: "dn" | "roi"
         - ckpt: Path, checkpoint path
-    
+
     Returns
     -------
         - list, of arguments to call model.inference for induction and collection
@@ -150,19 +80,49 @@ def mkModel(modeltype, task, ckpt=None):
     return [iargs, cargs], ModelTuple(imodel, cmodel)
 
 
-def _scg_inference(planes, loader, model, args, dev):
+def _uscg_inference(planes, loader, model, args, dev):
+    """
+    USCG inference utility function.
+
+    Parameters
+    ----------
+        - planes: np.array, planes array of shape=(N,C,H,W)
+        - loader: InferenceLoader, data loader
+        - model: USCG_Net, network instance
+        - args: ArgsTuple, inference arguments
+        - dev: list | str, host device
+    
+    Returns
+    -------
+        - torch.Tensor, output tensor of shape=(N,C,H,W)
+    """
     dataset = loader(planes)
     test = DataLoader(dataset=dataset, batch_size=args.batch_size)
     return inference(test, args.patch_stride, model.to(dev), dev).cpu()
 
 
 def _gcnn_inference(planes, loader, model, args, dev):
+    """
+    GCNN inference utility function.
+
+    Parameters
+    ----------
+        - planes: np.array, planes array of shape=(N,C,H,W)
+        - loader: InferenceCropLoader, data loader
+        - model: GCNN_Net, network instance
+        - args: ArgsTuple, inference arguments
+        - dev: list | str, host device
+    
+    Returns
+    -------
+        - torch.Tensor, output tensor of shape=(N,C,H,W)
+    """
     # creating a new instance of converter every time could waste time if the
     # inference is called many times.
     # TODO: think about to make it a DnRoiModel attribute and pass it to the fn
     # TODO: the batch size changes according to task, modeltype
     sub_planes = torch.Tensor(median_subtraction(planes))
-    converter = Converter(args.patch_size)
+    converter = Converter(args.crop_size)
     tiles = converter.planes2tiles(sub_planes)
 
     dataset = loader(tiles)
@@ -172,29 +132,61 @@ def _gcnn_inference(planes, loader, model, args, dev):
 
 
 def _identity_inference(planes, loader, **kwargs):
+    """
+    USCG inference utility function.
+
+    Parameters
+    ----------
+        - planes: np.array, planes array of shape=(N,C,H,W)
+        - loader: torch.utils.data.DataLoader, data loader
+        - kwargs: dict, kwargs for consistency with other inference functions
+    
+    Returns
+    -------
+        - torch.Tensor, output tensor of shape=(N,C,H,W)
+    """
     dataset = loader(planes)
     test = DataLoader(dataset=dataset)
     return identity_inference(test).cpu()
 
 
 def get_inference(modeltype, **kwargs):
+    """
+    Utility function to retrieve inference from model name and args.
+
+    Parameters
+    ----------
+        - modeltype: str, available options cnn | gcnn | uscg
+        - kwargs: dict, inference kwargs
+
+    Returns
+    -------
+        - inference function
+    
+    Raises
+    ------
+        - NotImplementedError if modeltype is not in ['uscg', 'cnn', 'gcnn']
+    """
     if modeltype == "uscg":
-        return _scg_inference(**kwargs)
+        return _uscg_inference(**kwargs)
     elif modeltype in ["cnn", "gcnn"]:
         return _gcnn_inference(**kwargs)
     elif modeltype == "id":
         return _identity_inference(**kwargs)
+    else:
+        raise NotImplementedError("Inference function not implemented")
 
 
 class BaseModel:
+    """
+    Mother class for inference model.
+    """
     def __init__(self, modeltype, task, ckpt=None):
         """
-        Wrapper for base model.
-
         Parameters
         ----------
-            - modeltype: str, valid options: "cnn" | "gcnn" | "usgc"
-            - task: str, valid options "dn" | "roi"
+            - modeltype: str, available options cnn | gcnn | uscg
+            - task: str, available options dn | roi
             - ckpt: Path, saved checkpoint path. If None, an un-trained model
                     will be used
         """
@@ -243,25 +235,27 @@ class BaseModel:
 
 
 class DnModel(BaseModel):
+    """
+    Wrapper class for denoising model.
+    """
     def __init__(self, modeltype, ckpt=None):
         """
-        Wrapper for denoising model.
-
         Parameters
         ----------
             - modeltype: str, valid options: "cnn" | "gcnn" | "sgc"
             - ckpt: Path, saved checkpoint path. The path should point to a folder
                     containing a collection and an induction .pth file. If None,
-                    an un-trained model will be used. 
+                    an un-trained model will be used.
         """
         super(DnModel, self).__init__(modeltype, "dn", ckpt)
-        
+
 
 class RoiModel(BaseModel):
+    """
+    Wrapper class for ROI selection model.
+    """
     def __init__(self, modeltype, ckpt=None):
         """
-        Wrapper for ROI selection model.
-
         Parameters
         ----------
             - modeltype: str, valid options: "cnn" | "gcnn" | "sgc"
@@ -272,10 +266,11 @@ class RoiModel(BaseModel):
 
 
 class DnRoiModel:
+    """
+    Wrapper class for denoising and ROI selection model.
+    """
     def __init__(self, modeltype, roi_ckpt=None, dn_ckpt=None):
         """
-        Wrapper for inference model.
-
         Parameters
         ----------
             - modeltype: str, valid options: "cnn" | "gcnn" | "sgc"
@@ -287,6 +282,17 @@ class DnRoiModel:
 
 
 def to_cuda(*args):
+    """
+    Utility class to port list of tensors to cuda.
+
+    Parameters
+    ----------
+        - args: tuple, ((induction tensor, collection tensor))
+    
+    Returns
+    -------
+        - tuple, (tensor, tensor) ported to cuda:0 device if cuda is available
+    """
     if not torch.cuda.is_available():
         return args
     dev = "cuda:0"
@@ -295,6 +301,14 @@ def to_cuda(*args):
 
 
 def print_cfnm(cfnm, channel):
+    """
+    Prints confusion metrics
+
+    Parameters
+    ----------
+        - cfnm: list, computed confusion matrix
+        - channel: str, available options readout | collection
+    """
     tp, fp, fn, tn = cfnm
     print(f"Confusion Matrix on {channel} planes:")
     print(f"\tTrue positives: {tp[0]:.3f} +- {tp[1]:.3f}")
@@ -304,8 +318,17 @@ def print_cfnm(cfnm, channel):
 
 
 def compute_metrics(output, target, task):
-    """This function takes the two events and computes the metrics between
-    their planes. Separating collection and inductions planes."""
+    """
+    Takes the two events and computes the metrics between their planes,
+    separating collection and inductions planes.
+    
+    Parameters
+    ----------
+        - output: np.array, output array of shape=(nb wires, nb tdc ticks)
+        - target: np.array, ground truth labels of shape=(nb wires, nb tdc ticks)
+        - task: str, available options dn | roi
+
+    """
     if task == "roi":
         metrics = ["bce_dice", "bce", "softdice", "cfnm"]
     elif task == "dn":

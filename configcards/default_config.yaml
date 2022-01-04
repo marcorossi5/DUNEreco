@@ -1,27 +1,58 @@
-dataset_dir: "../datasets/20201124"
+task: dn # roi | dn
+scan: False # wether to run hyperopt scan
+channel: induction # induction | collection
+dev: 
+     - cpu # cpu | cuda:0 | [0,1,2,3]
+     # - 0
+     # - 1
+     # - 2
+     # - 3
 
-task: "roi" # roi | dn
+# dataset
+dataset_dir: "../test_dataset"
+# dataset directory tree structure:
+# dataset_dir
+#   |-- train
+#   |    |--- evts
+#   |    |--- planes (preprocess product)
+#   |    |--- crops (preprocess product)
+#   |-- val
+#   |    |--- evts
+#   |    |--- planes (preprocess product)
+#   |-- test
+#   |    |--- evts
+#   |    |--- planes (preprocess product)
 
-model: "scg" # cnn | gcnn | scg
+nb_crops: 5000 # number of crops from each plane
+crop_edge: 32 # crop edge size
+pct: 0.99 # signal to background crop balance
 
-epochs: 2 # number of training epochs
+# logging
+load_epoch: 100 # load from epoch number from output directory checkpoints
+save: True # wether to save checkpoints during training
 
-loss_fn: "mse" # mse | ssim | ssim_l1 | ssim_l2
+# model architecture
+model: uscg # cnn | gcnn | uscg
+load_path: null # path to .pth checkpoint
+k: 8 # nearest neighbors number (gcnn only)
+input_channels: 1 # input channels size in (N,C,H,W) (gcnn | cnn only)
+hidden_channels: 32 # (graph) convolution network hidden filters number (gcnn | cnn only)
 
-lr: 0.001
+# trainings
+epochs: 1 # number of training epochs
+epoch_log: 1 # logging epochs interval
+epoch_test_start: 0 # test starting epoch
+epoch_test: 1 # test on epoch end interval
+loss_fn: ssim_l2 # mse | ssim | ssim_l1 | ssim_l2
+a: 0.84 # balancing between loss function contributions (if loss has multiple)
+lr: 0.001 # optimizer's learning rate
+amsgrad: True # Adam optimizer option
+batch_size: 1 # 1 (uscg) | 32 (cnn | gcnn)
 
-out_name: "202011/scg" # output dirname in denoising/output folder
+# inference
+threshold: 3.5 # 500 e- | 3.5 ADC counts (threshold for inference)
 
-load_path: None # "denoising/best_models/scg_dn_induction.pth" # torch .dat absolute filepath
-
-threshold: 500 # 500 e- | 3.5 ADC counts
-
-amsgrad: True
-
-channel: "collection" # induction | collection
-
-scan: False
-
-patch_w: 2000
-
-patch_stride: 1000
+# geometry
+patch_w: 2000 # inference image width (uscg only)
+patch_h: 800 # inference image height (uscg only)
+patch_stride: 1000 # inference stride (uscg only)
