@@ -104,10 +104,10 @@ def load_yaml(runcard_file):
     return runcard
 
 
-def get_runcard(fname):
+def get_configcard(fname):
     """
     Looks recursively into DUNEDN_SEARCH_PATH environment variable to find the
-    first match for runcard file.
+    first match for configcard file.
     DUNEDN_SEARCH_PATH environment variable should be a colon separated list of
     directories.
     At first, if fname is not found, it removes the parent folder structure and
@@ -115,11 +115,11 @@ def get_runcard(fname):
 
     Parameters
     ----------
-        - fname: Path, path to runcard yaml file.
+        - fname: Path, path to configcard yaml file.
 
     Returns
     -------
-        - dict, the parsed runcard
+        - dict, the parsed configcard
 
     Raises
     ------
@@ -138,7 +138,7 @@ def get_runcard(fname):
         if candidate.is_file():
             return load_yaml(candidate)
     raise FileNotFoundError(
-        f"Runcard {fname} not found. Please, update DUNEDN_SEARCH_PATH variable."
+        f"Configcard {fname} not found. Please, update DUNEDN_SEARCH_PATH variable."
     )
 
 

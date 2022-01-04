@@ -13,8 +13,9 @@ dataset_dir: "../test_dataset"
 # dataset directory tree structure:
 # dataset_dir
 #   |-- train
-#   |    |-- planes (preprocess product)
-#   |    |-- crops (preprocess product)
+#   |    |--- evts
+#   |    |--- planes (preprocess product)
+#   |    |--- crops (preprocess product)
 #   |-- val
 #   |    |--- evts
 #   |    |--- planes (preprocess product)

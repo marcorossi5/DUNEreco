@@ -51,7 +51,7 @@ def get_model_and_args(modeltype, task, channel, ckpt=None):
     model = get_model_from_args(args)
 
     if ckpt is not None:
-        fname = ckpt / f"{channel}.pth"
+        fname = ckpt / f"{channel}/{ckpt.name}_{task}_{channel}.pth"
         state_dict = torch.load(fname)
         model.load_state_dict(state_dict)
     return ArgsTuple(batch_size, patch_stride, crop_size), model

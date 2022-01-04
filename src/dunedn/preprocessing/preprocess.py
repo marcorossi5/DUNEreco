@@ -4,7 +4,7 @@
     command.
 """
 from pathlib import Path
-from dunedn.utils.utils import get_runcard
+from dunedn.utils.utils import get_configcard
 from dunedn.preprocessing.putils import (
     get_planes_and_dump,
     save_normalization_info,
@@ -20,7 +20,7 @@ def add_arguments_preprocessing(parser):
     ----------
         - parser: ArgumentParser, preprocessing subparser object
     """
-    parser.add_argument("runcard", type=Path, help="yaml configcard path")
+    parser.add_argument("configcard", type=Path, help="yaml configcard path")
     parser.add_argument("--dir_name", type=Path, help="directory path to datast")
     parser.add_argument(
         "--save_sample", action="store_true", help="extract a smaller dataset"
@@ -41,10 +41,10 @@ def preprocess(args):
     Parameters
     ----------
         - args: NameSpace object, command line parsed arguments. It should
-                contain runcard file name, dataset directory path, plus
+                contain configcard file name, dataset directory path, plus
                 save_sample and verbose force boolean options.
     """
-    p = get_runcard(args.runcard)
+    p = get_configcard(args.configcard)
     preprocess_main(
         p["dataset_dir"],
         p["nb_crops"],
