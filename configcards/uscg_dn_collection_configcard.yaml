@@ -54,5 +54,5 @@ threshold: 3.5 # 500 e- | 3.5 ADC counts (threshold for inference)
 
 # geometry
 patch_w: 2000 # inference image width (uscg only)
-patch_h: 800 # inference image height (uscg only)
+patch_h: 960 # inference image height (uscg only)
 patch_stride: 1000 # inference stride (uscg only)

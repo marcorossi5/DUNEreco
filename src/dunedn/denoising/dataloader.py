@@ -30,8 +30,7 @@ class CropLoader(torch.utils.data.Dataset):
         fname = os.path.join(
             dataset_dir, folder, "crops", f"{channel}_clear_{crop_edge}_{pct}.npy"
         )
-        clear = torch.Tensor(np.load(fname))[:50]
-
+        clear = torch.Tensor(np.load(fname))
         if task == "roi":
             mask = (clear <= threshold) & (clear >= -threshold)
             clear[mask] = 0
@@ -41,7 +40,7 @@ class CropLoader(torch.utils.data.Dataset):
         fname = os.path.join(
             dataset_dir, folder, "crops", f"{channel}_noisy_{crop_edge}_{pct}.npy"
         )
-        self.noisy = torch.Tensor(np.load(fname))[:50]
+        self.noisy = torch.Tensor(np.load(fname))
 
         hits = torch.clone(clear)
         hits[hits != 0] = 1

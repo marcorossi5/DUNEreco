@@ -104,7 +104,7 @@ def load_yaml(runcard_file):
     return runcard
 
 
-def get_configcard(fname):
+def get_configcard_path(fname):
     """
     Looks recursively into DUNEDN_SEARCH_PATH environment variable to find the
     first match for configcard file.
@@ -119,14 +119,14 @@ def get_configcard(fname):
 
     Returns
     -------
-        - dict, the parsed configcard
+        - Path, the retrieved configcard path
 
     Raises
     ------
         FileNotFoundError, if fname is not found.
     """
     if fname.is_file():
-        return load_yaml(fname)
+        return fname
     # get directories from colon separated list
     search_path = os.environ.get("DUNEDN_SEARCH_PATH").split(":")
     # prepend current directory
@@ -136,7 +136,7 @@ def get_configcard(fname):
     for base in search_path:
         candidate = Path(base) / fname.name
         if candidate.is_file():
-            return load_yaml(candidate)
+            return candidate
     raise FileNotFoundError(
         f"Configcard {fname} not found. Please, update DUNEDN_SEARCH_PATH variable."
     )

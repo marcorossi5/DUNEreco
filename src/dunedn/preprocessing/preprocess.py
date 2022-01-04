@@ -4,7 +4,7 @@
     command.
 """
 from pathlib import Path
-from dunedn.utils.utils import get_configcard
+from dunedn.utils.utils import get_configcard_path, load_yaml
 from dunedn.preprocessing.putils import (
     get_planes_and_dump,
     save_normalization_info,
@@ -44,7 +44,8 @@ def preprocess(args):
                 contain configcard file name, dataset directory path, plus
                 save_sample and verbose force boolean options.
     """
-    p = get_configcard(args.configcard)
+    config_path = get_configcard_path(args.configcard)
+    p = load_yaml(config_path)
     preprocess_main(
         p["dataset_dir"],
         p["nb_crops"],
