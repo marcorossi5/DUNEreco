@@ -32,7 +32,9 @@ def main_training(args):
 
     # load datasets
     loader = PlaneLoader if args.model == "uscg" else CropLoader
-    kwargs = {} if args.model == "uscg" else {"patch_size": args.patch_size, "pct": args.pct}
+    kwargs = (
+        {} if args.model == "uscg" else {"patch_size": args.patch_size, "pct": args.pct}
+    )
     train_data = loader(
         args.dataset_dir, "train", args.task, args.channel, args.threshold, **kwargs
     )

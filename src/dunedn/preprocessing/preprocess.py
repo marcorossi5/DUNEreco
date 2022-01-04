@@ -1,32 +1,16 @@
 # This file is part of DUNEdn by M. Rossi
-import os
 from pathlib import Path
 from glob import glob
 import numpy as np
 from dunedn.preprocessing.putils import get_crop
 from dunedn.geometry.helpers import evt2planes
-from dunedn.utils.utils import median_subtraction
+from dunedn.utils.utils import median_subtraction, load_yaml
 from dunedn.preprocessing.putils import save_normalization_info
 
 
 def add_arguments_preprocessing(parser):
-    parser.add_argument(
-        "--dir_name", type=Path, help="directory path to datasets", required=True
-    )
-    parser.add_argument(
-        "--nb_crops",
-        type=int,
-        help="number of crops for each plane",
-        default=5000,
-    )
-    parser.add_argument("--crop_edge", default=32, type=int, help="crop edge")
-    parser.add_argument(
-        "--pct",
-        default=0.5,
-        type=float,
-        help="percentage of signal",
-        metavar="PERCENTAGE",
-    )
+    parser.add_argument("runcard", type=Path, help="yaml configcard path")
+    parser.add_argument("--dir_name", type=Path, help="directory path to datasets")
     parser.add_argument(
         "--save_sample", action="store_true", help="extract a smaller dataset"
     )
@@ -40,9 +24,15 @@ def add_arguments_preprocessing(parser):
 
 
 def preprocess(args):
-    args = vars(args)
-    args.pop("func")
-    preprocess_main(**args)
+    p = load_yaml(args.runcard)
+    preprocess_main(
+        p["dataset_dir"],
+        p["nb_crops"],
+        p["crop_edge"],
+        p["pct"],
+        args.verbose,
+        args.save_sample,
+    )
 
 
 def get_planes_and_dump(dname, verbose, save_sample):

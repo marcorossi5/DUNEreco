@@ -9,9 +9,22 @@ dev:
      # - 3
 
 # dataset
-dataset_dir: "../test_dataset" # dataset directory
-pct: 0.5 # signal to background crop balance (gcnn | cnn only)
-patch_size: 32 # crop edge size (gcnn | cnn only)
+dataset_dir: "../test_dataset"
+# dataset directory tree structure:
+# dataset_dir
+#   |-- train
+#   |    |-- planes (preprocess product)
+#   |    |-- crops (preprocess product)
+#   |-- val
+#   |    |--- evts
+#   |    |--- planes (preprocess product)
+#   |-- test
+#   |    |--- evts
+#   |    |--- planes (preprocess product)
+
+nb_crops: 5000 # number of crops from each plane
+crop_edge: 32 # crop edge size
+pct: 0.99 # signal to background crop balance
 
 # logging
 load_epoch: 100 # load from epoch number from output directory checkpoints

@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader
 from dunedn.denoising.losses import get_loss
 from dunedn.denoising.model_utils import model2batch
 
+
 def time_windows(plane, w, stride):
     """ This function takes a plane and takes time windows """
     B, C, H, W = plane.size()
