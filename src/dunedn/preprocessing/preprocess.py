@@ -21,7 +21,6 @@ def add_arguments_preprocessing(parser):
         - parser: ArgumentParser, preprocessing subparser object
     """
     parser.add_argument("configcard", type=Path, help="yaml configcard path")
-    parser.add_argument("--dir_name", type=Path, help="directory path to datast")
     parser.add_argument(
         "--save_sample", action="store_true", help="extract a smaller dataset"
     )
@@ -47,7 +46,7 @@ def preprocess(args):
     config_path = get_configcard_path(args.configcard)
     p = load_yaml(config_path)
     preprocess_main(
-        p["dataset_dir"],
+        Path(p["dataset_dir"]),
         p["nb_crops"],
         p["crop_edge"],
         p["pct"],

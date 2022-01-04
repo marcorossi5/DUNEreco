@@ -32,15 +32,9 @@ class Args:
 
         self.load = False if (self.load_path is None) else True
 
-    def build_directories(self, output=None):
+    def build_directories(self):
         """
         Builds the output directory tree to store training results and logs.
-
-        Parameters
-        ----------
-            - output: Path, name of the output folder. If None, generate a
-                      unique output directory based on the current date and time.
-
         """
         if self.output is not None:
             output = self.output / f"{self.channel}"
