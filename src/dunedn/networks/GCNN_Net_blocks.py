@@ -4,7 +4,11 @@
 """
 import torch
 from torch import nn
-from dunedn.networks.GCNN_Net_utils import pairwise_dist, batched_index_select, local_mask
+from dunedn.networks.GCNN_Net_utils import (
+    pairwise_dist,
+    batched_index_select,
+    local_mask,
+)
 
 
 class ROI(nn.Module):
@@ -62,7 +66,11 @@ class HPF(nn.Module):
             nn.Conv2d(ic, ic, 3, padding=1), nn.BatchNorm2d(ic), nn.LeakyReLU(0.05)
         )
         self.GCs = nn.ModuleList(
-            [choose_conv(model, ic, ic), choose_conv(model, ic, oc), choose_conv(model, oc, oc)]
+            [
+                choose_conv(model, ic, ic),
+                choose_conv(model, ic, oc),
+                choose_conv(model, oc, oc),
+            ]
         )
         self.act = nn.LeakyReLU(0.05)
 
@@ -84,7 +92,11 @@ class LPF(nn.Module):
             nn.Conv2d(ic, ic, 5, padding=2), nn.BatchNorm2d(ic), nn.LeakyReLU(0.05)
         )
         self.GCs = nn.ModuleList(
-            [choose_conv(model, ic, ic), choose_conv(model, ic, oc), choose_conv(model, oc, oc)]
+            [
+                choose_conv(model, ic, ic),
+                choose_conv(model, ic, oc),
+                choose_conv(model, oc, oc),
+            ]
         )
         self.BNs = nn.ModuleList(
             [nn.BatchNorm2d(ic), nn.BatchNorm2d(oc), nn.BatchNorm2d(oc)]
@@ -126,6 +138,7 @@ class PostProcessBlock(nn.Module):
 
 class NonLocalGraph:
     """ Non-local graph layer. """
+
     def __init__(self, k, crop_size):
         """
         Parameters
@@ -141,7 +154,7 @@ class NonLocalGraph:
         Parameters
         ----------
             - arr: torch.Tensor, input tensor of shape=(N,C,H,W)
-        
+
         Returns
         -------
             - torch.Tensor, output tensor of shape=(N,H*W*K,C)
@@ -161,6 +174,7 @@ class NonLocalGraph:
 # ==============================================================================
 # functions and classes to be called within this module only
 
+
 def choose_conv(model, ic, oc):
     """
     Utility function to retrieve GConv or Conv layer from its name.
@@ -170,11 +184,11 @@ def choose_conv(model, ic, oc):
         - model: str, available options cnn | cnn
         - ic: int, input channel dimension size
         - oc: int, output channel dimension size
-    
+
     Returns
     -------
         - torch.nn.Module, the layer instance
-    
+
     Raises
     ------
         - NotImplementedError if op is not in ['gcnn', 'cnn']
@@ -189,6 +203,7 @@ def choose_conv(model, ic, oc):
 
 class GConv(nn.Module):
     """ GConv layer. """
+
     def __init__(self, ic, oc):
         """
         Parameters
@@ -206,6 +221,7 @@ class GConv(nn.Module):
 
 class Conv(nn.Module):
     """ GConv layer. """
+
     def __init__(self, ic, oc):
         """
         Parameters
@@ -224,6 +240,7 @@ class Conv(nn.Module):
 
 class NonLocalAggregator(nn.Module):
     """ NonLocalAggregator layer. """
+
     def __init__(self, input_channels, out_channels):
         """
         Parameters

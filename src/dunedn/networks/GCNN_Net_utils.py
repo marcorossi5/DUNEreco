@@ -19,7 +19,7 @@ def pairwise_dist(arr, k, local_mask):
         - arr: torch.Tensor, of shape=(N,H*W,C)
         - k: int, nearest neighbor number
         - local_mask: torch.Tensor, of shape=(1,H*W,H*W)
-    
+
     Returns
     -------
         - torch.Tensor, pairwise pixel distances of shape=(N,H*W,H*W)
@@ -46,7 +46,7 @@ def batched_index_select(t, dim, inds):
         - t: torch.Tensor of shape=(N,H*W,C)
         - dim: int, pixels axis. Default is 1
         - inds: torch.Tensor, neighbors indices of shape=(N,H*W,C)
-    
+
     Returns
     -------
         - torch.Tensor, index tensor of shape=(N,H*W*K,C)
@@ -122,7 +122,7 @@ def calculate_pad(plane_size, crop_size):
     ----------
         - plane_size: tuple, plane shape (N,C,H,W)
         - crop_size: tuple, crop shape (edge_h, edge_w)
-    
+
     Returns
     -------
         - list, plane padding: [pre h, post h, pre w, post w]
@@ -163,10 +163,10 @@ class Converter:
         Parameters
         ----------
             - image: torch.Tensor, planes of shape=(N,C,W,H)
-        
+
         Returns
         -------
-            - torch.Tensor, tiles of shape=(N',C,edge_h,edge_w) with 
+            - torch.Tensor, tiles of shape=(N',C,edge_h,edge_w) with
                             N' = N * ceil(H/edge_h) * ceil(W/edge_w)
         """
         edge_h, edge_w = self.crop_size
@@ -177,7 +177,9 @@ class Converter:
         splits = torch.stack(torch.split(planes, edge_w, -1), 1)
         splits = torch.stack(torch.split(splits, edge_h, -2), 1)
 
-        self.splits_shape = splits.shape  # (N, ceil(H/edge_h), ceil(W/edge_w), C, edge_h, edge_w)
+        self.splits_shape = (
+            splits.shape
+        )  # (N, ceil(H/edge_h), ceil(W/edge_w), C, edge_h, edge_w)
 
         return splits.view(-1, C, edge_h, edge_w)
 
@@ -186,7 +188,7 @@ class Converter:
         Parameters
         ----------
             - splits: torch.Tensor, tiles of shape (N',C,edge_h,edge_w)
-        
+
         Returns
         -------
             - torch.Tensor, planes of shape=(N,C,H,W)
@@ -206,10 +208,11 @@ class Converter:
 # ==============================================================================
 # deprecated functions
 
+
 def plot_crops(out_dir, imgs, name, sample):
     """
     Plots ADC colormap of channel vs time of 5x5 samples.
-    
+
     Parameters
     ----------
         - d: string, directory path of output img
@@ -261,7 +264,7 @@ def plot_wires(out_dir, imgs, name, sample, wire):
 def print_cm(a, f, epoch):
     """
     Print confusion matrix at a given epoch a for binary classification to file named f
-    
+
     Parameters
     ----------
         - a: np.array, confusion matrix of shape=(2,2)
@@ -303,7 +306,7 @@ def save_ROI_stats(args, epoch, clear, dn, t, ana=False):
     """
     Plot stats of the ROI: confusion matrix and histogram of the classifier's
     scores.
-    
+
     Parameters
     ----------
         - dn: torch.Tensor, NN output of shape=(N,C,H,W)

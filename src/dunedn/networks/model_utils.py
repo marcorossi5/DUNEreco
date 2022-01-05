@@ -16,14 +16,14 @@ model2batch = {
 
 class MinMax(nn.Module):
     """ MinMax normalization layer with scale factors Min and Max. """
-    
+
     def __init__(self, Min, Max):
         """
         Parameters
         ----------
             - Min: float, scaling factor
             - Max: float, scaling factor
-        
+
         Raises
         ------
             - ValueError, if Min >= Max
@@ -45,13 +45,14 @@ class MinMax(nn.Module):
 
 class ZScore(nn.Module):
     """ Standardization layer with scale factors mu and var. """
+
     def __init__(self, mu, var):
-        """        
+        """
         Parameters
         ----------
             - mu: float, scaling factor
             - var: float, scaling factor
-        
+
         Raises
         ------
             - ValueError, if var is 0
@@ -73,6 +74,7 @@ class MedianNorm(nn.Module):
     Median normalization layer with scale factors Min and Max. This functions
     divides by (Max-Min)
     """
+
     def __init__(self, med, Min, Max):
         """
         Parameters
@@ -80,7 +82,7 @@ class MedianNorm(nn.Module):
             - med: float, median
             - Min: float, scaling factor
             - Max: float, scaling factor
-        
+
         Raises
         ------
             - ValueError, if Min >= Max
@@ -110,11 +112,11 @@ def choose_norm(dataset_dir, ch, op):
         - dataset_dir: Path, path to dataset directory
         - ch: str, available options readout | collection
         - op: str, available options zscore | minmax | mednorm
-    
+
     Returns
     -------
         - torch.nn.Module, the normalization instance
-    
+
     Raises
     ------
         - NotImplementedError if op is not in ['zscore', 'minmax', 'mednorm']
@@ -149,8 +151,6 @@ class MyDDP(nn.parallel.DistributedDataParallel):
             return super(MyDDP, self).__getattr__(name)
         except AttributeError:
             return getattr(self.module, name)
-
-
 
 
 # TODO: check the confusion matrix (there's one implemented in utils/utils.py)

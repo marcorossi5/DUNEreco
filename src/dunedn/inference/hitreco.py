@@ -6,13 +6,13 @@ import collections
 from math import sqrt
 import torch
 from torch.utils.data import DataLoader
-from dunedn.denoising.args import Args
+from dunedn.training.args import Args
 from dunedn.networks.helpers import get_model_from_args
 from dunedn.networks.model_utils import model2batch
 from dunedn.networks.GCNN_Net_utils import Converter
-from dunedn.denoising.dataloader import InferenceLoader, InferenceCropLoader
-from dunedn.denoising.train import inference, identity_inference, gcnn_inference
-from dunedn.denoising.losses import get_loss
+from dunedn.training.dataloader import InferenceLoader, InferenceCropLoader
+from dunedn.training.train import inference, identity_inference, gcnn_inference
+from dunedn.training.losses import get_loss
 from dunedn.utils.utils import load_yaml, median_subtraction
 from dunedn.configdn import get_dunedn_path
 from dunedn.geometry.helpers import evt2planes, planes2evt
@@ -91,7 +91,7 @@ def _uscg_inference(planes, loader, model, args, dev):
         - model: USCG_Net, network instance
         - args: ArgsTuple, inference arguments
         - dev: list | str, host device
-    
+
     Returns
     -------
         - torch.Tensor, output tensor of shape=(N,C,H,W)
@@ -112,7 +112,7 @@ def _gcnn_inference(planes, loader, model, args, dev):
         - model: GCNN_Net, network instance
         - args: ArgsTuple, inference arguments
         - dev: list | str, host device
-    
+
     Returns
     -------
         - torch.Tensor, output tensor of shape=(N,C,H,W)
@@ -140,7 +140,7 @@ def _identity_inference(planes, loader, **kwargs):
         - planes: np.array, planes array of shape=(N,C,H,W)
         - loader: torch.utils.data.DataLoader, data loader
         - kwargs: dict, kwargs for consistency with other inference functions
-    
+
     Returns
     -------
         - torch.Tensor, output tensor of shape=(N,C,H,W)
@@ -162,7 +162,7 @@ def get_inference(modeltype, **kwargs):
     Returns
     -------
         - inference function
-    
+
     Raises
     ------
         - NotImplementedError if modeltype is not in ['uscg', 'cnn', 'gcnn']
@@ -181,6 +181,7 @@ class BaseModel:
     """
     Mother class for inference model.
     """
+
     def __init__(self, modeltype, task, ckpt=None):
         """
         Parameters
@@ -238,6 +239,7 @@ class DnModel(BaseModel):
     """
     Wrapper class for denoising model.
     """
+
     def __init__(self, modeltype, ckpt=None):
         """
         Parameters
@@ -254,6 +256,7 @@ class RoiModel(BaseModel):
     """
     Wrapper class for ROI selection model.
     """
+
     def __init__(self, modeltype, ckpt=None):
         """
         Parameters
@@ -269,6 +272,7 @@ class DnRoiModel:
     """
     Wrapper class for denoising and ROI selection model.
     """
+
     def __init__(self, modeltype, roi_ckpt=None, dn_ckpt=None):
         """
         Parameters
@@ -281,23 +285,21 @@ class DnRoiModel:
         self.dn = DnModel(modeltype, dn_ckpt)
 
 
-def to_cuda(*args):
+def to_dev(*args, dev="cuda:0"):
     """
-    Utility class to port list of tensors to cuda.
+    Utility class to port list of tensors to device dev. If cuda is not available,
+    just passes forward the arguments.
 
     Parameters
     ----------
-        - args: tuple, ((induction tensor, collection tensor))
-    
+        - args: tuple, (induction tensor, collection tensor)
+        - dev: str, device to place tensors
+
     Returns
     -------
-        - tuple, (tensor, tensor) ported to cuda:0 device if cuda is available
+        - tuple, (tensor, tensor) ported to cuda:0 device, if cuda is available
     """
-    if not torch.cuda.is_available():
-        return args
-    dev = "cuda:0"
-    args = list(map(torch.Tensor, args[0]))
-    return list(map(lambda x: x.to(dev), args))
+    return list(map(lambda x: torch.Tensor(x).to(dev), args))
 
 
 def print_cfnm(cfnm, channel):
@@ -317,27 +319,29 @@ def print_cfnm(cfnm, channel):
     print(f"\tFalse negatives: {fn[0]:.3f} +- {fn[1]:.3f}")
 
 
-def compute_metrics(output, target, task):
+def compute_metrics(output, target, task, dev):
     """
     Takes the two events and computes the metrics between their planes,
     separating collection and inductions planes.
-    
+
     Parameters
     ----------
         - output: np.array, output array of shape=(nb wires, nb tdc ticks)
         - target: np.array, ground truth labels of shape=(nb wires, nb tdc ticks)
         - task: str, available options dn | roi
-
+        - dev: str, computation host device
     """
     if task == "roi":
         metrics = ["bce_dice", "bce", "softdice", "cfnm"]
+        helps = ["bce dice", "bce", "softdice", "conf matr"]
     elif task == "dn":
         metrics = ["ssim", "psnr", "mse", "imae"]
+        helps = ["stat ssim", "psnr", "mse", "imae"]
     else:
         raise NotImplementedError("Task not implemented")
     metrics_fns = list(map(lambda x: get_loss(x)(reduction="none"), metrics))
-    ioutput, coutput = to_cuda(evt2planes(output))
-    itarget, ctarget = to_cuda(evt2planes(target))
+    ioutput, coutput = to_dev(*evt2planes(output), dev=dev)
+    itarget, ctarget = to_dev(*evt2planes(target), dev=dev)
     iloss = list(map(lambda x: x(ioutput, itarget), metrics_fns))
     closs = list(map(lambda x: x(coutput, ctarget), metrics_fns))
     print(f"Task {task}")
@@ -353,12 +357,21 @@ def compute_metrics(output, target, task):
 
     iloss = list(map(reduce, iloss))
     closs = list(map(reduce, closs))
+
+    # loss_ssim computes 1-ssim, print ssim instead
+    try:
+        idx = metrics.index("ssim")
+        iloss[idx][0] = 1 - iloss[idx][0]
+        closs[idx][0] = 1 - closs[idx][0]
+    except:
+        pass
+
     print("Induction planes:")
-    for metric, loss in zip(metrics, iloss):
-        print(f"\t\t loss {metric:7}: {loss[0]:.5} +- {loss[1]:.5}")
+    for help, loss in zip(helps, iloss):
+        print(f"\t\t {help:10}: {loss[0]:.5} +- {loss[1]:.5}")
     print("Collection planes:")
-    for metric, loss in zip(metrics, closs):
-        print(f"\t\t loss {metric:7}: {loss[0]:.5} +- {loss[1]:.5}")
+    for help, loss in zip(helps, closs):
+        print(f"\t\t {help:10}: {loss[0]:.5} +- {loss[1]:.5}")
 
 
 # TODO: must fix argument passing in inference

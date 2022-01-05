@@ -16,7 +16,7 @@ from dunedn.geometry.pdune import (
 def evt2planes(event):
     """
     Converts event array to planes.
-    
+
     Parameters
     ----------
         - event: np.array, of shape=(nb_event_channels, nb_tdc_ticks)

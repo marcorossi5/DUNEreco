@@ -7,7 +7,14 @@ from math import ceil
 import torch
 from torch import nn
 from torchvision.models import resnext50_32x4d
-from dunedn.networks.GCNN_Net_blocks import PreProcessBlock, ROI, HPF, LPF, PostProcessBlock, NonLocalGraph
+from dunedn.networks.GCNN_Net_blocks import (
+    PreProcessBlock,
+    ROI,
+    HPF,
+    LPF,
+    PostProcessBlock,
+    NonLocalGraph,
+)
 from dunedn.networks.USCG_Net_blocks import (
     SCG_Block,
     GCN_Layer,
@@ -20,6 +27,7 @@ class GCNN_Net(nn.Module):
     """
     Generic neural network: it switches between cnn|gcnn and roi|dn as well
     """
+
     def __init__(
         self,
         model,
@@ -78,7 +86,7 @@ class GCNN_Net(nn.Module):
         Parameters
         ----------
             - x: torch.Tensor, input tensor of shape=(N,C,H,W)
-        
+
         Returns
         -------
             - torch.Tensor, output tensor of shape=(N,C,H,W)
@@ -98,8 +106,9 @@ class GCNN_Net(nn.Module):
 
 class USCG_Net(nn.Module):
     """
-    U-shape Self Constructing Graph Network: it switches between roi|dn
+    U-shaped Self Constructing Graph Network: it switches between roi|dn
     """
+
     def __init__(
         self,
         out_channels=1,
@@ -187,7 +196,7 @@ class USCG_Net(nn.Module):
         Parameters
         ----------
             - x: torch.Tensor, input tensor of shape=(N,C,H,W)
-        
+
         Returns
         -------
             - torch.Tensor, output tensor of shape=(N,C,H,W)

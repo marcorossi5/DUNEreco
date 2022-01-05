@@ -5,6 +5,7 @@ from pathlib import Path
 import numpy as np
 import yaml
 from hyperopt import hp
+from dunedn.configdn import get_dunedn_search_path
 
 
 def check(check_instance, check_list):
@@ -106,12 +107,9 @@ def load_yaml(runcard_file):
 
 def get_configcard_path(fname):
     """
-    Looks recursively into DUNEDN_SEARCH_PATH environment variable to find the
-    first match for configcard file.
-    DUNEDN_SEARCH_PATH environment variable should be a colon separated list of
-    directories.
-    At first, if fname is not found, it removes the parent folder structure and
-    then searches the name in all directories in DUNEDN_SEARCH_PATH.
+    Retrieve the configcard path.
+    If the supplied path is not a valid file, looks recursively into directories
+    from DUNEDN_SEARCH_PATH environment variable to find the first match.
 
     Parameters
     ----------
@@ -127,14 +125,13 @@ def get_configcard_path(fname):
     """
     if fname.is_file():
         return fname
-    # get directories from colon separated list
-    search_path = os.environ.get("DUNEDN_SEARCH_PATH").split(":")
-    # prepend current directory
-    search_path.insert(0, ".")
-    # remove duplicates
-    search_path = list(dict.fromkeys(search_path))
+    
+    # get list of directories from DUNEDN_SEARCH_PATH env variable
+    search_path = get_dunedn_search_path()
+
+    # recursively look in search directories
     for base in search_path:
-        candidate = Path(base) / fname.name
+        candidate = base / fname.name
         if candidate.is_file():
             return candidate
     raise FileNotFoundError(
