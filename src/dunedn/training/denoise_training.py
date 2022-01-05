@@ -4,10 +4,10 @@
 """
 from pathlib import Path
 from shutil import copyfile
-from dunedn.denoising.dataloader import PlaneLoader, CropLoader
+from dunedn.training.dataloader import PlaneLoader, CropLoader
+from dunedn.training.args import Args
+from dunedn.training.train import train
 from dunedn.networks.helpers import get_model_from_args
-from dunedn.denoising.args import Args
-from dunedn.denoising.train import train
 from dunedn.utils.utils import get_configcard_path, load_yaml
 
 
@@ -24,24 +24,48 @@ def add_arguments_training(parser):
     parser.add_argument(
         "--force", action="store_true", help="overwrite existing files if present"
     )
-    parser.set_defaults(func=main_training)
+    parser.set_defaults(func=training)
 
 
-def main_training(args):
+def training(args):
     """
-    Wrapper training function. Reads settings from configcard
+    Wrapper training function.
 
     Parameters
     ----------
         - args: NameSpace object, command line parsed arguments. It should
                 contain configcard file name, output path and force boolean option.
+
+    Returns
+    -------
+        - float, minimum loss over training
+        - float, uncertainty over minimum loss
+        - str, best checkpoint file name
     """
-    config_path = get_configcard_path(args.configcard)
+    return training_main(args.configcard, args.output, args.force)
+
+
+def training_main(configcard, output, force):
+    """
+    Wrapper training function. Reads settings from configcard
+
+    Parameters
+    ----------
+        - configcard: Path, path to the yaml configcard
+        - output: Path, path to the output folder
+        - force: bool, wether to overwrite existing output folder, if present
+
+    Returns
+    -------
+        - float, minimum loss over training
+        - float, uncertainty over minimum loss
+        - str, best checkpoint file name
+    """
+    config_path = get_configcard_path(configcard)
     parameters = load_yaml(config_path)
-    args = vars(args)
-    args.pop("func")
-    parameters.update(args)
-    parameters["rank"] = 0
+    parameters.update(
+        {"configcard": configcard, "output": output, "force": force, "rank": 0}
+    )
     args = Args(**parameters)
     args.build_directories()
     copyfile(config_path, args.dir_output / "input_runcard.yaml")

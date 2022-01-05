@@ -18,3 +18,35 @@ def get_dunedn_path():
         error_msg = f"""
 Please, make the environment variable DUNEDN_PATH point to the DUNEdn repository root directory"""
         raise RuntimeError(error_msg)
+
+
+def get_dunedn_search_path():
+    """
+    Retrieves the list of directories to look for the configuration card.
+    Loads DUNEDN_SEARCH_PATH from environment variable (a colon separated
+    list of folders).
+    The first item is automatically set to the current directory.
+    The last item is fixed to the configcards folder in the DUNEdn package.
+
+    Set this variable with:
+        `export DUNEDN_SEARCH_PATH=<new path>:$DUNEDN_SEARCH_PATH`
+
+    Returns
+    -------
+        - list, of Path objects from DUNEDN_SEARCH_PATH
+    """
+    # get directories from colon separated list
+    search_path = os.environ.get("DUNEDN_SEARCH_PATH").split(":")
+    
+    # prepend current directory
+    search_path.insert(0, ".")
+
+    # append the configcards directory
+    search_path.append(get_dunedn_path() / "configcards")
+
+    # remove duplicates
+    search_path = list(dict.fromkeys(search_path))
+
+    # turn elements into Path objects
+    return list(map(Path, search_path))
+    

@@ -10,20 +10,20 @@ import torch
 from torch import optim
 from torch.utils.data import DataLoader
 
-from dunedn.denoising.losses import get_loss
+from dunedn.training.losses import get_loss
 from dunedn.networks.model_utils import model2batch
 
 
 def time_windows(planes, w, stride):
     """
     Takes time windows of given width and stride from a planes.
-    
+
     Parameters
     ----------
         - planes: torch.Tensor, planes of shape=(N,C,H,W)
         - w: int, width of the time windows
         - stride: int, steps between time windows
-    
+
     Returns
     -------
         - list, masks for time windows each of shape [N,C,H,w]
@@ -132,11 +132,11 @@ def choose_train(modeltype, *args):
     ----------
         - modeltype: str, available options cnn | gcnn | uscg
         - args: list, model's __init__ arguments
-    
+
     Returns
     -------
         - func, training function
-    
+
     Raises
     ------
         - NotImplementedError if modeltype is not in ['uscg', 'cnn', 'gcnn']
@@ -180,7 +180,7 @@ def identity_inference(test_loader):
     Parameters
     ----------
         - test_loader: torch.utils.data.DataLoader, dummy inference loader
-    
+
     Returns
     -------
         - torch.Tensor, input noisy planes of shape=(N,C,H,W)
@@ -300,7 +300,7 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
         - args: Args, runtime settings
         - task: str, available options dn | roi
         - dry_inference: bool, if true do not compute metrics
-    
+
     Returns
     -------
         - list, of computed metrics with their uncertainties
@@ -347,7 +347,7 @@ def optimizer_fn(params, lr, amsgrad):
         - params: list, parameters to optimize
         - lr: float, learning rate
         - amsgrad: bool, whether to use the AMSGrad variant of this algorithm
-    
+
     Returns
     -------
         - torch.optim.Adam, the optimizer

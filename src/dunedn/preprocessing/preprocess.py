@@ -44,12 +44,12 @@ def preprocess(args):
                 save_sample and verbose force boolean options.
     """
     config_path = get_configcard_path(args.configcard)
-    p = load_yaml(config_path)
+    params = load_yaml(config_path)
     preprocess_main(
-        Path(p["dataset_dir"]),
-        p["nb_crops"],
-        p["crop_edge"],
-        p["pct"],
+        Path(params["dataset_dir"]),
+        params["nb_crops"],
+        params["crop_edge"],
+        params["pct"],
         args.verbose,
         args.save_sample,
     )

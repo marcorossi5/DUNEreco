@@ -2,8 +2,8 @@
 import argparse
 from time import time as tm
 from dunedn.preprocessing.preprocess import add_arguments_preprocessing
-from dunedn.denoising.denoise_training import add_arguments_training
-from dunedn.denoising.inference import add_arguments_inference
+from dunedn.training.denoise_training import add_arguments_training
+from dunedn.inference.inference import add_arguments_inference
 
 
 def main():

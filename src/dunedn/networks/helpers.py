@@ -7,6 +7,7 @@
 from dunedn.networks.models import USCG_Net, GCNN_Net
 from dunedn.networks.model_utils import MyDataParallel
 
+
 def get_model(modeltype, **args):
     """
     Utility function to retrieve model from model name and args.
@@ -15,11 +16,11 @@ def get_model(modeltype, **args):
     ----------
         - modeltype: str, available options cnn | gcnn | uscg
         - args: list, model's __init__ arguments
-    
+
     Returns
     -------
         - torch.nn.Module, the model instance
-    
+
     Raises
     ------
         - NotImplementedError if modeltype is not in ['uscg', 'cnn', 'gcnn']
@@ -44,7 +45,7 @@ def get_model_from_args(args):
     Returns
     -------
         - MyDataParallel, the loaded model
-    
+
     Raises
     ------
         - NotImplementedError if modeltype is not in ['uscg', 'cnn', 'gcnn']
