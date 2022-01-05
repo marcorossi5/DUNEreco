@@ -62,10 +62,12 @@ def inference(args):
     ----------
         - args: NameSpace object, parsed from command line or from code. It
                 should contain input, output and model attributes.
+
+    Returns
+    -------
+        - np.array, ouptut event of shape=(nb wires, nb tdc ticks)
     """
-    args = vars(args)
-    args.pop("func")
-    inference_main(**args)
+    return inference_main(args.input, args.output, args.modeltype, args.ckpt)
 
 
 def inference_main(input, output, modeltype, ckpt):
