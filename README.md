@@ -15,7 +15,19 @@ pip install .
 export DUNEDN_PATH=$PWD
 ```
 
-This process will copy the dunedn program to your environment python path.
+This process will copy the DUNEdn program to your environment python path.
+
+### Note:
+
+The [saved_models](saved_models) directory contains the checkpoints to reproduce
+the results presented in [arXiv:2103.01596](https://arxiv.org/abs/2103.01596).  
+Since some of the saved models files are quite large (~100 MB), they are uploaded
+via [git-lfs](https://git-lfs.github.com/). when cloning the repo, it is possible
+to download pointers to those large files rather than the whole binaries. This can
+be achieved adding the flag `--config lfs.fetchexclude="*.pth*"` to the `git clone`
+command above.
+
+### Requirements:
 
 DUNEdn requires the following packages:
 
@@ -52,13 +64,17 @@ optional arguments:
   --force          overwrite existing files if present
 ```
 
-## Configuration cards
+### Configuration cards
 
-Models' parameter settings are stored in configcards. The [configcards](configcards) folder contains some examples. These can be extended providing the path to user defined cards directly to the command line interface.
+Models' parameter settings are stored in configcards. The [configcards](configcards)
+folder contains some examples. These can be extended providing the path to user
+defined cards directly to the command line interface.
 
-Setting the `DUNEDN_SEARCH_PATH` environment variable it is possible to let DUNEdn looking for configcards into different directories automatically. More on the search behavior can be found in the [utils/ultis.py](src/dunedn/utils/utils.py) file.
+Setting the `DUNEDN_SEARCH_PATH` environment variable it is possible to let DUNEdn
+looking for configcards into different directories automatically. More on the search 
+behavior can be found in the [utils/ultis.py](src/dunedn/utils/utils.py) file.
 
-## Preprocess a dataset
+### Preprocess a dataset
 
 At first, a dataset directory should have the following structure:
 
@@ -73,9 +89,11 @@ dataset_dir
   |    |--- evts
 ```
 
-where each `evts` folder contains a collection of ProtoDUNE events stored as raw digits (numpy array format).
+where each `evts` folder contains a collection of ProtoDUNE events stored as raw
+digits (numpy array format).
 
-It is possible to generate the correspondent dataset to train an USCG or a GCNN network with the command:
+It is possible to generate the correspondent dataset to train an USCG or a GCNN
+network with the command:
 
 ```bash
 dunedn preprocess <configcard.yaml> --dir_name <dataset directory>
@@ -98,23 +116,26 @@ dataset_dir
   |    |--- planes (preprocess product)
 ```
 
-## Training a model
+### Training a model
 
-After specifying parameters inside a configuration card, leverage DUNEdn to train the correspondent model with:
+After specifying parameters inside a configuration card, leverage DUNEdn to train
+the correspondent model with:
 
 ```bash
 dunedn train <configcard.yaml>
 ```
 
-## Inference
+### Inference
 
 ```bash
 dunedn inference -i <input.npy> -o <output.npy> -m <modeltype> [--model_path <checkpoint.pth>]
 ```
 
-DUNEdn inference takes the `input.npy` array and forwards it to the desired model `modeltype`. The output array is saved to `output.npy`.
+DUNEdn inference takes the `input.npy` array and forwards it to the desired model
+`modeltype`. The output array is saved to `output.npy`.
 
-If a checkpoint directory path is given with the optional `--model_path` flag, a saved model checkpoint could be loaded for inference.  
+If a checkpoint directory path is given with the optional `--model_path` flag, a
+saved model checkpoint could be loaded for inference.  
 The checkpoint directory should have the following structure:
 
 ```text
@@ -127,6 +148,7 @@ model_path
 
 On the other hand, if `--model_path` is not specified, an un-trained networks is issued.
 
-## Saved models
+### Benchmark
 
-The [saved_models](saved_models) directory contains the checkpoints to reproduce the results presented in [arXiv:2103.01596](https://arxiv.org/abs/2103.01596).
+The paper results can be reproduced through the [compute_denoising_performance.py](benchmarks/compute_denoising_performance.py) benchmark.  
+Please, see the script's docstring for further information.
