@@ -4,6 +4,8 @@ The DUNEdn source is organized in the following sub-packages:
 
     - geometry
         ProtoDUNE-SP geometry parameters and helper functions for event data management.
+    - hopt
+        Hyperparameter search utility.
     - inference
         Modules for inference subcommand implementation.
     - networks
