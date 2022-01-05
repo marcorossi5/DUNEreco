@@ -10,11 +10,11 @@ import random
 import torch
 import torch.distributed as dist
 
-from dunedn.denoising.dataloader import CropLoader, PlaneLoader
+from dunedn.training.dataloader import CropLoader, PlaneLoader
+from dunedn.training.args import Args
+from dunedn.training.train import train
 from dunedn.networks.models import GCNN_Net
-from dunedn.denoising.args import Args
 from dunedn.utils.utils import print_summary_file
-from dunedn.denoising.train import train
 from dunedn.utils.utils import get_configcard
 
 

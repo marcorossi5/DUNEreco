@@ -5,7 +5,7 @@
 import numpy as np
 import argparse
 from time import time as tm
-from dunedn.denoising.hitreco import evt2planes, planes2evt
+from dunedn.geometry.helpers import evt2planes, planes2evt
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -87,7 +87,7 @@ def main(fname, fit):
     cnormalized = cwires * ck[:, :1, None, None]
     normalized = planes2evt(inormalized, cnormalized)
 
-    from dunedn.denoising.hitreco import compute_metrics
+    from dunedn.inference.hitreco import compute_metrics
 
     compute_metrics(normalized, labels, "dn")
 

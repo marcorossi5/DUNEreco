@@ -18,7 +18,7 @@ import argparse
 from pathlib import Path
 from time import time as tm
 import numpy as np
-from dunedn.denoising.inference import (
+from dunedn.inference.inference import (
     add_arguments_inference,
     compare_performance_dn,
     thresholding_dn,

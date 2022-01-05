@@ -4,10 +4,10 @@
 """
 from pathlib import Path
 from shutil import copyfile
-from dunedn.denoising.dataloader import PlaneLoader, CropLoader
+from dunedn.training.dataloader import PlaneLoader, CropLoader
+from dunedn.training.args import Args
+from dunedn.training.train import train
 from dunedn.networks.helpers import get_model_from_args
-from dunedn.denoising.args import Args
-from dunedn.denoising.train import train
 from dunedn.utils.utils import get_configcard_path, load_yaml
 
 

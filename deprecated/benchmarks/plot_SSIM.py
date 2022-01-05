@@ -9,9 +9,9 @@ import numpy as np
 import torch
 import matplotlib.pyplot as plt
 
-from dunedn.denoising.args import Args
-from dunedn.denoising.ssim import stat_ssim
-from dunedn.denoising.dataloader import PlaneLoader
+from dunedn.training.args import Args
+from dunedn.training.ssim import stat_ssim
+from dunedn.training.dataloader import PlaneLoader
 
 PARSER = argparse.ArgumentParser()
 PARSER.add_argument(

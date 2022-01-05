@@ -6,7 +6,7 @@ from time import time as tm
 import argparse, os, shutil, sys, datetime, yaml, pprint, pickle
 import dunedn.denoising.denoise as denoise
 import dunedn.denoising.analysis as analysis
-from dunedn.denoising.args import Args
+from dunedn.training.args import Args
 from dunedn.utils.utils import load_yaml
 
 

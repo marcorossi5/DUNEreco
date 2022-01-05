@@ -7,14 +7,13 @@ hit with signal.
 Output file contains ssim, psnr and mse provided with mean values
 and uncertainties.
 """
-import os
 import argparse
 from pathlib import Path
 import numpy as np
 from time import time as tm
 import torch
 from dunedn.utils.utils import compute_psnr
-from dunedn.denoising.losses import loss_mse, loss_ssim
+from dunedn.training.losses import loss_mse, loss_ssim
 
 
 def main(dirname, device):

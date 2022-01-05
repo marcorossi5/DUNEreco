@@ -6,13 +6,13 @@ import collections
 from math import sqrt
 import torch
 from torch.utils.data import DataLoader
-from dunedn.denoising.args import Args
+from dunedn.training.args import Args
 from dunedn.networks.helpers import get_model_from_args
 from dunedn.networks.model_utils import model2batch
 from dunedn.networks.GCNN_Net_utils import Converter
-from dunedn.denoising.dataloader import InferenceLoader, InferenceCropLoader
-from dunedn.denoising.train import inference, identity_inference, gcnn_inference
-from dunedn.denoising.losses import get_loss
+from dunedn.training.dataloader import InferenceLoader, InferenceCropLoader
+from dunedn.training.train import inference, identity_inference, gcnn_inference
+from dunedn.training.losses import get_loss
 from dunedn.utils.utils import load_yaml, median_subtraction
 from dunedn.configdn import get_dunedn_path
 from dunedn.geometry.helpers import evt2planes, planes2evt

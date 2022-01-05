@@ -10,7 +10,7 @@ import torch
 from torch import optim
 from torch.utils.data import DataLoader
 
-from dunedn.denoising.losses import get_loss
+from dunedn.training.losses import get_loss
 from dunedn.networks.model_utils import model2batch
 
 

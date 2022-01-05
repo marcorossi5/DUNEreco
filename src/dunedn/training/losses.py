@@ -7,7 +7,7 @@ import torch
 import numpy as np
 from torch import nn
 from abc import ABC, abstractmethod
-from dunedn.denoising.ssim import stat_ssim
+from dunedn.training.ssim import stat_ssim
 from dunedn.utils.utils import confusion_matrix
 
 

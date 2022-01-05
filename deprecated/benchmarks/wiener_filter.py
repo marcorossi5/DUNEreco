@@ -7,7 +7,7 @@ from numpy.fft import fft2, ifft2
 from scipy.signal import gaussian
 import matplotlib.pyplot as plt
 import torch
-from dunedn.denoising.losses import loss_mse, loss_ssim
+from dunedn.training.losses import loss_mse, loss_ssim
 from dunedn.utils.utils import compute_psnr
 
 

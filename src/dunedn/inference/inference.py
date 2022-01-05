@@ -5,9 +5,8 @@
 """
 from copy import deepcopy
 import numpy as np
-import torch
 from pathlib import Path
-from dunedn.denoising.hitreco import DnModel, compute_metrics
+from dunedn.inference.hitreco import DnModel, compute_metrics
 
 THRESHOLD = 3.5  # the ADC threshold below which the output is put to zero
 # TODO: move this into some dunedn config file
