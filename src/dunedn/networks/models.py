@@ -106,7 +106,7 @@ class GCNN_Net(nn.Module):
 
 class USCG_Net(nn.Module):
     """
-    U-shape Self Constructing Graph Network: it switches between roi|dn
+    U-shaped Self Constructing Graph Network: it switches between roi|dn
     """
 
     def __init__(
