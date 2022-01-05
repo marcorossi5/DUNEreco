@@ -93,7 +93,7 @@ def inference_main(input, output, modeltype, ckpt):
 
     evt_dn = model.inference(evt, dev)
     np.save(output, evt_dn)
-    print(f"Saved output event at {output}.npy")
+    print(f"Saved output event at {output.stem}.npy")
     return evt_dn
 
 
