@@ -14,6 +14,7 @@ class CropLoader(torch.utils.data.Dataset):
     """
     Loads the crops for training.
     """
+
     def __init__(self, dataset_dir, folder, task, channel, threshold, crop_edge, pct):
         """
         Parameters
@@ -60,6 +61,7 @@ class PlaneLoader(torch.utils.data.Dataset):
     Only noisy planes are normalized since clear planes don't need to be
     scaled at inference time.
     """
+
     def __init__(self, dataset_dir, folder, task, channel, threshold, crop_edge=None):
         """
         Parameters
@@ -117,6 +119,7 @@ class InferenceLoader(torch.utils.data.Dataset):
     """
     Loads the planes for inference.
     """
+
     def __init__(self, noisy):
         """
         Parameters
@@ -137,6 +140,7 @@ class InferenceCropLoader(torch.utils.data.Dataset):
     """
     Loads the crops for inference.
     """
+
     def __init__(self, noisy):
         """
         Parameters

@@ -135,8 +135,10 @@ class Recombination_Layer(nn.Module):
     def forward(self, x, y):
         return self.conv(torch.cat([x, y], axis=1))
 
+
 # ==============================================================================
 # functions and classes to be called within this module only
+
 
 class BatchNorm_GCN(nn.BatchNorm1d):
     """Batch normalization over GCN features"""

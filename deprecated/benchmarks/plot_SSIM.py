@@ -63,6 +63,7 @@ if __name__ == "__main__":
     if torch.cuda.is_available():
         if int(ARGS["device"]) == -1:
             from dunedn.utils.utils import get_freer_gpu
+
             GPU_NUM = get_freer_gpu()
             DEV = torch.device("cuda:{}".format(GPU_NUM))
         elif int(ARGS["device"]) > -1:

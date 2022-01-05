@@ -29,7 +29,10 @@ def set_random_seed(random_seed=0):
 def add_arguments_distributed_training(parser):
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--configcard", type=Path, help="yaml config file path", default="default_config.yaml"
+        "--configcard",
+        type=Path,
+        help="yaml config file path",
+        default="default_config.yaml",
     )
     parser.add_argument("--local_rank", default=0, type=int, help="Distributed utility")
     parser.add_argument(
