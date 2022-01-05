@@ -71,8 +71,7 @@ folder contains some examples. These can be extended providing the path to user
 defined cards directly to the command line interface.
 
 Setting the `DUNEDN_SEARCH_PATH` environment variable it is possible to let DUNEdn
-looking for configcards into different directories automatically. More on the search 
-behavior can be found in the [utils/ultis.py](src/dunedn/utils/utils.py) file.
+looking for configcards into different directories automatically. More on the search behavior can be found at the `get_configcard_path` function's docstring in the [utils/ultis.py](src/dunedn/utils/utils.py) file.
 
 ### Preprocess a dataset
 
