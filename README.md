@@ -1,6 +1,21 @@
+# DUNEdn
+
 [![arxiv](https://img.shields.io/badge/arXiv-hep--ph%2F2103.01596-%23B31B1B.svg)](https://arxiv.org/abs/2103.01596)
 
-# DUNEdn
+[![DOI](https://zenodo.org/badge/248536693.svg)](https://zenodo.org/badge/latestdoi/248536693)
+
+If you use this software please cite this [paper](https://arxiv.org/abs/2103.01596)
+
+```bibtex
+@misc{rossi2021deep,
+      title={Deep Learning strategies for ProtoDUNE raw data denoising}, 
+      author={Marco Rossi and Sofia Vallecorsa},
+      year={2021},
+      eprint={2103.01596},
+      archivePrefix={arXiv},
+      primaryClass={hep-ph}
+}
+```
 
 DUNEdn is a denoising algorithm for ProtoDUNE-SP raw data with Neural Networks.
 
@@ -35,7 +50,6 @@ DUNEdn requires the following packages:
 - numpy
 - pytorch
 - matplotlib
-- hyperopt (optional)
 
 ## Running the code
 
