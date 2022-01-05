@@ -36,6 +36,7 @@ class Loss(ABC):
 
 class Loss_mse(Loss):
     """ Mean squared error loss function."""
+
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super().__init__(reduction=reduction)
         self.loss = nn.MSELoss(reduction="none")
@@ -77,6 +78,7 @@ class Loss_imae(Loss):
 
 class Loss_ssim(Loss):
     """ Statistical structural similarity loss function. """
+
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super().__init__(a, data_range, reduction)
 
@@ -94,6 +96,7 @@ class Loss_ssim(Loss):
 
 class Loss_ssim_l2(Loss):
     """ Stat ssim + MSE loss function. """
+
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super().__init__(a, data_range, reduction)
 
@@ -116,6 +119,7 @@ class Loss_ssim_l2(Loss):
 
 class Loss_ssim_l1(Loss):
     """ Stat ssim + mean absolute error loss function. """
+
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super().__init__(a, data_range, reduction)
 
@@ -140,6 +144,7 @@ class Loss_ssim_l1(Loss):
 
 class Loss_bce(Loss):
     """ Binary cross entropy loss function. """
+
     def __init__(self, ratio=0.5, reduction="mean"):
         """
         Ratio is the number of positive against negative example in training
@@ -156,7 +161,9 @@ class Loss_bce(Loss):
             - y_true: torch.Tensor, of shape=(N,C,W,H)
         """
         log = lambda x: torch.log(x + EPS.to(x.device))
-        loss = -y_true * log(x_pred) / self.ratio - (1 - y_true) * log(1 - x_pred) / (1 - self.ratio)
+        loss = -y_true * log(x_pred) / self.ratio - (1 - y_true) * log(1 - x_pred) / (
+            1 - self.ratio
+        )
         if self.reduction == "mean":
             return loss.mean()
         elif self.reduction == "sum":
@@ -167,6 +174,7 @@ class Loss_bce(Loss):
 
 class Loss_SoftDice(Loss):
     """ Soft dice loss function. """
+
     def __init__(self, reduction="mean"):
         """
         Reduction: str
@@ -207,14 +215,15 @@ class Loss_SoftDice(Loss):
 
 class Loss_bce_dice(Loss):
     """ Binary xent + soft dice loss function. """
+
     def __init__(self, ratio=0.5, reduction="mean"):
         """
         Reduction: str
             'mean' | 'none'
         """
         super().__init__(0, 0, reduction)
-        self.bce = loss_bce(ratio, reduction="none")
-        self.dice = loss_SoftDice(reduction="none")
+        self.bce = Loss_bce(ratio, reduction="none")
+        self.dice = Loss_SoftDice(reduction="none")
 
     def __call__(self, y_pred, y_true):
         """
@@ -235,6 +244,7 @@ class Loss_bce_dice(Loss):
 
 class Loss_psnr(Loss):
     """ Peak signal to noise ration function. """
+
     def __init__(self, reduction="mean"):
         super().__init__(reduction=reduction)
         self.mse = nn.MSELoss(reduction="none")
@@ -261,6 +271,7 @@ class Loss_psnr(Loss):
 
 class Loss_cfnm(Loss):
     """ Confusion matrix function. """
+
     def __init__(self, reduction="mean"):
         pass
 
@@ -293,11 +304,11 @@ def get_loss(loss):
     ----------
         - loss: str, available options
                 mse | imae | ssim | ssim_l2 | ssim_l1 | bce | softdice | cfnm
-    
+
     Returns
     -------
         - Loss, the loss instance
-    
+
     Raises
     ------
         - NotImplementedError if modeltype is not in

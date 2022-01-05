@@ -6,9 +6,9 @@ from pathlib import Path
 from time import time as tm
 import numpy as np
 from dunedn.denoising.inference import (
-    inference_main,
     add_arguments_inference,
     compare_performance_dn,
+    thresholding_dn,
 )
 
 
@@ -27,11 +27,14 @@ def main():
         help="path to the output event file",
     )
     args = parser.parse_args()
-    target = np.load(args.target)
-    # remove target to make inference work
+    evt_dn = args.func(args)
 
-    args.func(args.input, args.output, args.modeltype, args.ckpt)
-    dn_evt = inference_main()
+    target = np.load(args.target)[:, 2:]
+
+    # denoised event can be thresholded, comment this line to compare bare waveforms
+    evt_dn = thresholding_dn(evt_dn)
+
+    compare_performance_dn(evt_dn, target, args.dev)
 
 
 if __name__ == "__main__":

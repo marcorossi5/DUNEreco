@@ -42,10 +42,10 @@ def training(args):
         - float, uncertainty over minimum loss
         - str, best checkpoint file name
     """
-    return main_training(args.configcard, args.output, args.force)
+    return training_main(args.configcard, args.output, args.force)
 
 
-def main_training(configcard, output, force):
+def training_main(configcard, output, force):
     """
     Wrapper training function. Reads settings from configcard
 

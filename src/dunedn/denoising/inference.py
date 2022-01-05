@@ -51,6 +51,9 @@ def add_arguments_inference(parser):
         default=None,
         dest="ckpt",
     )
+    parser.add_argument(
+        "--dev", help="(optional) device hosting computation", default="cpu"
+    )
     parser.set_defaults(func=inference)
 
 
@@ -67,10 +70,10 @@ def inference(args):
     -------
         - np.array, ouptut event of shape=(nb wires, nb tdc ticks)
     """
-    return inference_main(args.input, args.output, args.modeltype, args.ckpt)
+    return inference_main(args.input, args.output, args.modeltype, args.ckpt, args.dev)
 
 
-def inference_main(input, output, modeltype, ckpt):
+def inference_main(input, output, modeltype, ckpt, dev):
     """
     Inference main function. Loads an input event from file, makes inference and
     saves the ouptut. Eventually returns the output array.
@@ -81,6 +84,7 @@ def inference_main(input, output, modeltype, ckpt):
         - output: Path, path to the output event file
         - modeltype: str, model name. Available options: uscg|gcnn|cnn|id
         - ckpt: path to directory with saved model
+        - dev: str, device hosting computation
 
     Returns
     -------
@@ -89,7 +93,6 @@ def inference_main(input, output, modeltype, ckpt):
     print(f"Denoising event at {input}")
     evt = np.load(input)[:, 2:]
     model = DnModel(modeltype, ckpt)
-    dev = "cuda:0" if torch.cuda.is_available() else "cpu"
 
     evt_dn = model.inference(evt, dev)
     np.save(output, evt_dn)
@@ -97,7 +100,7 @@ def inference_main(input, output, modeltype, ckpt):
     return evt_dn
 
 
-def compare_performance_dn(evt_dn, target):
+def compare_performance_dn(evt_dn, target, dev):
     """
     Computes perfromance metrics between denoising inference output and ground
     truth labels.
@@ -106,15 +109,12 @@ def compare_performance_dn(evt_dn, target):
     ----------
         - evt_roi: np.array, denoised event of shape=(nb wires, nb tdc ticks)
         - target: np.array, ground truth labels of shape=(nb wires, nb tdc ticks)
+        - dev: str, device hosting computation
     """
-    mask = np.abs(evt_dn) <= THRESHOLD
-    # bind evt_dn variable to a copy to prevent in place substitution
-    evt_dn = deepcopy(evt_dn)
-    evt_dn[mask] = 0
-    compute_metrics(evt_dn, target, "dn")
+    compute_metrics(evt_dn, target, "dn", dev)
 
 
-def compare_performance_roi(evt_roi, target):
+def compare_performance_roi(evt_roi, target, dev):
     """
     Computes perfromance metrics between ROI inference output and ground truth
     labels.
@@ -123,13 +123,34 @@ def compare_performance_roi(evt_roi, target):
     ----------
         - evt_roi: np.array, event ROI selection of shape=(nb wires, nb tdc ticks)
         - target: np.array, ground truth labels of shape=(nb wires, nb tdc ticks)
+        - dev: str, device hosting computation
     """
-    mask = np.abs(evt_roi) <= THRESHOLD
     # bind target variable to a copy to prevent in place substitution
+    mask = np.abs(target) <= THRESHOLD
     target = deepcopy(target)
     target[mask] = 0
     target[~mask] = 1
-    compute_metrics(evt_roi, target, "roi")
+    compute_metrics(evt_roi, target, "roi", dev)
+
+
+def thresholding_dn(evt, t=THRESHOLD):
+    """
+    Apply a threhosld to the denoised waveforms to smooth results.
+
+    Parameters
+    ----------
+        - evt: np.array, event of shape=(nb wires, nb tdc ticks)
+        - t: float, threshold
+
+    Returns
+    -------
+        - np.array, thresholded event of shape=(nb wires, nb tdc ticks)
+    """
+    mask = np.abs(evt) <= t
+    # bind evt_dn variable to a copy to prevent in place substitution
+    evt = deepcopy(evt)
+    evt[mask] = 0
+    return evt
 
 
 # inputs: the input event filename, the output event filename, the saved model
