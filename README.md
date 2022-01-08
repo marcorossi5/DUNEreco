@@ -4,16 +4,23 @@
 
 [![DOI](https://zenodo.org/badge/248536693.svg)](https://zenodo.org/badge/latestdoi/248536693)
 
-If you use this software please cite this [paper](https://arxiv.org/abs/2103.01596)
+If you use this software please cite this [paper](https://doi.org/10.1007/s41781-021-00077-9)
 
 ```bibtex
-@misc{rossi2021deep,
-      title={Deep Learning strategies for ProtoDUNE raw data denoising}, 
-      author={Marco Rossi and Sofia Vallecorsa},
-      year={2021},
-      eprint={2103.01596},
-      archivePrefix={arXiv},
-      primaryClass={hep-ph}
+@article{dunedn,
+author={Rossi, Marco
+and Vallecorsa, Sofia},
+title={Deep Learning Strategies for ProtoDUNE Raw Data Denoising},
+journal={Computing and Software for Big Science},
+year={2022},
+month={Jan},
+day={07},
+volume={6},
+number={1},
+numpages={9},
+issn={2510-2044},
+doi={10.1007/s41781-021-00077-9},
+url={https://doi.org/10.1007/s41781-021-00077-9}
 }
 ```
 
