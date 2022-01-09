@@ -2,11 +2,16 @@
 """
     This module contains the utility functions for the preprocessing step.
 """
+import logging
 from pathlib import Path
 from glob import glob
 import numpy as np
+from dunedn.configdn import PACKAGE
 from dunedn.geometry.helpers import evt2planes
 from dunedn.utils.utils import median_subtraction
+
+# instantiate logger
+logger = logging.getLogger(PACKAGE + ".preprocess")
 
 
 def save_normalization_info(dir_name, channel):
@@ -19,7 +24,7 @@ def save_normalization_info(dir_name, channel):
         - dir_name: Path, directory path to datasets
         - channel: str, induction | collection
     """
-    print(f"[+] Saving normalization info to {dir_name}")
+    logger.info(f"Saving normalization info to {dir_name}")
     fname = dir_name / f"train/planes/{channel}_noisy.npy"
     n = np.load(fname).flatten()
 
@@ -82,7 +87,7 @@ def get_crop(clear_plane, nb_crops=1000, crop_size=(32, 32), pct=0.5):
     return (idx_h, idx_w)
 
 
-def get_planes_and_dump(dname, verbose, save_sample):
+def get_planes_and_dump(dname, save_sample):
     """
     Populates the "planes" subfolder of dname directory with numpy arrays of
     planes taken from events in the "events" subfolder. Planes arrays have
@@ -91,7 +96,6 @@ def get_planes_and_dump(dname, verbose, save_sample):
     Parameters
     ----------
         - dname: Path, path to train|val|test dataset subfolder
-        - verbose: bool, wether to print status information
         - save_sample: bool, wether to save a smaller dataset from the original one
     """
     # TODO: this function could probably be shortened
@@ -105,16 +109,15 @@ def get_planes_and_dump(dname, verbose, save_sample):
     paths_clear = glob((dname / "evts/*noiseoff*").as_posix())
     assert len(paths_clear) != 0
 
-    print(f"[+] Fetching files from {dname}")
+    logger.info(f"Fetching files from {dname}")
     for path_clear in paths_clear:
         path_noisy = Path(path_clear.replace("rawdigit_noiseoff", "rawdigit"))
         path_simch = Path(path_clear.replace("rawdigit_noiseoff", "simch_labels"))
         path_clear = Path(path_clear)
 
-        if verbose:
-            print(f"\t{path_clear.name}")
-            print(f"\t{path_noisy.name}")
-            print(f"\t{path_simch.name}")
+        logger.debug(f"  {path_clear.name}")
+        logger.debug(f"  {path_noisy.name}")
+        logger.debug(f"  {path_simch.name}")
 
         c = np.load(path_clear)[:, 2:]
         n = np.load(path_noisy)[:, 2:]
@@ -145,14 +148,14 @@ def get_planes_and_dump(dname, verbose, save_sample):
     # at this point planes have shape=(nb_events,N,1,H,W)
     # with N being the number of induction|collection planes in each event
 
-    print(f"[+] Saving planes to {dname}/planes")
-    if verbose:
-        print("\tCollection clear planes: ", cclear.shape)
-        print("\tCollection noisy planes: ", cnoisy.shape)
-        print("\tCollection sim::SimChannel planes: ", csimch.shape)
-        print("\tInduction clear planes: ", iclear.shape)
-        print("\tInduction noisy planes: ", inoisy.shape)
-        print("\tInduction sim::SimChannel planes: ", isimch.shape)
+    logger.info(f"Saving planes to {dname}/planes")
+
+    logger.debug(f"  collection clear planes: {cclear.shape}")
+    logger.debug(f"  collection noisy planes: {cnoisy.shape}")
+    logger.debug(f"  collection sim::SimChannel planes: {csimch.shape}")
+    logger.debug(f"  induction clear planes: {iclear.shape}")
+    logger.debug(f"  induction noisy planes: {inoisy.shape}")
+    logger.debug(f"  induction sim::SimChannel planes: {isimch.shape}")
 
     # stack all the planes from different events together
     save = lambda x, y: np.save(dname / f"planes/{x}", y)
@@ -168,13 +171,13 @@ def get_planes_and_dump(dname, verbose, save_sample):
 
     if save_sample:
         # extract a small collection sample from dataset
-        print(f"[+] Saving sample dataset to {dname}/planes")
+        logger.info(f"Saving sample dataset to {dname}/planes")
         save("sample_collection_clear", cclear[:10])
         save("sample_collection_noisy", cnoisy[:10])
         save("sample_collection_simch", csimch[:10])
 
 
-def crop_planes_and_dump(dir_name, nb_crops, crop_size, pct, verbose):
+def crop_planes_and_dump(dir_name, nb_crops, crop_size, pct):
     """
     Populates the "crop" folder: for each plane stored in `dir_name/planes` generate
     nb_crops of size crop_size. The value of pct fixes the signal / background
@@ -186,7 +189,6 @@ def crop_planes_and_dump(dir_name, nb_crops, crop_size, pct, verbose):
         - nb_crops: int, number of crops from a single plane
         - crop_size: list, crop [height, width]
         - pct: float, signal / background crops balancing
-        - verbose: bool, wether to print status information
     """
     for s in ["induction", "collection"]:
 
@@ -196,7 +198,7 @@ def crop_planes_and_dump(dir_name, nb_crops, crop_size, pct, verbose):
         fname = dir_name / f"planes/{s}_noisy.npy"
         nplanes = np.load(fname)
 
-        print(f"[+] Cropping {s} planes at {fname}")
+        logger.info(f"Cropping {s} planes at {fname}")
 
         nplanes = median_subtraction(nplanes)[:, 0]
 
@@ -211,10 +213,10 @@ def crop_planes_and_dump(dir_name, nb_crops, crop_size, pct, verbose):
         ncrops = np.concatenate(ncrops, 0)
 
         fname = dir_name / f"crops/{s}_noisy_{crop_size[0]}_{pct}"
-        print(f"Saving crops to {dir_name}")
-        if verbose:
-            print(f"{s} clear crops:", ccrops.shape)
-            print(f"{s} noisy crops:", ncrops.shape)
+        logger.info(f"Saving crops to {dir_name}")
+
+        logger.debug(f"{s} clear crops: {ccrops.shape}")
+        logger.debug(f"{s} noisy crops: {ncrops.shape}")
         np.save(fname, ncrops)
 
         fname = dir_name / f"crops/{s}_clear_{crop_size[0]}_{pct}"

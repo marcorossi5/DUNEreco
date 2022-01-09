@@ -93,6 +93,11 @@ def confusion_matrix(hit, no_hit, t=0.5):
 
     return tp, fp, fn, tn
 
+import logging
+from dunedn.configdn import PACKAGE
+
+# instantiate logger
+logger = logging.getLogger(PACKAGE + ".train")
 
 def load_yaml(runcard_file):
     """Loads yaml runcard"""
@@ -100,7 +105,7 @@ def load_yaml(runcard_file):
         runcard = yaml.load(stream, Loader=yaml.FullLoader)
     for key, value in runcard.items():
         if "hp." in str(value):
-            print(key, value)
+            logger.info(f"Evaluating: eval({key}) = {value}")
             runcard[key] = eval(value)
     return runcard
 

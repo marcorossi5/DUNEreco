@@ -3,6 +3,7 @@
     This module contains the utility functions for CNN and GCNN networks.
 """
 import os
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -207,6 +208,10 @@ class Converter:
 
 # ==============================================================================
 # deprecated functions
+from dunedn.configdn import PACKAGE
+
+# instantiate logger
+logger = logging.getLogger(PACKAGE)
 
 
 def plot_crops(out_dir, imgs, name, sample):
@@ -233,7 +238,7 @@ def plot_crops(out_dir, imgs, name, sample):
             fig.colorbar(z, ax=ax)
     plt.savefig(fname)
     plt.close()
-    print("Saved image at %s" % fname)
+    logger.info("Saved image at %s" % fname)
 
 
 def plot_wires(out_dir, imgs, name, sample, wire):
@@ -258,7 +263,7 @@ def plot_wires(out_dir, imgs, name, sample, wire):
             ax.plot(samples[i * 5 + j, wire[i * 5 + j]], linewidth=0.3)
     plt.savefig(fname)
     plt.close()
-    print("Saved image at %s" % fname)
+    logger.info("Saved image at %s" % fname)
 
 
 def print_cm(a, f, epoch):
@@ -272,34 +277,34 @@ def print_cm(a, f, epoch):
         - epoch: int, epoch number
     """
     tot = a.sum()
-    print(f"Epoch: {epoch}", file=f)
-    print("Over a total of %d pixels:\n" % tot, file=f)
-    print("------------------------------------------------", file=f)
-    print("|{:>20}|{:>12}|{:>12}|".format("", "Hit", "No hit"), file=f)
-    print("------------------------------------------------", file=f)
-    print(
+    logger.info(f"Epoch: {epoch}", file=f)
+    logger.info("Over a total of %d pixels:\n" % tot, file=f)
+    logger.info("------------------------------------------------", file=f)
+    logger.info("|{:>20}|{:>12}|{:>12}|".format("", "Hit", "No hit"), file=f)
+    logger.info("------------------------------------------------", file=f)
+    logger.info(
         "|{:>20}|{:>12.4e}|{:>12.4e}|".format(
             "Predicted hit", a[1, 1] / tot, a[0, 1] / tot
         ),
         file=f,
     )
-    print("------------------------------------------------", file=f)
-    print(
+    logger.info("------------------------------------------------", file=f)
+    logger.info(
         "|{:>20}|{:>12.4e}|{:>12.4e}|".format(
             "Predicted no hit", a[1, 0] / tot, a[0, 0] / tot
         ),
         file=f,
     )
-    print("------------------------------------------------", file=f)
-    print("{:>21}|{:>12}|{:>12}|".format("", "Sensitivity", "Specificity"), file=f)
-    print("                     ---------------------------", file=f)
-    print(
+    logger.info("------------------------------------------------", file=f)
+    logger.info("{:>21}|{:>12}|{:>12}|".format("", "Sensitivity", "Specificity"), file=f)
+    logger.info("                     ---------------------------", file=f)
+    logger.info(
         "{:>21}|{:>12.4e}|{:>12.4e}|".format(
             "", a[1, 1] / (a[1, 1] + a[1, 0]), a[0, 0] / (a[0, 1] + a[0, 0])
         ),
         file=f,
     )
-    print("                     ---------------------------\n\n", file=f)
+    logger.info("                     ---------------------------\n\n", file=f)
 
 
 def save_ROI_stats(args, epoch, clear, dn, t, ana=False):
@@ -324,7 +329,7 @@ def save_ROI_stats(args, epoch, clear, dn, t, ana=False):
     with open(fname, "a+") as f:
         print_cm(cm, f, epoch)
         f.close()
-    print(f"Updated confusion matrix file at {fname}")
+    logger.info(f"Updated confusion matrix file at {fname}")
 
 
 def weight_scan(module):

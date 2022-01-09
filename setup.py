@@ -4,11 +4,9 @@ from sys import version_info
 import os
 import re
 
-
-requirements = ["numpy", "pyyaml", "torch"]
+requirements = ["numpy", "pyyaml", "torch", "matplotlib"]
 
 PACKAGE = "dunedn"
-
 
 def get_version():
     """Gets the version from the package's __init__ file
@@ -34,10 +32,12 @@ setup(
     author="M. Rossi",
     author_email="marco.rossi@cern.ch",
     url="https://github.com/marcorossi5/DUNEdn.git",
+    download_url="https://github.com/marcorossi5/DUNEdn/archive/refs/tags/1.0.0.tar.gz",
     entry_points={"console_scripts": ["dunedn = dunedn.scripts.dunedn:main"]},
     package_dir={"": "src"},
     packages=find_packages("src"),
     zip_safe=False,
+    install_requires=requirements,
     classifiers=[
         "Operating System :: Unix",
         "Programming Language :: Python",

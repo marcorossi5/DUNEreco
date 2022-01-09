@@ -1,5 +1,6 @@
 # This file is part of DUNEdn by M. Rossi
 import os
+import logging
 import glob
 import argparse
 
@@ -7,14 +8,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time as tm
 
-PARSER = argparse.ArgumentParser()
-PARSER.add_argument(
-    "--dir_name",
-    "-p",
-    default="../datasets/20200901",
-    type=str,
-    help="Directory path to datasets",
-)
+# instantiate logger
+logger = logging.getLogger(__name__)
 
 tdc_min = 0
 tdc_max = 6000
@@ -106,7 +101,15 @@ def main(dir_name):
 
 
 if __name__ == "__main__":
-    ARGS = vars(PARSER.parse_args())
-    START = tm.time()
-    main(**ARGS)
-    print("Program done in %f" % (tm.time() - START))
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dir_name",
+        "-p",
+        default="../datasets/20200901",
+        type=str,
+        help="Directory path to datasets",
+    )
+    args = vars(parser.parse_args())
+    start = tm.time()
+    main(**args)
+    print("Program done in %f" % (tm.time() - start))

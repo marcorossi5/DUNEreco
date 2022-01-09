@@ -2,6 +2,7 @@
 """
     This module implements the main training loops and inference functions.
 """
+import logging
 from math import ceil, sqrt
 from time import time as tm
 import numpy as np
@@ -10,8 +11,12 @@ import torch
 from torch import optim
 from torch.utils.data import DataLoader
 
+from dunedn.configdn import PACKAGE
 from dunedn.training.losses import get_loss
 from dunedn.networks.model_utils import model2batch
+
+# instantiate logger
+logger = logging.getLogger(PACKAGE + ".train")
 
 
 def time_windows(planes, w, stride):
@@ -62,7 +67,7 @@ def train_uscg_epoch(args, epoch, train_loader, model, optimizer, balance_ratio,
         - float, training epoch time
     """
     if args.rank == 0:
-        print("\n[+] Training")
+        logger.debug("Training epoch")
     start = tm()
     loss_fn = (
         get_loss(args.loss_fn)(args.a)
@@ -104,7 +109,7 @@ def train_gcnn_epoch(args, epoch, train_loader, model, optimizer, balance_ratio,
         - np.array, training epoch loss of shape=(1,)
         - float, training epoch time
     """
-    print("\n[+] Training")
+    logger.debug("Training epoch")
     start = tm()
     model.train()
     loss_fn = (
@@ -315,7 +320,7 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
         batch_size=model2batch[args.model][args.task],
     )
     if args.rank == 0:
-        print("\n[+] Testing")
+        logger.debug("Testing epoch")
     start = tm()
     if args.model == "uscg":
         outputs = inference(test_loader, args.patch_stride, model, args.dev[0])
@@ -418,7 +423,7 @@ def train(args, train_data, val_data, model):
             time_test = []
 
         if args.rank == 0:
-            print(f"Loading model at {fname}")
+            logger.info(f"Loading model at {fname}")
         # map_location = {"cuda:{0:d}": f"cuda:{args.dev:d}"}
         # map_location = {"cuda:{0:d}": f"cuda:{args.local_rank:d}"}
         # model.load_state_dict(torch.load(fname, map_location=map_location))
@@ -464,7 +469,7 @@ def train(args, train_data, val_data, model):
         loss_sum.append(loss)
         time_train.append(t)
         if epoch % args.epoch_log == 0 and (not args.scan) and args.rank == 0:
-            print(
+            logger.info(
                 f"Epoch: {epoch:3}, Loss: {loss_sum[-1][0]:6.5}, epoch time: {end:.4}s"
             )
 
@@ -478,15 +483,15 @@ def train(args, train_data, val_data, model):
             time_test.append(t)
             if args.rank == 0:
                 if args.task == "roi":
-                    print(f"Test loss on {channel:10} APAs: {x[0]:.5} +- {x[1]:.5}")
+                    logger.info(f"Test loss on {channel:10} APAs: {x[0]:.5} +- {x[1]:.5}")
                 if args.task == "dn":
-                    print(
+                    logger.info(
                         f"Test on {channel:10} APAs: {'loss:':7} {x[0]:.5} +- {x[1]:.5}\n\
                          {'ssim:':7} {x[2]:.5} +- {x[3]:.5}\n\
                          {'psnr:':7} {x[4]:.5} +- {x[5]:.5}\n\
                          {'mse:':7} {x[6]:.5} +- {x[7]:.5}"
                     )
-                print(f"Test epoch time: {end:.4}")
+                logger.info(f"Test epoch time: {end:.4}")
 
             # save the model if it is the best one
             if test_metrics[-1][0] + test_metrics[-1][1] < best_loss and args.rank == 0:
@@ -502,13 +507,13 @@ def train(args, train_data, val_data, model):
                     f.write(fname)
                     f.close()
                 if (not args.scan) and args.rank == 0:
-                    print("updated best model at: ", bname)
+                    logger.info("updated best model at: ", bname)
             if args.save and args.rank == 0:
                 fname = (
                     args.dir_saved_models / f"{args.model}_{task}_{channel}_{epoch}.dat"
                 )
                 if not args.scan:
-                    print("saved model at: %s" % fname)
+                    logger.info("saved model at: %s" % fname)
             if args.rank == 0:
                 torch.save(model.state_dict(), fname)
 

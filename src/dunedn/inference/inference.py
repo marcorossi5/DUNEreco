@@ -3,6 +3,7 @@
     This module contains the wrapper function for the ``dunedn inference``
     command.
 """
+import logging
 from copy import deepcopy
 import numpy as np
 from pathlib import Path
@@ -89,13 +90,13 @@ def inference_main(input, output, modeltype, ckpt, dev):
     -------
         - np.array, ouptut event of shape=(nb wires, nb tdc ticks)
     """
-    print(f"Denoising event at {input}")
+    logging.info(f"Denoising event at {input}")
     evt = np.load(input)[:, 2:]
     model = DnModel(modeltype, ckpt)
 
     evt_dn = model.inference(evt, dev)
     np.save(output, evt_dn)
-    print(f"Saved output event at {output.stem}.npy")
+    logging.info(f"Saved output event at {output.stem}.npy")
     return evt_dn
 
 

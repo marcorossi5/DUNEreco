@@ -39,7 +39,7 @@ export DUNEDN_PATH=$PWD
 
 This process will copy the DUNEdn program to your environment python path.
 
-### Note:
+### Note
 
 The [saved_models](saved_models) directory contains the checkpoints to reproduce
 the results presented in [arXiv:2103.01596](https://arxiv.org/abs/2103.01596).  
@@ -49,7 +49,7 @@ to download pointers to those large files rather than the whole binaries. This c
 be achieved adding the flag `--config lfs.fetchexclude="*.pth*"` to the `git clone`
 command above.
 
-### Requirements:
+### Requirements
 
 DUNEdn requires the following packages:
 

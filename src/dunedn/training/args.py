@@ -2,11 +2,16 @@
 """
     This module contains the Args class, that keeps track of all runtime settings.
 """
+import logging
 from pathlib import Path
 from datetime import datetime as dtm
+from dunedn.configdn import PACKAGE
 from dunedn.configdn import get_dunedn_path
 from dunedn.utils.utils import check
 import shutil
+
+# instantiate logger
+logger = logging.getLogger(PACKAGE)
 
 
 class Args:
@@ -40,17 +45,17 @@ class Args:
             output = self.output / f"{self.channel}"
             if output.is_dir():
                 if self.force:
-                    print(f"WARNING: Overwriting {output} directory with new model")
+                    logger.warning(f"WARNING: Overwriting {output} directory with new model")
                     shutil.rmtree(output)
                 else:
-                    print('Delete or run with "--force" to overwrite.')
+                    logger.critical('Delete or run with "--force" to overwrite.')
                     exit(-1)
             else:
-                print(f"[+] Creating output directory at {output}")
+                logger.info(f"Creating output directory at {output}")
         else:
             date = dtm.now().strftime("%y%m%d_%H%M%S")
             output = get_dunedn_path().parent / f"output/{date}/{self.channel}"
-            print(f"[+] Creating output directory at {output}")
+            logger.info(f"Creating output directory at {output}")
 
         self.dir_output = output
 

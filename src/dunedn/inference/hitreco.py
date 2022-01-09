@@ -2,10 +2,12 @@
 """
     This module contains utility functions for the inference step.
 """
+import logging
 import collections
 from math import sqrt
 import torch
 from torch.utils.data import DataLoader
+from dunedn.configdn import PACKAGE
 from dunedn.training.args import Args
 from dunedn.networks.helpers import get_model_from_args
 from dunedn.networks.model_utils import model2batch
@@ -16,6 +18,9 @@ from dunedn.training.losses import get_loss
 from dunedn.utils.utils import load_yaml, median_subtraction
 from dunedn.configdn import get_dunedn_path
 from dunedn.geometry.helpers import evt2planes, planes2evt
+
+# instantiate logger
+logger = logging.getLogger(PACKAGE + ".inference")
 
 # tuple containing induction and collection models
 ModelTuple = collections.namedtuple("Model", ["induction", "collection"])
@@ -312,11 +317,11 @@ def print_cfnm(cfnm, channel):
         - channel: str, available options readout | collection
     """
     tp, fp, fn, tn = cfnm
-    print(f"Confusion Matrix on {channel} planes:")
-    print(f"\tTrue positives: {tp[0]:.3f} +- {tp[1]:.3f}")
-    print(f"\tTrue negatives: {tn[0]:.3f} +- {tn[1]:.3f}")
-    print(f"\tFalse positives: {fp[0]:.3f} +- {fp[1]:.3f}")
-    print(f"\tFalse negatives: {fn[0]:.3f} +- {fn[1]:.3f}")
+    logger.info(f"Confusion Matrix on {channel} planes:")
+    logger.info(f"\tTrue positives: {tp[0]:.3f} +- {tp[1]:.3f}")
+    logger.info(f"\tTrue negatives: {tn[0]:.3f} +- {tn[1]:.3f}")
+    logger.info(f"\tFalse positives: {fp[0]:.3f} +- {fp[1]:.3f}")
+    logger.info(f"\tFalse negatives: {fn[0]:.3f} +- {fn[1]:.3f}")
 
 
 def compute_metrics(output, target, task, dev):
@@ -344,7 +349,7 @@ def compute_metrics(output, target, task, dev):
     itarget, ctarget = to_dev(*evt2planes(target), dev=dev)
     iloss = list(map(lambda x: x(ioutput, itarget), metrics_fns))
     closs = list(map(lambda x: x(coutput, ctarget), metrics_fns))
-    print(f"Task {task}")
+
     if task == "roi":
         print_cfnm(iloss[-1], "induction")
         iloss.pop(-1)
@@ -365,13 +370,14 @@ def compute_metrics(output, target, task, dev):
         closs[idx][0] = 1 - closs[idx][0]
     except:
         pass
-
-    print("Induction planes:")
+    
+    logger.info(f"Task: {task}")
+    logger.info("Induction planes:")
     for help, loss in zip(helps, iloss):
-        print(f"\t\t {help:10}: {loss[0]:.5} +- {loss[1]:.5}")
-    print("Collection planes:")
+        logger.info(f"\t\t {help:10}: {loss[0]:.5} +- {loss[1]:.5}")
+    logger.info("Collection planes:")
     for help, loss in zip(helps, closs):
-        print(f"\t\t {help:10}: {loss[0]:.5} +- {loss[1]:.5}")
+        logger.info(f"\t\t {help:10}: {loss[0]:.5} +- {loss[1]:.5}")
 
 
 # TODO: must fix argument passing in inference

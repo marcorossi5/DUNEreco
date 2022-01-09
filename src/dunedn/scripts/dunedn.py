@@ -5,7 +5,6 @@ from dunedn.preprocessing.preprocess import add_arguments_preprocessing
 from dunedn.training.denoise_training import add_arguments_training
 from dunedn.inference.inference import add_arguments_inference
 
-
 def main():
     parser = argparse.ArgumentParser(description="dunedn")
 
@@ -45,4 +44,4 @@ def main():
 
 # TODO: train subcommand missing
 # TODO: deal with the distributed training in a separated sub-package folder
-# TODO: (enachement) introduce the hpt (HyperParameterTuning) subcommand
+# TODO: (enhancement) introduce the hpt (HyperParameterTuning) subcommand
