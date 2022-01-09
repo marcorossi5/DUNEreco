@@ -39,7 +39,7 @@ def get_model_and_args(modeltype, task, channel, ckpt=None):
         - MyDataParallel, the loaded model
     """
     card_prefix = get_dunedn_path()
-    card = f"configcards/{modeltype}_{task}_{channel}_configcard.yaml"
+    card = f"configcards/{modeltype}_{task}_{channel}_config.yaml"
     parameters = load_yaml(card_prefix / card)
     parameters["channel"] = channel
     args = Args(**parameters)
