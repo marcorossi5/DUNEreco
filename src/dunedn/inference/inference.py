@@ -7,10 +7,14 @@ import logging
 from copy import deepcopy
 import numpy as np
 from pathlib import Path
+from dunedn.configdn import PACKAGE
 from dunedn.inference.hitreco import DnModel, compute_metrics
 
 THRESHOLD = 3.5  # the ADC threshold below which the output is put to zero
 # TODO: move this into some dunedn config file
+
+# instantiate logger
+logger = logging.getLogger(PACKAGE + ".inference")
 
 
 def add_arguments_inference(parser):
@@ -90,13 +94,13 @@ def inference_main(input, output, modeltype, ckpt, dev):
     -------
         - np.array, ouptut event of shape=(nb wires, nb tdc ticks)
     """
-    logging.info(f"Denoising event at {input}")
+    logger.info(f"Denoising event at {input}")
     evt = np.load(input)[:, 2:]
     model = DnModel(modeltype, ckpt)
 
     evt_dn = model.inference(evt, dev)
     np.save(output, evt_dn)
-    logging.info(f"Saved output event at {output.stem}.npy")
+    logger.info(f"Saved output event at {output.stem}.npy")
     return evt_dn
 
 

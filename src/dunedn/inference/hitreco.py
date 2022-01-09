@@ -28,6 +28,7 @@ ModelTuple = collections.namedtuple("Model", ["induction", "collection"])
 # tuple containing induction and collection inference arguments
 ArgsTuple = collections.namedtuple("Args", ["batch_size", "patch_stride", "crop_size"])
 
+task_dict = {"dn": "Denoising", "ROI": "Region of interest selection"}
 
 def get_model_and_args(modeltype, task, channel, ckpt=None):
     """
@@ -356,12 +357,10 @@ def compute_metrics(output, target, task, dev):
         print_cfnm(closs[-1], "collection")
         closs.pop(-1)
 
-    def reduce(loss):
-        sqrtn = sqrt(len(loss))
-        return [loss.mean(), loss.std() / sqrtn]
+    reduce_fn = lambda x: [x.mean(), x.std() / sqrt(len(x))]
 
-    iloss = list(map(reduce, iloss))
-    closs = list(map(reduce, closs))
+    iloss = list(map(reduce_fn, iloss))
+    closs = list(map(reduce_fn, closs))
 
     # loss_ssim computes 1-ssim, print ssim instead
     try:
@@ -371,13 +370,21 @@ def compute_metrics(output, target, task, dev):
     except:
         pass
     
-    logger.info(f"Task: {task}")
-    logger.info("Induction planes:")
-    for help, loss in zip(helps, iloss):
-        logger.info(f"\t\t {help:10}: {loss[0]:.5} +- {loss[1]:.5}")
-    logger.info("Collection planes:")
-    for help, loss in zip(helps, closs):
-        logger.info(f"\t\t {help:10}: {loss[0]:.5} +- {loss[1]:.5}")
+    # loop message function
+    msg = "%10s: %.5f +- %.5f"
+    loop_fn = lambda x: [msg % (h, l[0], l[1]) for h, l in zip(helps, x)]
+    
+    msgs = []
+
+    msgs.append(f"{task_dict[task]}: metrics computation")
+    msgs.append("Induction planes:")
+    msgs.extend(loop_fn(iloss))
+    msgs.append("Collection planes:")
+    msgs.extend(loop_fn(closs))
+
+    # log the messages
+    logger.info("\n".join(msgs))
+    
 
 
 # TODO: must fix argument passing in inference
