@@ -504,16 +504,16 @@ def train(args, train_data, val_data, model):
                 best_model_name = fname
                 bname = args.dir_final_test / "best_model.txt"
                 with open(bname, "w") as f:
-                    f.write(fname)
+                    f.write(fname.as_posix())
                     f.close()
                 if (not args.scan) and args.rank == 0:
-                    logger.info("updated best model at: ", bname)
+                    logger.info(f"Updated best model at: {bname}")
             if args.save and args.rank == 0:
                 fname = (
                     args.dir_saved_models / f"{args.model}_{task}_{channel}_{epoch}.dat"
                 )
                 if not args.scan:
-                    logger.info("saved model at: %s" % fname)
+                    logger.info(f"Saved model at: {fname}")
             if args.rank == 0:
                 torch.save(model.state_dict(), fname)
 
