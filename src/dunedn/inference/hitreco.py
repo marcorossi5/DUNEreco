@@ -16,7 +16,7 @@ from dunedn.training.dataloader import InferenceLoader, InferenceCropLoader
 from dunedn.training.train import inference, identity_inference, gcnn_inference
 from dunedn.training.losses import get_loss
 from dunedn.utils.utils import load_yaml, median_subtraction
-from dunedn.configdn import get_dunedn_path
+from dunedn.configdn import get_configcard_path
 from dunedn.geometry.helpers import evt2planes, planes2evt
 
 # instantiate logger
@@ -44,11 +44,11 @@ def get_model_and_args(modeltype, task, channel, ckpt=None):
         - ArgsTuple, tuple containing induction and collection inference arguments
         - MyDataParallel, the loaded model
     """
-    card_prefix = get_dunedn_path()
-    card = f"configcards/{modeltype}_{task}_{channel}_configcard.yaml"
-    parameters = load_yaml(card_prefix / card)
-    parameters["channel"] = channel
-    args = Args(**parameters)
+    card = f"{modeltype}_{task}_{channel}_config.yaml"
+    config_path = get_configcard_path(card)
+    params = load_yaml(config_path)
+    params["channel"] = channel
+    args = Args(**params)
 
     crop_size = None if modeltype == "uscg" else args.crop_size
     patch_stride = args.patch_stride if modeltype == "uscg" else None

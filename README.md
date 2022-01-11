@@ -34,7 +34,6 @@ The package can be installed with Python's pip package manager:
 git clone https://github.com/marcorossi5/DUNEdn.git
 cd DUNEdn
 pip install .
-export DUNEDN_PATH=$PWD
 ```
 
 This process will copy the DUNEdn program to your environment python path.
@@ -92,7 +91,9 @@ folder contains some examples. These can be extended providing the path to user
 defined cards directly to the command line interface.
 
 Setting the `DUNEDN_SEARCH_PATH` environment variable it is possible to let DUNEdn
-looking for configcards into different directories automatically. More on the search behavior can be found at the `get_configcard_path` function's docstring in the [utils/ultis.py](src/dunedn/utils/utils.py) file.
+looking for configcards into different directories automatically. More on the
+search behavior can be found at the `get_configcard_path` function's docstring
+in the [utils/ultis.py](src/dunedn/utils/utils.py) file.
 
 ### Preprocess a dataset
 
@@ -145,6 +146,9 @@ the correspondent model with:
 dunedn train <configcard.yaml>
 ```
 
+The output directory is set by default to `output`. Optionally, the
+`DUNEDN_OUTPUT_PATH` environment variable could be set to override this choice.
+
 ### Inference
 
 ```bash
@@ -170,5 +174,6 @@ On the other hand, if `--model_path` is not specified, an un-trained networks is
 
 ### Benchmark
 
-The paper results can be reproduced through the [compute_denoising_performance.py](benchmarks/compute_denoising_performance.py) benchmark.  
+The paper results can be reproduced through the
+[compute_denoising_performance.py](benchmarks/compute_denoising_performance.py) benchmark.  
 Please, see the script's docstring for further information.

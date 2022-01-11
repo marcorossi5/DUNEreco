@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from datetime import datetime as dtm
 from dunedn.configdn import PACKAGE
-from dunedn.configdn import get_dunedn_path
+from dunedn.configdn import get_output_path
 from dunedn.utils.utils import check
 import shutil
 
@@ -54,7 +54,7 @@ class Args:
                 logger.info(f"Creating output directory at {output}")
         else:
             date = dtm.now().strftime("%y%m%d_%H%M%S")
-            output = get_dunedn_path().parent / f"output/{date}/{self.channel}"
+            output = get_output_path() / f"{date}/{self.channel}"
             logger.info(f"Creating output directory at {output}")
 
         self.dir_output = output

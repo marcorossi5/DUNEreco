@@ -36,21 +36,20 @@ _console_handler.setFormatter(_console_format)
 logger.addHandler(_console_handler)
 
 
-def get_dunedn_path():
+def get_output_path():
     """
-    Loads DUNEdn package source directory path from environment variable.
+    Gets the DUNEdn output directory path from DUNEDN_OUTPUT_PATH environment
+    variable. If the variable is not set, it returns `output` by default.
 
     Returns
     -------
-        - Path, the path to DUNEdn package source directory
+        - Path, the path to output directory
     """
-    root = Path(os.environ.get("DUNEDN_PATH"))
+    root = Path(os.environ.get("DUNEDN_OUTPUT_PATH"))
     if root is not None:
         return root
     else:
-        error_msg = f"""
-Please, make the environment variable DUNEDN_PATH point to the DUNEdn repository root directory"""
-        raise RuntimeError(error_msg)
+        return Path("output")
 
 
 def get_dunedn_search_path():
@@ -59,7 +58,7 @@ def get_dunedn_search_path():
     Loads DUNEDN_SEARCH_PATH from environment variable (a colon separated
     list of folders).
     The first item is automatically set to the current directory.
-    The last item is fixed to the configcards folder in the DUNEdn package.
+    The last item is fixed to the configcards folder in the current directory.
 
     Set this variable with:
         `export DUNEDN_SEARCH_PATH=<new path>:$DUNEDN_SEARCH_PATH`
@@ -75,7 +74,7 @@ def get_dunedn_search_path():
     search_path.insert(0, ".")
 
     # append the configcards directory
-    search_path.append(get_dunedn_path() / "configcards")
+    search_path.append("./configcards")
 
     # remove duplicates
     search_path = list(dict.fromkeys(search_path))
