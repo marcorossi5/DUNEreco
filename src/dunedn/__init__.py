@@ -2,6 +2,6 @@
 # Put here functions or variables to be exposed
 # that way the log system is imported from the very beginning
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 # TODO: logging system

@@ -36,7 +36,9 @@ def get_dunedn_search_path():
         - list, of Path objects from DUNEDN_SEARCH_PATH
     """
     # get directories from colon separated list
-    search_path = os.environ.get("DUNEDN_SEARCH_PATH").split(":")
+    env_var = os.environ.get("DUNEDN_SEARCH_PATH")
+    search_path = [] if env_var is None else env_var.split(":")
+
     
     # prepend current directory
     search_path.insert(0, ".")
