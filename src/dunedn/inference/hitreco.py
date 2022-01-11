@@ -15,8 +15,7 @@ from dunedn.networks.GCNN_Net_utils import Converter
 from dunedn.training.dataloader import InferenceLoader, InferenceCropLoader
 from dunedn.training.train import inference, identity_inference, gcnn_inference
 from dunedn.training.losses import get_loss
-from dunedn.utils.utils import load_yaml, median_subtraction
-from dunedn.configdn import get_configcard_path
+from dunedn.utils.utils import load_yaml, median_subtraction, get_configcard_path
 from dunedn.geometry.helpers import evt2planes, planes2evt
 
 # instantiate logger

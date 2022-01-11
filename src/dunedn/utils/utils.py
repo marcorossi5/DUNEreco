@@ -1,7 +1,6 @@
 # This file is part of DUNEdn by M. Rossi
 """ This module contains utility functions of general interest. """
 import os
-from pathlib import Path
 import numpy as np
 import yaml
 from hyperopt import hp
