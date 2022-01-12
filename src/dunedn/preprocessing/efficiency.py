@@ -26,7 +26,9 @@ def draw_results(a, b, c, d):
     logger.info("------------------------------------------------")
     logger.info("|{:>20}|{:>12}|{:>12}|".format("", "Signal", "Background"))
     logger.info("------------------------------------------------")
-    logger.info("|{:>20}|{:>12.4e}|{:>12.4e}|".format("Predicted signal", a / tot, b / tot))
+    logger.info(
+        "|{:>20}|{:>12.4e}|{:>12.4e}|".format("Predicted signal", a / tot, b / tot)
+    )
     logger.info("------------------------------------------------")
     logger.info(
         "|{:>20}|{:>12.4e}|{:>12.4e}|".format("Predicted background", c / tot, d / tot)

@@ -29,6 +29,7 @@ ArgsTuple = collections.namedtuple("Args", ["batch_size", "patch_stride", "crop_
 
 task_dict = {"dn": "Denoising", "ROI": "Region of interest selection"}
 
+
 def get_model_and_args(modeltype, task, channel, ckpt=None):
     """
     Parameters
@@ -368,11 +369,11 @@ def compute_metrics(output, target, task, dev):
         closs[idx][0] = 1 - closs[idx][0]
     except:
         pass
-    
+
     # loop message function
     msg = "%10s: %.5f +- %.5f"
     loop_fn = lambda x: [msg % (h, l[0], l[1]) for h, l in zip(helps, x)]
-    
+
     msgs = []
 
     msgs.append(f"{task_dict[task]}: metrics computation")
@@ -383,7 +384,6 @@ def compute_metrics(output, target, task, dev):
 
     # log the messages
     logger.info("\n".join(msgs))
-    
 
 
 # TODO: must fix argument passing in inference

@@ -92,11 +92,13 @@ def confusion_matrix(hit, no_hit, t=0.5):
 
     return tp, fp, fn, tn
 
+
 import logging
 from dunedn.configdn import PACKAGE
 
 # instantiate logger
 logger = logging.getLogger(PACKAGE + ".train")
+
 
 def load_yaml(runcard_file):
     """Loads yaml runcard"""
@@ -129,7 +131,7 @@ def get_configcard_path(fname):
     """
     if fname.is_file():
         return fname
-    
+
     # get list of directories from DUNEDN_SEARCH_PATH env variable
     search_path = get_dunedn_search_path()
 

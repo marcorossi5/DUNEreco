@@ -45,7 +45,9 @@ class Args:
             output = self.output / f"{self.channel}"
             if output.is_dir():
                 if self.force:
-                    logger.warning(f"WARNING: Overwriting {output} directory with new model")
+                    logger.warning(
+                        f"WARNING: Overwriting {output} directory with new model"
+                    )
                     shutil.rmtree(output)
                 else:
                     logger.critical('Delete or run with "--force" to overwrite.')

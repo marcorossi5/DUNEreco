@@ -14,7 +14,10 @@ logger = logging.getLogger(PACKAGE + ".test")
 UscgArgsTuple = namedtuple("Args", ["model", "dev", "task", "patch_h", "patch_w"])
 
 # namedtuple for gcnn arguments
-GcnnArgsTuple = namedtuple("Args", ["model", "dev", "task", "crop_edge", "input_channels", "hidden_channels", "k"])
+GcnnArgsTuple = namedtuple(
+    "Args",
+    ["model", "dev", "task", "crop_edge", "input_channels", "hidden_channels", "k"],
+)
 
 
 def run_test_uscg():
@@ -26,9 +29,9 @@ def run_test_uscg():
 
     # load dummy dataset
     dummy_dataset = torch.rand(batch_size, 1, patch_h, patch_w)
-    
+
     # load cnn model
-    args =  UscgArgsTuple("uscg", "cpu", "dn", patch_h, patch_w)
+    args = UscgArgsTuple("uscg", "cpu", "dn", patch_h, patch_w)
     model = get_model_from_args(args)
     model.eval()
 
@@ -39,14 +42,16 @@ def run_test_uscg():
     try:
         assert dummy_dataset.shape == output.shape
     except AssertionError as err:
-        logger.critical("Assertion fail: uscg model input and output shapes do not match")
+        logger.critical(
+            "Assertion fail: uscg model input and output shapes do not match"
+        )
         raise err
 
 
 def run_test_gcnn(modeltype):
     """
     Run GCNN-like network test.
-    
+
     Parameters
     ----------
         - modeltype: str, available options cnn | gcnn
@@ -56,12 +61,12 @@ def run_test_gcnn(modeltype):
     crop_edge = 32
     input_channels = 1
     k = 8 if modeltype == "gcnn" else None
-    
+
     # load dummy dataset
     dummy_dataset = torch.rand(batch_size, input_channels, crop_edge, crop_edge)
-    
+
     # load cnn model
-    args =  GcnnArgsTuple(modeltype, "cpu", "dn", crop_edge, input_channels, 32, k)
+    args = GcnnArgsTuple(modeltype, "cpu", "dn", crop_edge, input_channels, 32, k)
     model = get_model_from_args(args)
     model.eval()
 
@@ -72,7 +77,9 @@ def run_test_gcnn(modeltype):
     try:
         assert dummy_dataset.shape == output.shape
     except AssertionError as err:
-        logger.critical(f"Assertion fail: {model} model input and output shapes do not match")
+        logger.critical(
+            f"Assertion fail: {model} model input and output shapes do not match"
+        )
         raise err
 
 
@@ -94,6 +101,7 @@ def run_test(modeltype):
 def test_networks():
     for modeltype in get_supported_models():
         run_test(modeltype)
+
 
 if __name__ == "__main__":
     test_networks()

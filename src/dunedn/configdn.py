@@ -4,10 +4,15 @@ from pathlib import Path
 import logging
 
 # set package name
-PACKAGE = __name__.split(".")[0] # "dunedn"
+PACKAGE = __name__.split(".")[0]  # "dunedn"
 
 # Log levels
-LOG_DICT = {"0": logging.ERROR, "1": logging.WARNING, "2": logging.INFO, "3": logging.DEBUG}
+LOG_DICT = {
+    "0": logging.ERROR,
+    "1": logging.WARNING,
+    "2": logging.INFO,
+    "3": logging.DEBUG,
+}
 
 # Read the PDFFLOW environment variables
 _log_level_idx = os.environ.get("DUNEDN_LOG_LEVEL")
@@ -69,7 +74,7 @@ def get_dunedn_search_path():
     """
     # get directories from colon separated list
     search_path = os.environ.get("DUNEDN_SEARCH_PATH").split(":")
-    
+
     # prepend current directory
     search_path.insert(0, ".")
 
@@ -81,4 +86,3 @@ def get_dunedn_search_path():
 
     # turn elements into Path objects
     return list(map(Path, search_path))
-    

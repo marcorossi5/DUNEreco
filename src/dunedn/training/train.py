@@ -483,7 +483,9 @@ def train(args, train_data, val_data, model):
             time_test.append(t)
             if args.rank == 0:
                 if args.task == "roi":
-                    logger.info(f"Test loss on {channel:10} APAs: {x[0]:.5} +- {x[1]:.5}")
+                    logger.info(
+                        f"Test loss on {channel:10} APAs: {x[0]:.5} +- {x[1]:.5}"
+                    )
                 if args.task == "dn":
                     logger.info(
                         f"Test on {channel:10} APAs: {'loss:':7} {x[0]:.5} +- {x[1]:.5}\n\

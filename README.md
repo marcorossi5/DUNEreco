@@ -55,7 +55,9 @@ DUNEdn requires the following packages:
 - python3
 - numpy
 - pytorch
+- torchvision
 - matplotlib
+- hyperopt
 
 ## Running the code
 

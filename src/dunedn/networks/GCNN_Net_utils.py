@@ -296,7 +296,9 @@ def print_cm(a, f, epoch):
         file=f,
     )
     logger.info("------------------------------------------------", file=f)
-    logger.info("{:>21}|{:>12}|{:>12}|".format("", "Sensitivity", "Specificity"), file=f)
+    logger.info(
+        "{:>21}|{:>12}|{:>12}|".format("", "Sensitivity", "Specificity"), file=f
+    )
     logger.info("                     ---------------------------", file=f)
     logger.info(
         "{:>21}|{:>12.4e}|{:>12.4e}|".format(

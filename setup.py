@@ -4,9 +4,10 @@ from sys import version_info
 import os
 import re
 
-requirements = ["numpy", "pyyaml", "torch", "torchvision", "matplotlib"]
+requirements = ["numpy", "pyyaml", "torch", "torchvision", "matplotlib", "hyperopt"]
 
 PACKAGE = "dunedn"
+
 
 def get_version():
     """Gets the version from the package's __init__ file
