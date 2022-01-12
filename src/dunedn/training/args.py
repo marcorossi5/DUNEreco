@@ -2,11 +2,16 @@
 """
     This module contains the Args class, that keeps track of all runtime settings.
 """
+import logging
 from pathlib import Path
 from datetime import datetime as dtm
-from dunedn.configdn import get_dunedn_path
-from dunedn.utils.utils import check
 import shutil
+from dunedn.configdn import PACKAGE
+from dunedn.configdn import get_output_path
+from dunedn.utils.utils import check
+
+# instantiate logger
+logger = logging.getLogger(PACKAGE)
 
 
 class Args:
@@ -30,7 +35,15 @@ class Args:
         self.dataset_dir = Path(self.dataset_dir)
         self.crop_size = (self.crop_edge,) * 2
 
-        self.load = False if (self.load_path is None) else True
+        self.load = self.load_path is not None
+
+        # build directories
+        self.dir_output = None
+        self.dir_timings = None
+        self.dir_testing = None
+        self.dir_final_test = None
+        self.dir_metrics = None
+        self.dir_saved_models = None
 
     def build_directories(self):
         """
@@ -40,17 +53,19 @@ class Args:
             output = self.output / f"{self.channel}"
             if output.is_dir():
                 if self.force:
-                    print(f"WARNING: Overwriting {output} directory with new model")
+                    logger.warning(
+                        "Overwriting %s directory with new model", output.as_posix()
+                    )
                     shutil.rmtree(output)
                 else:
-                    print('Delete or run with "--force" to overwrite.')
+                    logger.critical('Delete or run with "--force" to overwrite.')
                     exit(-1)
             else:
-                print(f"[+] Creating output directory at {output}")
+                logger.info("Creating output directory at %s", output.as_posix())
         else:
             date = dtm.now().strftime("%y%m%d_%H%M%S")
-            output = get_dunedn_path().parent / f"output/{date}/{self.channel}"
-            print(f"[+] Creating output directory at {output}")
+            output = get_output_path() / f"{date}/{self.channel}"
+            logger.info("Creating output directory at %s", output.as_posix())
 
         self.dir_output = output
 

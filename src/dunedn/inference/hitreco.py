@@ -2,10 +2,12 @@
 """
     This module contains utility functions for the inference step.
 """
+import logging
 import collections
 from math import sqrt
 import torch
 from torch.utils.data import DataLoader
+from dunedn.configdn import PACKAGE
 from dunedn.training.args import Args
 from dunedn.networks.helpers import get_model_from_args
 from dunedn.networks.model_utils import model2batch
@@ -13,15 +15,19 @@ from dunedn.networks.GCNN_Net_utils import Converter
 from dunedn.training.dataloader import InferenceLoader, InferenceCropLoader
 from dunedn.training.train import inference, identity_inference, gcnn_inference
 from dunedn.training.losses import get_loss
-from dunedn.utils.utils import load_yaml, median_subtraction
-from dunedn.configdn import get_dunedn_path
+from dunedn.utils.utils import load_yaml, median_subtraction, get_configcard_path
 from dunedn.geometry.helpers import evt2planes, planes2evt
+
+# instantiate logger
+logger = logging.getLogger(PACKAGE + ".inference")
 
 # tuple containing induction and collection models
 ModelTuple = collections.namedtuple("Model", ["induction", "collection"])
 
 # tuple containing induction and collection inference arguments
 ArgsTuple = collections.namedtuple("Args", ["batch_size", "patch_stride", "crop_size"])
+
+task_dict = {"dn": "Denoising", "ROI": "Region of interest selection"}
 
 
 def get_model_and_args(modeltype, task, channel, ckpt=None):
@@ -38,11 +44,11 @@ def get_model_and_args(modeltype, task, channel, ckpt=None):
         - ArgsTuple, tuple containing induction and collection inference arguments
         - MyDataParallel, the loaded model
     """
-    card_prefix = get_dunedn_path()
-    card = f"configcards/{modeltype}_{task}_{channel}_config.yaml"
-    parameters = load_yaml(card_prefix / card)
-    parameters["channel"] = channel
-    args = Args(**parameters)
+    card = f"{modeltype}_{task}_{channel}_config.yaml"
+    config_path = get_configcard_path(card)
+    params = load_yaml(config_path)
+    params["channel"] = channel
+    args = Args(**params)
 
     crop_size = None if modeltype == "uscg" else args.crop_size
     patch_stride = args.patch_stride if modeltype == "uscg" else None
@@ -312,11 +318,11 @@ def print_cfnm(cfnm, channel):
         - channel: str, available options readout | collection
     """
     tp, fp, fn, tn = cfnm
-    print(f"Confusion Matrix on {channel} planes:")
-    print(f"\tTrue positives: {tp[0]:.3f} +- {tp[1]:.3f}")
-    print(f"\tTrue negatives: {tn[0]:.3f} +- {tn[1]:.3f}")
-    print(f"\tFalse positives: {fp[0]:.3f} +- {fp[1]:.3f}")
-    print(f"\tFalse negatives: {fn[0]:.3f} +- {fn[1]:.3f}")
+    logger.info(f"Confusion Matrix on {channel} planes:")
+    logger.info(f"\tTrue positives: {tp[0]:.3f} +- {tp[1]:.3f}")
+    logger.info(f"\tTrue negatives: {tn[0]:.3f} +- {tn[1]:.3f}")
+    logger.info(f"\tFalse positives: {fp[0]:.3f} +- {fp[1]:.3f}")
+    logger.info(f"\tFalse negatives: {fn[0]:.3f} +- {fn[1]:.3f}")
 
 
 def compute_metrics(output, target, task, dev):
@@ -344,19 +350,17 @@ def compute_metrics(output, target, task, dev):
     itarget, ctarget = to_dev(*evt2planes(target), dev=dev)
     iloss = list(map(lambda x: x(ioutput, itarget), metrics_fns))
     closs = list(map(lambda x: x(coutput, ctarget), metrics_fns))
-    print(f"Task {task}")
+
     if task == "roi":
         print_cfnm(iloss[-1], "induction")
         iloss.pop(-1)
         print_cfnm(closs[-1], "collection")
         closs.pop(-1)
 
-    def reduce(loss):
-        sqrtn = sqrt(len(loss))
-        return [loss.mean(), loss.std() / sqrtn]
+    reduce_fn = lambda x: [x.mean(), x.std() / sqrt(len(x))]
 
-    iloss = list(map(reduce, iloss))
-    closs = list(map(reduce, closs))
+    iloss = list(map(reduce_fn, iloss))
+    closs = list(map(reduce_fn, closs))
 
     # loss_ssim computes 1-ssim, print ssim instead
     try:
@@ -366,12 +370,20 @@ def compute_metrics(output, target, task, dev):
     except:
         pass
 
-    print("Induction planes:")
-    for help, loss in zip(helps, iloss):
-        print(f"\t\t {help:10}: {loss[0]:.5} +- {loss[1]:.5}")
-    print("Collection planes:")
-    for help, loss in zip(helps, closs):
-        print(f"\t\t {help:10}: {loss[0]:.5} +- {loss[1]:.5}")
+    # loop message function
+    msg = "%10s: %.5f +- %.5f"
+    loop_fn = lambda x: [msg % (h, l[0], l[1]) for h, l in zip(helps, x)]
+
+    msgs = []
+
+    msgs.append(f"{task_dict[task]}: metrics computation")
+    msgs.append("Induction planes:")
+    msgs.extend(loop_fn(iloss))
+    msgs.append("Collection planes:")
+    msgs.extend(loop_fn(closs))
+
+    # log the messages
+    logger.info("\n".join(msgs))
 
 
 # TODO: must fix argument passing in inference

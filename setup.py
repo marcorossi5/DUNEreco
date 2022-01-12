@@ -4,8 +4,7 @@ from sys import version_info
 import os
 import re
 
-
-requirements = ["numpy", "pyyaml", "torch"]
+requirements = ["numpy", "pyyaml", "torch", "torchvision", "matplotlib", "hyperopt"]
 
 PACKAGE = "dunedn"
 
@@ -34,10 +33,12 @@ setup(
     author="M. Rossi",
     author_email="marco.rossi@cern.ch",
     url="https://github.com/marcorossi5/DUNEdn.git",
+    download_url="https://github.com/marcorossi5/DUNEdn/archive/refs/tags/1.0.0.tar.gz",
     entry_points={"console_scripts": ["dunedn = dunedn.scripts.dunedn:main"]},
     package_dir={"": "src"},
     packages=find_packages("src"),
     zip_safe=False,
+    install_requires=requirements,
     classifiers=[
         "Operating System :: Unix",
         "Programming Language :: Python",

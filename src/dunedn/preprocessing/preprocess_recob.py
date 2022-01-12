@@ -2,34 +2,29 @@
 """ This module returns the ROIs from recob::hit objects"""
 import os
 import argparse
-import numpy as np
+import logging
 import glob
-import time as tm
+from time import time as tm
+import numpy as np
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--dirname",
-    "-p",
-    default="../datasets/backup/test/benchmark",
-    type=str,
-    help="Directory path to datasets",
-)
+# instantiate logger
+logger = logging.getLogger(__name__)
 
-N_CHANNELS = 2560
-N_INDUCTION = 800
-N_COLLECTION = 960
-N_APAS = 6
-N_TICKS = 6000
+n_channels = 2560
+n_induction = 800
+n_collection = 960
+n_apas = 6
+n_ticks = 6000
 
 
 def process_hits(fname):
     hits = np.load(os.path.join(fname))
 
-    ROIs = np.zeros((N_APAS, N_COLLECTION, N_TICKS))
+    ROIs = np.zeros((n_apas, n_collection, n_ticks))
 
-    for apa in range(N_APAS):
-        first_ch = N_CHANNELS * apa + 2 * N_INDUCTION
-        last_ch = N_CHANNELS * (apa + 1)
+    for apa in range(n_apas):
+        first_ch = n_channels * apa + 2 * n_induction
+        last_ch = n_channels * (apa + 1)
         mask = np.logical_and(hits[:, 0] >= first_ch, hits[:, 0] < last_ch)
 
         for hit in hits[mask]:
@@ -42,10 +37,10 @@ def process_wires(fname):
     wires = np.load(os.path.join(fname))
 
     coll_wires = []
-    for apa in range(N_APAS):
-        coll_wire = np.zeros((N_COLLECTION, N_TICKS))
-        first_ch = N_CHANNELS * apa + 2 * N_INDUCTION
-        last_ch = N_CHANNELS * (apa + 1)
+    for apa in range(n_apas):
+        coll_wire = np.zeros((n_collection, n_ticks))
+        first_ch = n_channels * apa + 2 * n_induction
+        last_ch = n_channels * (apa + 1)
         mask = np.logical_and(wires[:, 1] >= first_ch, wires[:, 1] < last_ch)
 
         valid = wires[mask]
@@ -57,10 +52,10 @@ def process_wires(fname):
 
 def process_hits_and_dump(dirname):
     """
-    Processes hits to cast them into an array of shape (N_CHANNELS, N_TICKS).
+    Processes hits to cast them into an array of shape (n_channels, n_ticks).
     Saves an array named collection_hits in benchmark/hits folder with all
     collection region of interests in the datasetto be used as a benchmark.
-    Shape: (ALL_APAS, N_COLLECTION, N_TICKS)
+    Shape: (ALL_APAS, n_collection, n_ticks)
     """
     input_dir = os.path.join(dirname, "pandora_out")
     output_dir = os.path.join(dirname, "hits")
@@ -79,7 +74,7 @@ def process_wires_and_dump(dirname):
     """
     Saves all collection planes array into benchmark/wires folder.
     Saves arrays named ..._collection.npy into benchmark/pandora_out folder.
-    Shape: (ALL_APAS, N_COLLECTION, N_TICKS)
+    Shape: (ALL_APAS, n_collection, n_ticks)
 
     Note: the ADC counts are normalized arbitrarily
     """
@@ -102,7 +97,14 @@ def main(dirname):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--dirname",
+        "-p",
+        default="../datasets/backup/test/benchmark",
+        help="Directory path to datasets",
+    )
     args = vars(parser.parse_args())
-    START = tm.time()
+    start = tm()
     main(**args)
-    print("Program done in %f" % (tm.time() - START))
+    logger.info("Program done in %f", tm() - start)

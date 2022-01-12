@@ -1,3 +1,24 @@
+"""
+    This script is the DUNEdn package entry point. Parses the subcommands from
+    command line and calls the appropriate function to run.
+
+    Main help output:
+
+    ```
+    usage: dunedn [-h] {preprocess,train,training,inference,infer} ...
+
+    dunedn
+
+    positional arguments:
+      {preprocess,train,training,inference,infer}
+        preprocess          preprocess dataset of protodune events
+        train (training)    train model loading settings from configcard
+        inference (infer)   load event and make inference with saved model
+
+    optional arguments:
+      -h, --help            show this help message and exit
+    ```
+"""
 # This file is part of DUNEdn by M. Rossi
 import argparse
 from time import time as tm
@@ -7,6 +28,7 @@ from dunedn.inference.inference import add_arguments_inference
 
 
 def main():
+    """ Defines the DUNEdn main entry point. """
     parser = argparse.ArgumentParser(description="dunedn")
 
     subparsers = parser.add_subparsers()
@@ -43,6 +65,5 @@ def main():
     print(f"Program done in {tm()-start} s")
 
 
-# TODO: train subcommand missing
 # TODO: deal with the distributed training in a separated sub-package folder
-# TODO: (enachement) introduce the hpt (HyperParameterTuning) subcommand
+# TODO: (enhancement) introduce the hpt (HyperParameterTuning) subcommand
