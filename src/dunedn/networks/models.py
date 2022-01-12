@@ -161,9 +161,9 @@ class USCG_Net(nn.Module):
         )
         self.upsamples = nn.ModuleList(
             [
-                Pooling_Block(1, ceil(h / 32), ceil(w / 32)),
-                Pooling_Block(1, ceil(h / 8), ceil(w / 8)),
-                Pooling_Block(1, h, w),
+                Pooling_Block(1, ceil(self.h / 32), ceil(self.w / 32)),
+                Pooling_Block(1, ceil(self.h / 8), ceil(self.w / 8)),
+                Pooling_Block(1, self.h, self.w),
             ]
         )
         self.GCNs = nn.Sequential(
@@ -212,7 +212,7 @@ class USCG_Net(nn.Module):
             ys.append(adapt(x))
 
         # Graph
-        B, C, H, W = x.size()
+        B, C, _, _ = x.size()
         A, x, loss, z_hat = self.scg(x)
         x, _ = self.GCNs((x.reshape(B, -1, C), A))
         if self.aux_pred:
@@ -227,7 +227,7 @@ class USCG_Net(nn.Module):
 
         if self.training:
             return self.act(x * i), loss
-        return self.act(x * i).cpu().data
+        return self.act(x * i)
 
 
 # TODO: check that for training, the median normalization is done outside the

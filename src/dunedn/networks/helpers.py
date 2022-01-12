@@ -8,6 +8,20 @@ from dunedn.networks.models import USCG_Net, GCNN_Net
 from dunedn.networks.model_utils import MyDataParallel
 
 
+supported_models = ["uscg", "cnn", "gcnn"]
+
+
+def get_supported_models():
+    """
+    Gets the names of the supported models.
+
+    Returns
+    -------
+        - list, the list of currently implemented models
+    """
+    return supported_models
+
+
 def get_model(modeltype, **args):
     """
     Utility function to retrieve model from model name and args.
@@ -35,11 +49,33 @@ def get_model(modeltype, **args):
 
 def get_model_from_args(args):
     """
-    Load model from args.
+    Load model from argument object. The arguments' model attribute contains the
+    name of the network to be loaded.
+
+    Model independent attributes:
+        - model: str, available options cnn | gcnn
+        - dev: str, device hosting computation
+
+    Model dependent attributes.
+
+    args.model is 'uscg'
+    Attributes:
+        - model: str, available options cnn | gcnn
+        - dev: str, device hosting computation
+        - task: str, available options dn | roi
+        - h: int, input image height
+        - w: int, input image width
+
+    args.model is one of 'cnn' | 'gcnn'
+    Attributes:
+        - task: str, available options dn | roi
+        - crop_edge: int, crop edge size
+        - input_channels: int, inputh channel dimension size
+        - hidden_channels: int, convolutions hidden filters number
+        - k: int, nearest neighbor number. None if model is cnn
 
     Parameters
     ----------
-        - modeltype: str, available options cnn | gcnn | uscg
         - args: Args, runtime settings
 
     Returns

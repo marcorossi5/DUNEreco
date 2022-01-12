@@ -24,12 +24,6 @@ def add_arguments_preprocessing(parser):
     parser.add_argument(
         "--save_sample", action="store_true", help="extract a smaller dataset"
     )
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="print processing status information",
-    )
     parser.set_defaults(func=preprocess)
 
 
@@ -41,7 +35,7 @@ def preprocess(args):
     ----------
         - args: NameSpace object, command line parsed arguments. It should
                 contain configcard file name, dataset directory path, plus
-                save_sample and verbose force boolean options.
+                save_sample boolean options.
     """
     config_path = get_configcard_path(args.configcard)
     params = load_yaml(config_path)
@@ -50,12 +44,11 @@ def preprocess(args):
         params["nb_crops"],
         params["crop_edge"],
         params["pct"],
-        args.verbose,
         args.save_sample,
     )
 
 
-def preprocess_main(dir_name, nb_crops, crop_edge, pct, verbose, save_sample):
+def preprocess_main(dir_name, nb_crops, crop_edge, pct, save_sample):
     """
     Preprocessing main function. Loads an input event from file, makes inference and
     saves the ouptut. Eventually returns the output array.
@@ -66,7 +59,6 @@ def preprocess_main(dir_name, nb_crops, crop_edge, pct, verbose, save_sample):
         - nb_crops: int, number of crops from each plane
         - crop_edge: int, crop edge size
         - pct: float, signal / background crop balance
-        - verbose: bool, wether to print processing status information
         - save_sample: bool, wether to extract a smaller dataset
 
     Returns
@@ -79,7 +71,7 @@ def preprocess_main(dir_name, nb_crops, crop_edge, pct, verbose, save_sample):
         (dname / "planes").mkdir(parents=True, exist_ok=True)
         if folder == "train":
             (dname / "crops").mkdir(exist_ok=True)
-        get_planes_and_dump(dname, verbose, save_sample)
+        get_planes_and_dump(dname, save_sample)
     for channel in ["induction", "collection"]:
         save_normalization_info(dir_name, channel)
-    crop_planes_and_dump(dir_name / "train", nb_crops, crop_size, pct, verbose)
+    crop_planes_and_dump(dir_name / "train", nb_crops, crop_size, pct)

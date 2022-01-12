@@ -1,10 +1,14 @@
 # This file is part of DUNEdn by M. Rossi
 import os
+import logging
 import argparse
 from time import time as tm
 import numpy as np
 import torch
 from skimage.feature import canny
+
+# instantiate logger
+logger = logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -18,20 +22,22 @@ parser.add_argument(
 
 def draw_results(a, b, c, d):
     tot = a + b + c + d
-    print("Over a total of %d pixels:\n" % tot)
-    print("------------------------------------------------")
-    print("|{:>20}|{:>12}|{:>12}|".format("", "Signal", "Background"))
-    print("------------------------------------------------")
-    print("|{:>20}|{:>12.4e}|{:>12.4e}|".format("Predicted signal", a / tot, b / tot))
-    print("------------------------------------------------")
-    print(
+    logger.info("Over a total of %d pixels:\n", tot)
+    logger.info("------------------------------------------------")
+    logger.info("|{:>20}|{:>12}|{:>12}|".format("", "Signal", "Background"))
+    logger.info("------------------------------------------------")
+    logger.info(
+        "|{:>20}|{:>12.4e}|{:>12.4e}|".format("Predicted signal", a / tot, b / tot)
+    )
+    logger.info("------------------------------------------------")
+    logger.info(
         "|{:>20}|{:>12.4e}|{:>12.4e}|".format("Predicted background", c / tot, d / tot)
     )
-    print("------------------------------------------------")
-    print("{:>21}|{:>12}|{:>12}|".format("", "Sensitivity", "Specificity"))
-    print("                     ---------------------------")
-    print("{:>21}|{:>12.4e}|{:>12.4e}|".format("", a / (a + c), d / (b + d)))
-    print("                     ---------------------------\n")
+    logger.info("------------------------------------------------")
+    logger.info("{:>21}|{:>12}|{:>12}|".format("", "Sensitivity", "Specificity"))
+    logger.info("                     ---------------------------")
+    logger.info("{:>21}|{:>12.4e}|{:>12.4e}|".format("", a / (a + c), d / (b + d)))
+    logger.info("                     ---------------------------\n")
 
 
 def main(dir_name):
@@ -56,7 +62,7 @@ def main(dir_name):
             fn = (d[d == 10].shape)[0]
             fp = (d[d == -1].shape)[0]
 
-            print("".join(["\n", s, ss]))
+            logger.info("".join(["\n", s, ss]))
             draw_results(tp, fp, fn, tn)
 
 
@@ -64,4 +70,4 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
     start = tm()
     main(**args)
-    print("\nProgram done in %f" % (tm() - start))
+    logger.info("\nProgram done in %f", (tm() - start))

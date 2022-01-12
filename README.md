@@ -1,8 +1,9 @@
 # DUNEdn
 
 [![arxiv](https://img.shields.io/badge/arXiv-hep--ph%2F2103.01596-%23B31B1B.svg)](https://arxiv.org/abs/2103.01596)
-
 [![DOI](https://zenodo.org/badge/248536693.svg)](https://zenodo.org/badge/latestdoi/248536693)
+
+![pytest](https://github.com/N3PDF/pdfflow/workflows/pytest/badge.svg)
 
 If you use this software please cite this [paper](https://doi.org/10.1007/s41781-021-00077-9)
 
@@ -34,12 +35,11 @@ The package can be installed with Python's pip package manager:
 git clone https://github.com/marcorossi5/DUNEdn.git
 cd DUNEdn
 pip install .
-export DUNEDN_PATH=$PWD
 ```
 
 This process will copy the DUNEdn program to your environment python path.
 
-### Note:
+### Note
 
 The [saved_models](saved_models) directory contains the checkpoints to reproduce
 the results presented in [arXiv:2103.01596](https://arxiv.org/abs/2103.01596).  
@@ -49,14 +49,16 @@ to download pointers to those large files rather than the whole binaries. This c
 be achieved adding the flag `--config lfs.fetchexclude="*.pth*"` to the `git clone`
 command above.
 
-### Requirements:
+### Requirements
 
 DUNEdn requires the following packages:
 
 - python3
 - numpy
 - pytorch
+- torchvision
 - matplotlib
+- hyperopt
 
 ## Running the code
 
@@ -92,7 +94,9 @@ folder contains some examples. These can be extended providing the path to user
 defined cards directly to the command line interface.
 
 Setting the `DUNEDN_SEARCH_PATH` environment variable it is possible to let DUNEdn
-looking for configcards into different directories automatically. More on the search behavior can be found at the `get_configcard_path` function's docstring in the [utils/ultis.py](src/dunedn/utils/utils.py) file.
+looking for configcards into different directories automatically. More on the
+search behavior can be found at the `get_configcard_path` function's docstring
+in the [utils/ultis.py](src/dunedn/utils/utils.py) file.
 
 ### Preprocess a dataset
 
@@ -145,6 +149,9 @@ the correspondent model with:
 dunedn train <configcard.yaml>
 ```
 
+The output directory is set by default to `output`. Optionally, the
+`DUNEDN_OUTPUT_PATH` environment variable could be set to override this choice.
+
 ### Inference
 
 ```bash
@@ -166,9 +173,10 @@ model_path
     |       |-- <ckpt directory name>_dn_induction.pth
 ```
 
-On the other hand, if `--model_path` is not specified, an un-trained networks is issued.
+On the other hand, if `--model_path` is not specified, an un-trained network is issued.
 
 ### Benchmark
 
-The paper results can be reproduced through the [compute_denoising_performance.py](benchmarks/compute_denoising_performance.py) benchmark.  
+The paper results can be reproduced through the
+[compute_denoising_performance.py](benchmarks/compute_denoising_performance.py) benchmark.  
 Please, see the script's docstring for further information.
