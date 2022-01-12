@@ -1,5 +1,5 @@
 # This file is part of DUNEdn by M. Rossi
-""" 
+"""
     This module implements several losses.
     Main option is reduction, which could be either 'mean' (default) or 'none'.
 """
@@ -30,15 +30,16 @@ class Loss(ABC):
         self.reduction = reduction
 
     @abstractmethod
-    def __call__(self, *args):
+    def __call__(self, y_pred, y_true):
         """ Compute the loss function"""
+        pass
 
 
-class Loss_mse(Loss):
+class LossMse(Loss):
     """ Mean squared error loss function."""
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
-        super().__init__(reduction=reduction)
+        super(LossMse, self).__init__(reduction=reduction)
         self.loss = nn.MSELoss(reduction="none")
 
     def __call__(self, y_pred, y_true):
@@ -51,15 +52,14 @@ class Loss_mse(Loss):
         loss = self.loss(y_pred, y_true)
         if self.reduction == "mean":
             return loss.mean()
-        elif self.reduction == "none":
-            return loss.reshape([loss.shape[0], -1]).mean(-1)
+        return loss.reshape([loss.shape[0], -1]).mean(-1)
 
 
-class Loss_imae(Loss):
+class LossImae(Loss):
     """ Mean absolute error on integrated charge loss function. """
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
-        super().__init__(reduction=reduction)
+        super(LossImae, self).__init__(reduction=reduction)
         self.loss = nn.L1Loss(reduction="none")
 
     def __call__(self, y_pred, y_true):
@@ -72,15 +72,14 @@ class Loss_imae(Loss):
         loss = self.loss(y_pred.sum(-1), y_true.sum(-1))
         if self.reduction == "mean":
             return loss.mean()
-        elif self.reduction == "none":
-            return loss.reshape([loss.shape[0], -1]).mean(-1)
+        return loss.reshape([loss.shape[0], -1]).mean(-1)
 
 
-class Loss_ssim(Loss):
+class LossSsim(Loss):
     """ Statistical structural similarity loss function. """
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
-        super().__init__(a, data_range, reduction)
+        super(LossSsim, self).__init__(a, data_range, reduction)
 
     def __call__(self, x_pred, y_true):
         """
@@ -94,11 +93,11 @@ class Loss_ssim(Loss):
         )
 
 
-class Loss_ssim_l2(Loss):
+class LossSsimL2(Loss):
     """ Stat ssim + MSE loss function. """
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
-        super().__init__(a, data_range, reduction)
+        super(LossSsimL2, self).__init__(a, data_range, reduction)
 
     def __call__(self, y_pred, y_true):
         """
@@ -117,11 +116,11 @@ class Loss_ssim_l2(Loss):
         return self.a * loss1 + (1 - self.a) * 1e-3 * loss2
 
 
-class Loss_ssim_l1(Loss):
+class LossSsimL1(Loss):
     """ Stat ssim + mean absolute error loss function. """
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
-        super().__init__(a, data_range, reduction)
+        super(LossSsimL1, self).__init__(a, data_range, reduction)
 
     def __call__(self, y_pred, y_true):
         """
@@ -142,37 +141,40 @@ class Loss_ssim_l1(Loss):
         return self.a * loss1 + (1 - self.a) * 1e-3 * loss2
 
 
-class Loss_bce(Loss):
+class LossBce(Loss):
     """ Binary cross entropy loss function. """
 
     def __init__(self, ratio=0.5, reduction="mean"):
         """
         Ratio is the number of positive against negative example in training
         set. It's used for reweighting the cross entropy
+
+        Parameters
+        ----------
+            - reduction: str, available options mean | sum | none
         """
-        super().__init__(0, 0, reduction)
+        super(LossBce, self).__init__(0, 0, reduction)
         self.ratio = ratio
 
-    def __call__(self, x_pred, y_true):
+    def __call__(self, y_pred, y_true):
         """
         Parameters
         ----------
-            - x_pred: torch.Tensor, of shape=(N,C,W,H)
+            - y_pred: torch.Tensor, of shape=(N,C,W,H)
             - y_true: torch.Tensor, of shape=(N,C,W,H)
         """
         log = lambda x: torch.log(x + EPS.to(x.device))
-        loss = -y_true * log(x_pred) / self.ratio - (1 - y_true) * log(1 - x_pred) / (
+        loss = -y_true * log(y_pred) / self.ratio - (1 - y_true) * log(1 - y_pred) / (
             1 - self.ratio
         )
         if self.reduction == "mean":
             return loss.mean()
         elif self.reduction == "sum":
             return loss.sum()
-        elif self.reduction == "none":
-            return loss
+        return loss
 
 
-class Loss_SoftDice(Loss):
+class LossSoftDice(Loss):
     """ Soft dice loss function. """
 
     def __init__(self, reduction="mean"):
@@ -180,7 +182,7 @@ class Loss_SoftDice(Loss):
         Reduction: str
             'mean' | 'none'
         """
-        super().__init__(0, 0, reduction)
+        super(LossSoftDice, self).__init__(0, 0, reduction)
 
     def dice(self, x, y):
         """
@@ -209,11 +211,10 @@ class Loss_SoftDice(Loss):
         loss = 1 - ratio
         if self.reduction == "mean":
             return loss.mean()
-        elif self.reduction == "none":
-            return loss
+        return loss
 
 
-class Loss_bce_dice(Loss):
+class LossBceDice(Loss):
     """ Binary xent + soft dice loss function. """
 
     def __init__(self, ratio=0.5, reduction="mean"):
@@ -221,9 +222,9 @@ class Loss_bce_dice(Loss):
         Reduction: str
             'mean' | 'none'
         """
-        super().__init__(0, 0, reduction)
-        self.bce = Loss_bce(ratio, reduction="none")
-        self.dice = Loss_SoftDice(reduction="none")
+        super(LossBceDice, self).__init__(0, 0, reduction)
+        self.bce = LossBce(ratio, reduction="none")
+        self.dice = LossSoftDice(reduction="none")
 
     def __call__(self, y_pred, y_true):
         """
@@ -238,15 +239,14 @@ class Loss_bce_dice(Loss):
         loss = bce + dice
         if self.reduction == "mean":
             return loss.mean()
-        elif self.reduction == "none":
-            return loss
+        return loss
 
 
-class Loss_psnr(Loss):
+class LossPsnr(Loss):
     """ Peak signal to noise ration function. """
 
     def __init__(self, reduction="mean"):
-        super().__init__(reduction=reduction)
+        super(LossPsnr, self).__init__(reduction=reduction)
         self.mse = nn.MSELoss(reduction="none")
 
     def __call__(self, y_noisy, y_clear):
@@ -265,11 +265,10 @@ class Loss_psnr(Loss):
         psnr = torch.where(m2 == 0, zero, 10 * torch.log10(m2 / mse))
         if self.reduction == "none":
             return psnr
-        elif self.reduction == "mean":
-            return psnr.mean()
+        return psnr.mean()
 
 
-class Loss_cfnm(Loss):
+class LossCfnm(Loss):
     """ Confusion matrix function. """
 
     def __init__(self, reduction="mean"):
@@ -315,28 +314,24 @@ def get_loss(loss):
           ["mse", "imae", "ssim", "ssim_l2", "ssim_l1", "bce", "softdice", "cfnm"]
     """
     if loss == "mse":
-        return Loss_mse
+        return LossMse
     elif loss == "imae":
-        return Loss_imae
+        return LossImae
     elif loss == "ssim":
-        return Loss_ssim
+        return LossSsim
     elif loss == "ssim_l2":
-        return Loss_ssim_l2
+        return LossSsimL2
     elif loss == "ssim_l1":
-        return Loss_ssim_l1
+        return LossSsimL1
     elif loss == "bce":
-        return Loss_bce
+        return LossBce
     elif loss == "softdice":
-        return Loss_SoftDice
+        return LossSoftDice
     elif loss == "bce_dice":
-        return Loss_bce_dice
+        return LossBceDice
     elif loss == "psnr":
-        return Loss_psnr
+        return LossPsnr
     elif loss == "cfnm":
-        return Loss_cfnm
+        return LossCfnm
     else:
         raise NotImplementedError("Loss function not implemented")
-
-
-# TODO: must check if all the reductions are consistent
-# TODO: transform psnr into loss subclass

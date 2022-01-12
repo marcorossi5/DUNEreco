@@ -1,10 +1,11 @@
 # This file is part of DUNEdn by M. Rossi
 """ This module contains utility functions of general interest. """
 import os
-import numpy as np
+import logging
 import yaml
+import numpy as np
 from hyperopt import hp
-from dunedn.configdn import get_dunedn_search_path
+from dunedn.configdn import PACKAGE, get_dunedn_search_path
 
 
 def check(check_instance, check_list):
@@ -26,19 +27,22 @@ def check(check_instance, check_list):
 
 
 def get_freer_gpu():
+    """ Returns the gpu number with the most available memory. """
     os.system("nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp")
     memory_available = [int(x.split()[2]) for x in open("tmp", "r").readlines()]
     return np.argmax(memory_available)
 
 
 def get_freer_gpus(n):
+    """ Returns the n gpus with the most available memory. """
     os.system("nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp")
     memory_available = [int(x.split()[2]) for x in open("tmp", "r").readlines()]
-    ind = np.argsort(memory_available)
+    np.argsort(memory_available)
     return np.argmax(memory_available)[-n:]
 
 
 def smooth(smoothed, scalars, weight):  # weight between 0 and 1
+    """ Computes the next moving average item. """
     assert len(scalars) - len(smoothed) == 1
 
     if len(scalars) == 1:
@@ -50,6 +54,19 @@ def smooth(smoothed, scalars, weight):  # weight between 0 and 1
 
 
 def moving_average(scalars, weight):
+    """
+    Computes the moving avarage from a list of scalar quantities.
+
+    Parameters
+    ----------
+        - scalars: list, of scalar quantity to be soothed
+        - weight: the weighting factor in the (0,1) range. Higher values provide
+                  more smoothing power
+
+    Returns
+    -------
+        - list, the averaged quantities
+    """
     smoothed = []
     for i in range(len(scalars)):
         smooth(smoothed, scalars[: i + 1], weight)
@@ -93,9 +110,6 @@ def confusion_matrix(hit, no_hit, t=0.5):
     return tp, fp, fn, tn
 
 
-import logging
-from dunedn.configdn import PACKAGE
-
 # instantiate logger
 logger = logging.getLogger(PACKAGE + ".train")
 
@@ -106,7 +120,7 @@ def load_yaml(runcard_file):
         runcard = yaml.load(stream, Loader=yaml.FullLoader)
     for key, value in runcard.items():
         if "hp." in str(value):
-            logger.info(f"Evaluating: eval({key}) = {value}")
+            logger.info("Evaluating: eval(%s) = %s", key, str(value))
             runcard[key] = eval(value)
     return runcard
 

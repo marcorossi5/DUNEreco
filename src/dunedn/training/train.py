@@ -117,7 +117,7 @@ def train_gcnn_epoch(args, epoch, train_loader, model, optimizer, balance_ratio,
         if task == "dn"
         else get_loss("bce")(balance_ratio)
     )
-    for i, (clear, noisy) in enumerate(train_loader):
+    for clear, noisy in train_loader:
         idx = 0 if task == "dn" else 1
         clear = clear[:, idx : idx + 1].to(args.dev[0])
         noisy = noisy.to(args.dev[0])
@@ -150,8 +150,7 @@ def choose_train(modeltype, *args):
         return train_uscg_epoch(*args)
     elif modeltype in ["gcnn", "cnn"]:
         return train_gcnn_epoch(*args)
-    else:
-        raise NotImplementedError("Model not implemented")
+    raise NotImplementedError("Model not implemented")
 
 
 def inference(test_loader, stride, model, dev):
@@ -423,7 +422,7 @@ def train(args, train_data, val_data, model):
             time_test = []
 
         if args.rank == 0:
-            logger.info(f"Loading model at {fname}")
+            logger.info("Loading model at %s", fname)
         # map_location = {"cuda:{0:d}": f"cuda:{args.dev:d}"}
         # map_location = {"cuda:{0:d}": f"cuda:{args.local_rank:d}"}
         # model.load_state_dict(torch.load(fname, map_location=map_location))
@@ -470,7 +469,10 @@ def train(args, train_data, val_data, model):
         time_train.append(t)
         if epoch % args.epoch_log == 0 and (not args.scan) and args.rank == 0:
             logger.info(
-                f"Epoch: {epoch:3}, Loss: {loss_sum[-1][0]:6.5}, epoch time: {end:.4}s"
+                "Epoch: %3d, Loss: %6.5f, epoch time: %.4fs",
+                epoch,
+                loss_sum[-1][0],
+                end,
             )
 
         # test
@@ -484,7 +486,7 @@ def train(args, train_data, val_data, model):
             if args.rank == 0:
                 if args.task == "roi":
                     logger.info(
-                        f"Test loss on {channel:10} APAs: {x[0]:.5} +- {x[1]:.5}"
+                        "Test loss on %10s APAs: %.5f +- %.5f", channel, *x[0:2]
                     )
                 if args.task == "dn":
                     logger.info(
@@ -493,7 +495,7 @@ def train(args, train_data, val_data, model):
                          {'psnr:':7} {x[4]:.5} +- {x[5]:.5}\n\
                          {'mse:':7} {x[6]:.5} +- {x[7]:.5}"
                     )
-                logger.info(f"Test epoch time: {end:.4}")
+                logger.info("Test epoch time: %.4f", end)
 
             # save the model if it is the best one
             if test_metrics[-1][0] + test_metrics[-1][1] < best_loss and args.rank == 0:
@@ -509,13 +511,13 @@ def train(args, train_data, val_data, model):
                     f.write(fname.as_posix())
                     f.close()
                 if (not args.scan) and args.rank == 0:
-                    logger.info(f"Updated best model at: {bname}")
+                    logger.info("Updated best model at: %s", bname)
             if args.save and args.rank == 0:
                 fname = (
                     args.dir_saved_models / f"{args.model}_{task}_{channel}_{epoch}.dat"
                 )
                 if not args.scan:
-                    logger.info(f"Saved model at: {fname}")
+                    logger.info("Saved model at: %s", fname)
             if args.rank == 0:
                 torch.save(model.state_dict(), fname)
 

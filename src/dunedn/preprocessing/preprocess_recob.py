@@ -1,11 +1,11 @@
 # This file is part of DUNEdn by M. Rossi
 """ This module returns the ROIs from recob::hit objects"""
 import os
-import logging
 import argparse
-import numpy as np
+import logging
 import glob
-import time as tm
+from time import time as tm
+import numpy as np
 
 # instantiate logger
 logger = logging.getLogger(__name__)
@@ -105,6 +105,6 @@ if __name__ == "__main__":
         help="Directory path to datasets",
     )
     args = vars(parser.parse_args())
-    start = tm.time()
+    start = tm()
     main(**args)
-    logger.info("Program done in %f" % (tm.time() - start))
+    logger.info("Program done in %f", tm() - start)

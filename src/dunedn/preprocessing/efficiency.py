@@ -22,7 +22,7 @@ parser.add_argument(
 
 def draw_results(a, b, c, d):
     tot = a + b + c + d
-    logger.info("Over a total of %d pixels:\n" % tot)
+    logger.info("Over a total of %d pixels:\n", tot)
     logger.info("------------------------------------------------")
     logger.info("|{:>20}|{:>12}|{:>12}|".format("", "Signal", "Background"))
     logger.info("------------------------------------------------")
@@ -70,4 +70,4 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
     start = tm()
     main(**args)
-    logger.info("\nProgram done in %f" % (tm() - start))
+    logger.info("\nProgram done in %f", (tm() - start))

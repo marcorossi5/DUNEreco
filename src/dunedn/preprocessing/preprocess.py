@@ -3,7 +3,6 @@
     This module contains the wrapper function for the ``dunedn preprocess``
     command.
 """
-import logging
 from pathlib import Path
 from dunedn.utils.utils import get_configcard_path, load_yaml
 from dunedn.preprocessing.putils import (

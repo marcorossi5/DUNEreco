@@ -3,10 +3,10 @@ import os
 import logging
 import glob
 import argparse
-
-import numpy as np
-import matplotlib.pyplot as plt
 import time as tm
+import numpy as np
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 # instantiate logger
 logger = logging.getLogger(__name__)
@@ -62,8 +62,6 @@ def main(dir_name):
 
     raw = np.load(f_raw)[:, 2:]
     ch = np.load(f_ch)
-
-    import matplotlib.pyplot as mpl
 
     mpl.rcParams["xtick.labelsize"] = 6
     mpl.rcParams["ytick.labelsize"] = 6

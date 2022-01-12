@@ -5,10 +5,10 @@
 import logging
 from pathlib import Path
 from datetime import datetime as dtm
+import shutil
 from dunedn.configdn import PACKAGE
 from dunedn.configdn import get_output_path
 from dunedn.utils.utils import check
-import shutil
 
 # instantiate logger
 logger = logging.getLogger(PACKAGE)
@@ -35,7 +35,15 @@ class Args:
         self.dataset_dir = Path(self.dataset_dir)
         self.crop_size = (self.crop_edge,) * 2
 
-        self.load = False if (self.load_path is None) else True
+        self.load = self.load_path is not None
+
+        # build directories
+        self.dir_output = None
+        self.dir_timings = None
+        self.dir_testing = None
+        self.dir_final_test = None
+        self.dir_metrics = None
+        self.dir_saved_models = None
 
     def build_directories(self):
         """
@@ -46,18 +54,18 @@ class Args:
             if output.is_dir():
                 if self.force:
                     logger.warning(
-                        f"WARNING: Overwriting {output} directory with new model"
+                        "Overwriting %s directory with new model", output.as_posix()
                     )
                     shutil.rmtree(output)
                 else:
                     logger.critical('Delete or run with "--force" to overwrite.')
                     exit(-1)
             else:
-                logger.info(f"Creating output directory at {output}")
+                logger.info("Creating output directory at %s", output.as_posix())
         else:
             date = dtm.now().strftime("%y%m%d_%H%M%S")
             output = get_output_path() / f"{date}/{self.channel}"
-            logger.info(f"Creating output directory at {output}")
+            logger.info("Creating output directory at %s", output.as_posix())
 
         self.dir_output = output
 

@@ -24,7 +24,7 @@ def save_normalization_info(dir_name, channel):
         - dir_name: Path, directory path to datasets
         - channel: str, induction | collection
     """
-    logger.info(f"Saving normalization info to {dir_name}")
+    logger.info("Saving normalization info to %s", dir_name)
     fname = dir_name / f"train/planes/{channel}_noisy.npy"
     n = np.load(fname).flatten()
 
@@ -109,15 +109,15 @@ def get_planes_and_dump(dname, save_sample):
     paths_clear = glob((dname / "evts/*noiseoff*").as_posix())
     assert len(paths_clear) != 0
 
-    logger.info(f"Fetching files from {dname}")
+    logger.info("Fetching files from %s", dname)
     for path_clear in paths_clear:
         path_noisy = Path(path_clear.replace("rawdigit_noiseoff", "rawdigit"))
         path_simch = Path(path_clear.replace("rawdigit_noiseoff", "simch_labels"))
         path_clear = Path(path_clear)
 
-        logger.debug(f"  {path_clear.name}")
-        logger.debug(f"  {path_noisy.name}")
-        logger.debug(f"  {path_simch.name}")
+        logger.debug("  %s", path_clear.name)
+        logger.debug("  %s", path_noisy.name)
+        logger.debug("  %s", path_simch.name)
 
         c = np.load(path_clear)[:, 2:]
         n = np.load(path_noisy)[:, 2:]
@@ -148,14 +148,14 @@ def get_planes_and_dump(dname, save_sample):
     # at this point planes have shape=(nb_events,N,1,H,W)
     # with N being the number of induction|collection planes in each event
 
-    logger.info(f"Saving planes to {dname}/planes")
+    logger.info("Saving planes to %s/planes", dname)
 
-    logger.debug(f"  collection clear planes: {cclear.shape}")
-    logger.debug(f"  collection noisy planes: {cnoisy.shape}")
-    logger.debug(f"  collection sim::SimChannel planes: {csimch.shape}")
-    logger.debug(f"  induction clear planes: {iclear.shape}")
-    logger.debug(f"  induction noisy planes: {inoisy.shape}")
-    logger.debug(f"  induction sim::SimChannel planes: {isimch.shape}")
+    logger.debug("  collection clear planes: %s", cclear.shape)
+    logger.debug("  collection noisy planes: %s", cnoisy.shape)
+    logger.debug("  collection sim::SimChannel planes: %s", csimch.shape)
+    logger.debug("  induction clear planes: %s", iclear.shape)
+    logger.debug("  induction noisy planes: %s", inoisy.shape)
+    logger.debug("  induction sim::SimChannel planes: %s", isimch.shape)
 
     # stack all the planes from different events together
     save = lambda x, y: np.save(dname / f"planes/{x}", y)
@@ -171,7 +171,7 @@ def get_planes_and_dump(dname, save_sample):
 
     if save_sample:
         # extract a small collection sample from dataset
-        logger.info(f"Saving sample dataset to {dname}/planes")
+        logger.info("Saving sample dataset to %s/planes", dname)
         save("sample_collection_clear", cclear[:10])
         save("sample_collection_noisy", cnoisy[:10])
         save("sample_collection_simch", csimch[:10])
@@ -198,7 +198,7 @@ def crop_planes_and_dump(dir_name, nb_crops, crop_size, pct):
         fname = dir_name / f"planes/{s}_noisy.npy"
         nplanes = np.load(fname)
 
-        logger.info(f"Cropping {s} planes at {fname}")
+        logger.info("Cropping %s planes at %s", s, fname)
 
         nplanes = median_subtraction(nplanes)[:, 0]
 
@@ -213,10 +213,10 @@ def crop_planes_and_dump(dir_name, nb_crops, crop_size, pct):
         ncrops = np.concatenate(ncrops, 0)
 
         fname = dir_name / f"crops/{s}_noisy_{crop_size[0]}_{pct}"
-        logger.info(f"Saving crops to {dir_name}")
+        logger.info("Saving crops to %s", dir_name)
 
-        logger.debug(f"{s} clear crops: {ccrops.shape}")
-        logger.debug(f"{s} noisy crops: {ncrops.shape}")
+        logger.debug("%s{s} clear crops: %s", s, ccrops.shape)
+        logger.debug("%s{s} noisy crops: %s", s, ncrops.shape)
         np.save(fname, ncrops)
 
         fname = dir_name / f"crops/{s}_clear_{crop_size[0]}_{pct}"

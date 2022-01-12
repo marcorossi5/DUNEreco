@@ -1,8 +1,9 @@
 # DUNEdn
 
 [![arxiv](https://img.shields.io/badge/arXiv-hep--ph%2F2103.01596-%23B31B1B.svg)](https://arxiv.org/abs/2103.01596)
-
 [![DOI](https://zenodo.org/badge/248536693.svg)](https://zenodo.org/badge/latestdoi/248536693)
+
+![pytest](https://github.com/N3PDF/pdfflow/workflows/pytest/badge.svg)
 
 If you use this software please cite this [paper](https://doi.org/10.1007/s41781-021-00077-9)
 

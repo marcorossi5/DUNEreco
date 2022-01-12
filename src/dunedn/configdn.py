@@ -53,8 +53,7 @@ def get_output_path():
     root = Path(os.environ.get("DUNEDN_OUTPUT_PATH"))
     if root is not None:
         return root
-    else:
-        return Path("output")
+    return Path("output")
 
 
 def get_dunedn_search_path():

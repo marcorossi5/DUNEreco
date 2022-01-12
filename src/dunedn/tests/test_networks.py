@@ -2,8 +2,8 @@
     Ensures DUNEdn networks objects run the forwrd pass without errors.
 """
 import logging
-import torch
 from collections import namedtuple
+import torch
 from dunedn.configdn import PACKAGE
 from dunedn.networks.helpers import get_supported_models, get_model_from_args
 
@@ -78,7 +78,7 @@ def run_test_gcnn(modeltype):
         assert dummy_dataset.shape == output.shape
     except AssertionError as err:
         logger.critical(
-            f"Assertion fail: {model} model input and output shapes do not match"
+            "Assertion fail: %s model input and output shapes do not match", modeltype
         )
         raise err
 
@@ -91,7 +91,7 @@ def run_test(modeltype):
     ----------
         - modeltype: str, available options uscg | cnn | gcnn
     """
-    logger.info(f"Running forward-pass test on {modeltype} model")
+    logger.info("Running forward-pass test on %s model", modeltype)
     if modeltype == "uscg":
         run_test_uscg()
     elif modeltype in ["cnn", "gcnn"]:
@@ -99,6 +99,7 @@ def run_test(modeltype):
 
 
 def test_networks():
+    """ Test wrapper function. """
     for modeltype in get_supported_models():
         run_test(modeltype)
 
