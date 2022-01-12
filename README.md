@@ -170,7 +170,7 @@ model_path
     |       |-- <ckpt directory name>_dn_induction.pth
 ```
 
-On the other hand, if `--model_path` is not specified, an un-trained networks is issued.
+On the other hand, if `--model_path` is not specified, an un-trained network is issued.
 
 ### Benchmark
 
