@@ -29,7 +29,15 @@ DUNEdn is a denoising algorithm for ProtoDUNE-SP raw data with Neural Networks.
 
 ## Installation
 
-The package can be installed with Python's pip package manager:
+The package can be installed with Python's pip package manager.
+
+From PyPI:
+
+```bash
+pip install dunedn
+```
+
+or manually:
 
 ```bash
 git clone https://github.com/marcorossi5/DUNEdn.git
