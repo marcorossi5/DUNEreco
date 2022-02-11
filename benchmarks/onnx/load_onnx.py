@@ -1,3 +1,19 @@
+"""
+    This module generates a dummy batch to be passed to PyTorch and `onnx`
+    exported networks for inference time comparison.
+
+    Usage: (assuming being in DUNEdn root folder)
+    
+    ```
+    python benchmarks/onnx/load_onnx.py <modeltype> --onnx <path>
+    ```
+
+    Note: the current implementation works only for modeltype `cnn`
+
+    Check that the dummy dataset batch size is consistent with the required input
+    shape of the `onnx` model.
+"""
+
 from pathlib import Path
 import argparse
 from time import time as tm
