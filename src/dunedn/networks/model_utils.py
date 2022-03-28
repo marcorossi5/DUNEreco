@@ -15,7 +15,7 @@ model2batch = {
 
 
 class MinMax(nn.Module):
-    """ MinMax normalization layer with scale factors Min and Max. """
+    """MinMax normalization layer with scale factors Min and Max."""
 
     def __init__(self, Min, Max):
         """
@@ -44,7 +44,7 @@ class MinMax(nn.Module):
 
 
 class ZScore(nn.Module):
-    """ Standardization layer with scale factors mu and var. """
+    """Standardization layer with scale factors mu and var."""
 
     def __init__(self, mu, var):
         """
@@ -134,7 +134,7 @@ def choose_norm(dataset_dir, ch, op):
 
 
 class MyDataParallel(nn.DataParallel):
-    """Data Parallel wrapper that allows calling model's attributes. """
+    """Data Parallel wrapper that allows calling model's attributes."""
 
     def __getattr__(self, name):
         try:
@@ -144,7 +144,7 @@ class MyDataParallel(nn.DataParallel):
 
 
 class MyDDP(nn.parallel.DistributedDataParallel):
-    """Distributed Data Parallel wrapper that allows calling model's attributes. """
+    """Distributed Data Parallel wrapper that allows calling model's attributes."""
 
     def __getattr__(self, name):
         try:

@@ -31,12 +31,12 @@ class Loss(ABC):
 
     @abstractmethod
     def __call__(self, y_pred, y_true):
-        """ Compute the loss function"""
+        """Compute the loss function"""
         pass
 
 
 class LossMse(Loss):
-    """ Mean squared error loss function."""
+    """Mean squared error loss function."""
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super(LossMse, self).__init__(reduction=reduction)
@@ -56,7 +56,7 @@ class LossMse(Loss):
 
 
 class LossImae(Loss):
-    """ Mean absolute error on integrated charge loss function. """
+    """Mean absolute error on integrated charge loss function."""
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super(LossImae, self).__init__(reduction=reduction)
@@ -76,7 +76,7 @@ class LossImae(Loss):
 
 
 class LossSsim(Loss):
-    """ Statistical structural similarity loss function. """
+    """Statistical structural similarity loss function."""
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super(LossSsim, self).__init__(a, data_range, reduction)
@@ -94,7 +94,7 @@ class LossSsim(Loss):
 
 
 class LossSsimL2(Loss):
-    """ Stat ssim + MSE loss function. """
+    """Stat ssim + MSE loss function."""
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super(LossSsimL2, self).__init__(a, data_range, reduction)
@@ -117,7 +117,7 @@ class LossSsimL2(Loss):
 
 
 class LossSsimL1(Loss):
-    """ Stat ssim + mean absolute error loss function. """
+    """Stat ssim + mean absolute error loss function."""
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super(LossSsimL1, self).__init__(a, data_range, reduction)
@@ -142,7 +142,7 @@ class LossSsimL1(Loss):
 
 
 class LossBce(Loss):
-    """ Binary cross entropy loss function. """
+    """Binary cross entropy loss function."""
 
     def __init__(self, ratio=0.5, reduction="mean"):
         """
@@ -175,7 +175,7 @@ class LossBce(Loss):
 
 
 class LossSoftDice(Loss):
-    """ Soft dice loss function. """
+    """Soft dice loss function."""
 
     def __init__(self, reduction="mean"):
         """
@@ -215,7 +215,7 @@ class LossSoftDice(Loss):
 
 
 class LossBceDice(Loss):
-    """ Binary xent + soft dice loss function. """
+    """Binary xent + soft dice loss function."""
 
     def __init__(self, ratio=0.5, reduction="mean"):
         """
@@ -243,7 +243,7 @@ class LossBceDice(Loss):
 
 
 class LossPsnr(Loss):
-    """ Peak signal to noise ration function. """
+    """Peak signal to noise ration function."""
 
     def __init__(self, reduction="mean"):
         super(LossPsnr, self).__init__(reduction=reduction)
@@ -269,7 +269,7 @@ class LossPsnr(Loss):
 
 
 class LossCfnm(Loss):
-    """ Confusion matrix function. """
+    """Confusion matrix function."""
 
     def __init__(self, reduction="mean"):
         pass

@@ -15,7 +15,7 @@ logger = logging.getLogger(PACKAGE)
 
 
 class Args:
-    """ Class that tracks all the needed runtime settings."""
+    """Class that tracks all the needed runtime settings."""
 
     def __init__(self, **kwargs):
         """

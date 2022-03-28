@@ -82,7 +82,11 @@ def main(outdir: Path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser("plot event")
     parser.add_argument(
-        "--output", type=Path, help="the output directory", default="plot_example", dest="outdir"
+        "--output",
+        type=Path,
+        help="the output directory",
+        default="plot_example",
+        dest="outdir",
     )
     args = parser.parse_args()
     start = tm()

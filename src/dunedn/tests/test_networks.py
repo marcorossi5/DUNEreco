@@ -21,7 +21,7 @@ GcnnArgsTuple = namedtuple(
 
 
 def run_test_uscg():
-    """ Run USCG network test. """
+    """Run USCG network test."""
     # tuple containing induction and collection inference arguments
     batch_size = 32
     patch_h = 100
@@ -99,7 +99,7 @@ def run_test(modeltype):
 
 
 def test_networks():
-    """ Test wrapper function. """
+    """Test wrapper function."""
     for modeltype in get_supported_models():
         run_test(modeltype)
 

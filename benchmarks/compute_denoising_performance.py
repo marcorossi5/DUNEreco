@@ -25,21 +25,13 @@ from dunedn.inference.inference import (
 )
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Denoising benchmark for arXiv:2103.01596",
-        add_help="loads event from file, denoise it and computes performance metrics",
-    )
-    add_arguments_inference(parser)
-    parser.add_argument(
-        "-t",
-        type=Path,
-        required=True,
-        metavar="TARGET",
-        dest="target",
-        help="path to the output event file",
-    )
-    args = parser.parse_args()
+def main(args):
+    """
+    Parameters
+    ----------
+        - args: Namespace, the inference arguments
+    """
+    # inference pass
     evt_dn = args.func(args)
 
     target = np.load(args.target)[:, 2:]
@@ -51,6 +43,21 @@ def main():
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Denoising benchmark for arXiv:2103.01596",
+        add_help="loads event from file, denoise it and computes performance metrics",
+    )
+    add_arguments_inference(parser)
+    parser.add_argument(
+        "-t",
+        type=Path,
+        required=True,
+        metavar="TARGET",
+        dest="target",
+        help="path to the event file containing ground truths",
+    )
+    args = parser.parse_args()
+
     start = tm()
-    main()
+    main(args)
     print(f"Program done in {tm()-start} s")

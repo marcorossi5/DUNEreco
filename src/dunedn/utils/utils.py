@@ -27,14 +27,14 @@ def check(check_instance, check_list):
 
 
 def get_freer_gpu():
-    """ Returns the gpu number with the most available memory. """
+    """Returns the gpu number with the most available memory."""
     os.system("nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp")
     memory_available = [int(x.split()[2]) for x in open("tmp", "r").readlines()]
     return np.argmax(memory_available)
 
 
 def get_freer_gpus(n):
-    """ Returns the n gpus with the most available memory. """
+    """Returns the n gpus with the most available memory."""
     os.system("nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp")
     memory_available = [int(x.split()[2]) for x in open("tmp", "r").readlines()]
     np.argsort(memory_available)
@@ -42,7 +42,7 @@ def get_freer_gpus(n):
 
 
 def smooth(smoothed, scalars, weight):  # weight between 0 and 1
-    """ Computes the next moving average item. """
+    """Computes the next moving average item."""
     assert len(scalars) - len(smoothed) == 1
 
     if len(scalars) == 1:
@@ -160,7 +160,7 @@ def get_configcard_path(fname):
 
 
 def print_summary_file(args):
-    """Export Args object to file. """
+    """Export Args object to file."""
     d = args.__dict__
     fname = args.dir_output / "readme.txt"
     with open(fname, "w") as f:

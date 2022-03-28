@@ -149,7 +149,7 @@ def calculate_pad(plane_size, crop_size):
 
 
 class Converter:
-    """ Groups image to tiles converter functions """
+    """Groups image to tiles converter functions"""
 
     def __init__(self, crop_size):
         """

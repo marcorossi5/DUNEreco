@@ -28,7 +28,7 @@ from dunedn.inference.inference import add_arguments_inference
 
 
 def main():
-    """ Defines the DUNEdn main entry point. """
+    """Defines the DUNEdn main entry point."""
     parser = argparse.ArgumentParser(description="dunedn")
 
     subparsers = parser.add_subparsers()

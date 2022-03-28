@@ -12,7 +12,7 @@ from dunedn.networks.GCNN_Net_utils import (
 
 
 class ROI(nn.Module):
-    """ U-net style binary segmentation """
+    """U-net style binary segmentation"""
 
     def __init__(self, kernel_size, ic, hc, getgraph_fn, model):
         super(ROI, self).__init__()
@@ -137,7 +137,7 @@ class PostProcessBlock(nn.Module):
 
 
 class NonLocalGraph:
-    """ Non-local graph layer. """
+    """Non-local graph layer."""
 
     def __init__(self, k, crop_size):
         """
@@ -202,7 +202,7 @@ def choose_conv(model, ic, oc):
 
 
 class GConv(nn.Module):
-    """ GConv layer. """
+    """GConv layer."""
 
     def __init__(self, ic, oc):
         """
@@ -220,7 +220,7 @@ class GConv(nn.Module):
 
 
 class Conv(nn.Module):
-    """ GConv layer. """
+    """GConv layer."""
 
     def __init__(self, ic, oc):
         """
@@ -239,7 +239,7 @@ class Conv(nn.Module):
 
 
 class NonLocalAggregator(nn.Module):
-    """ NonLocalAggregator layer. """
+    """NonLocalAggregator layer."""
 
     def __init__(self, input_channels, out_channels):
         """
