@@ -347,7 +347,7 @@ class DnModel(BaseModel):
             - should_use_onnx: bool, wether to use ONNX exported model
         """
         super(DnModel, self).__init__(
-            modeltype, "dn", ckpt, dev="cpu", should_use_onnx=should_use_onnx
+            modeltype, "dn", ckpt, dev=dev, should_use_onnx=should_use_onnx
         )
 
 
@@ -367,7 +367,7 @@ class RoiModel(BaseModel):
             - should_use_onnx: bool, wether to use ONNX exported model
         """
         super(RoiModel, self).__init__(
-            modeltype, "roi", ckpt, dev="cpu", should_use_onnx=should_use_onnx
+            modeltype, "roi", ckpt, dev=dev, should_use_onnx=should_use_onnx
         )
 
 
