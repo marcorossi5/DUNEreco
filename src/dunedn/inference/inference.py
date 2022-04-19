@@ -58,6 +58,9 @@ def add_arguments_inference(parser):
     parser.add_argument(
         "--dev", help="(optional) device hosting computation", default="cpu"
     )
+    parser.add_argument(
+        "--onnx", action="store_true", help="wether to use ONNX exported model"
+    )
     parser.set_defaults(func=inference)
 
 
@@ -74,10 +77,17 @@ def inference(args):
     -------
         - np.array, ouptut event of shape=(nb wires, nb tdc ticks)
     """
-    return inference_main(args.input, args.output, args.modeltype, args.ckpt, args.dev)
+    return inference_main(
+        args.input,
+        args.output,
+        args.modeltype,
+        args.ckpt,
+        args.dev,
+        should_use_onnx=args.onnx,
+    )
 
 
-def inference_main(input, output, modeltype, ckpt, dev):
+def inference_main(input, output, modeltype, ckpt, dev, should_use_onnx=False):
     """
     Inference main function. Loads an input event from file, makes inference and
     saves the ouptut. Eventually returns the output array.
@@ -89,6 +99,7 @@ def inference_main(input, output, modeltype, ckpt, dev):
         - modeltype: str, model name. Available options: uscg|gcnn|cnn|id
         - ckpt: path to directory with saved model
         - dev: str, device hosting computation
+        - should_use_onnx: bool, wether to use onnx format
 
     Returns
     -------
@@ -96,9 +107,12 @@ def inference_main(input, output, modeltype, ckpt, dev):
     """
     logger.info(f"Denoising event at {input}")
     evt = np.load(input)[:, 2:]
-    model = DnModel(modeltype, ckpt)
+    model = DnModel(modeltype, ckpt, dev, should_use_onnx=should_use_onnx)
 
-    evt_dn = model.inference(evt, dev)
+    model.export_onnx(ckpt)
+    exit()
+
+    evt_dn = model.inference(evt)
     np.save(output, evt_dn)
     logger.info(f"Saved output event at {output.stem}.npy")
     return evt_dn

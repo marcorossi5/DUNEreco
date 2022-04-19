@@ -3,9 +3,12 @@
     This module contains utility functions for the inference step.
 """
 import logging
+from pathlib import Path
 import collections
 from math import sqrt
+import numpy as np
 import torch
+import onnxruntime as ort
 from torch.utils.data import DataLoader
 from dunedn.configdn import PACKAGE
 from dunedn.training.args import Args
@@ -13,7 +16,12 @@ from dunedn.networks.helpers import get_model_from_args
 from dunedn.networks.model_utils import model2batch
 from dunedn.networks.GCNN_Net_utils import Converter
 from dunedn.training.dataloader import InferenceLoader, InferenceCropLoader
-from dunedn.training.train import inference, identity_inference, gcnn_inference
+from dunedn.training.train import (
+    uscg_inference,
+    identity_inference,
+    gcnn_inference,
+    gcnn_onnx_inference,
+)
 from dunedn.training.losses import get_loss
 from dunedn.utils.utils import load_yaml, median_subtraction, get_configcard_path
 from dunedn.geometry.helpers import evt2planes, planes2evt
@@ -30,7 +38,9 @@ ArgsTuple = collections.namedtuple("Args", ["batch_size", "patch_stride", "crop_
 task_dict = {"dn": "Denoising", "ROI": "Region of interest selection"}
 
 
-def get_model_and_args(modeltype, task, channel, ckpt=None):
+def get_model_and_args(
+    modeltype, task, channel, ckpt=None, dev="cpu", should_use_onnx=False
+):
     """
     Parameters
     ----------
@@ -38,32 +48,45 @@ def get_model_and_args(modeltype, task, channel, ckpt=None):
         - task: str, available options dn | roi
         - channel: str, available options readout | collection
         - ckpt: Path, path to directory with saved model
+        - dev: str, device hosting the computation
+        - should_use_onnx: bool, wether to use ONNX exported model
 
     Returns
     -------
         - ArgsTuple, tuple containing induction and collection inference arguments
         - MyDataParallel, the loaded model
     """
-    card = f"{modeltype}_{task}_{channel}_config.yaml"
+    card = Path(f"{modeltype}_{task}_{channel}_config.yaml")
     config_path = get_configcard_path(card)
     params = load_yaml(config_path)
     params["channel"] = channel
     args = Args(**params)
 
-    crop_size = None if modeltype == "uscg" else args.crop_size
+    crop_size = (args.patch_w, args.patch_h) if modeltype == "uscg" else args.crop_size
     patch_stride = args.patch_stride if modeltype == "uscg" else None
     batch_size = model2batch[modeltype][task]
 
-    model = get_model_from_args(args)
-
-    if ckpt is not None:
-        fname = ckpt / f"{channel}/{ckpt.name}_{task}_{channel}.pth"
-        state_dict = torch.load(fname)
-        model.load_state_dict(state_dict)
+    if should_use_onnx and ckpt is not None:
+        fname = ckpt / f"{channel}" / f"{modeltype}_{task}.onnx"
+        logger.debug(f"Loading onnx model at {fname}")
+        model = ort.InferenceSession(fname.as_posix())
+    else:
+        model = get_model_from_args(args)
+        if ckpt is not None:
+            fname = ckpt / f"{channel}" / f"{ckpt.name}_{task}_{channel}.pth"
+            state_dict = torch.load(fname, map_location=torch.device(dev))
+            # compatibility with previous versions of the GCNN_net networks which
+            # contained the following parameters
+            extras = ["module.norm_fn.med", "module.norm_fn.Min", "module.norm_fn.Max"]
+            for extra in extras:
+                if state_dict.get(extra, None) is not None:
+                    state_dict.move_to_end(extra)
+                    state_dict.popitem()
+            model.load_state_dict(state_dict)
     return ArgsTuple(batch_size, patch_stride, crop_size), model
 
 
-def mkModel(modeltype, task, ckpt=None):
+def mkModel(modeltype, task, ckpt=None, dev="cpu", should_use_onnx=False):
     """
     Instantiate a new model of type modeltype.
 
@@ -72,6 +95,8 @@ def mkModel(modeltype, task, ckpt=None):
         - modeltype: str, valid options: "uscg" | "cnn" | "gcnn" | "id"
         - task: str, valid options: "dn" | "roi"
         - ckpt: Path, checkpoint path
+        - dev: str, device hosting the computation
+        - should_use_onnx: bool, wether to use ONNX exported model
 
     Returns
     -------
@@ -81,8 +106,12 @@ def mkModel(modeltype, task, ckpt=None):
     """
     if modeltype == "id":
         return [None, None], ModelTuple(None, None)
-    iargs, imodel = get_model_and_args(modeltype, task, "induction", ckpt)
-    cargs, cmodel = get_model_and_args(modeltype, task, "collection", ckpt)
+    iargs, imodel = get_model_and_args(
+        modeltype, task, "induction", ckpt, dev, should_use_onnx
+    )
+    cargs, cmodel = get_model_and_args(
+        modeltype, task, "collection", ckpt, dev, should_use_onnx
+    )
     return [iargs, cargs], ModelTuple(imodel, cmodel)
 
 
@@ -104,10 +133,10 @@ def _uscg_inference(planes, loader, model, args, dev):
     """
     dataset = loader(planes)
     test = DataLoader(dataset=dataset, batch_size=args.batch_size)
-    return inference(test, args.patch_stride, model.to(dev), dev).cpu()
+    return uscg_inference(test, args.patch_stride, model.to(dev), dev).cpu()
 
 
-def _gcnn_inference(planes, loader, model, args, dev):
+def _gcnn_inference(planes, loader, model, args, dev, should_use_onnx):
     """
     GCNN inference utility function.
 
@@ -127,13 +156,18 @@ def _gcnn_inference(planes, loader, model, args, dev):
     # inference is called many times.
     # TODO: think about to make it a DnRoiModel attribute and pass it to the fn
     # TODO: the batch size changes according to task, modeltype
+    logger.debug("Applying median subtraction")
     sub_planes = torch.Tensor(median_subtraction(planes))
     converter = Converter(args.crop_size)
     tiles = converter.planes2tiles(sub_planes)
 
     dataset = loader(tiles)
     test = DataLoader(dataset=dataset, batch_size=args.batch_size)
-    res = gcnn_inference(test, model.to(dev), dev).cpu()
+    if should_use_onnx:
+        res = gcnn_onnx_inference(test, ort_session=model)
+    else:
+        logger.debug("Inference with pytorch")
+        res = gcnn_inference(test, model.to(dev), dev).cpu()
     return converter.tiles2planes(res)
 
 
@@ -188,7 +222,7 @@ class BaseModel:
     Mother class for inference model.
     """
 
-    def __init__(self, modeltype, task, ckpt=None):
+    def __init__(self, modeltype, task, ckpt=None, dev="cpu", should_use_onnx=False):
         """
         Parameters
         ----------
@@ -196,24 +230,33 @@ class BaseModel:
             - task: str, available options dn | roi
             - ckpt: Path, saved checkpoint path. If None, an un-trained model
                     will be used
+            - dev: str, device hosting computation
+            - should_use_onnx: bool, wether to use ONNX exported model
         """
         self.modeltype = modeltype
-        self.args, self.model = mkModel(modeltype, task, ckpt)
+        self.task = task
+        self.ckpt = ckpt
+        self.dev = dev
+        self.should_use_onnx = should_use_onnx
+
+        self.args, self.model = mkModel(
+            modeltype, task, ckpt, self.dev, self.should_use_onnx
+        )
         self.loader = InferenceLoader if modeltype == "uscg" else InferenceCropLoader
 
-    def inference(self, event, dev):
+    def inference(self, event):
         """
         Interface for roi selection inference on a complete event.
 
         Parameters
         ----------
             - event: array-like, event input array of shape=(nb wires, nb tdc ticks)
-            - dev: str, device hosting the computation
 
         Returns
         -------
             - np.array, denoised event of shape=(nb wires, nb tdc ticks)
         """
+        logger.debug("Starting inference on event")
         inductions, collections = evt2planes(event)
         iout = get_inference(
             self.modeltype,
@@ -221,7 +264,8 @@ class BaseModel:
             loader=self.loader,
             model=self.model.induction,
             args=self.args[0],
-            dev=dev,
+            dev=self.dev,
+            should_use_onnx=self.should_use_onnx,
         )
         cout = get_inference(
             self.modeltype,
@@ -229,7 +273,8 @@ class BaseModel:
             loader=self.loader,
             model=self.model.collection,
             args=self.args[1],
-            dev=dev,
+            dev=self.dev,
+            should_use_onnx=self.should_use_onnx,
         )
         # TODO: for the denoising model
         # masking for gcnn output must be done
@@ -240,13 +285,59 @@ class BaseModel:
         #     dn [dn <= args.threshold] = 0
         return planes2evt(iout, cout)
 
+    def export_onnx(self, output_dir):
+        """
+        Exports the model to onnx format.
+
+        Parameters
+        ----------
+            - output_dir: Path, the directory to save the onnx files
+
+        """
+        logger.debug(f"Exporting onnx model")
+        iargs, cargs = self.args
+        pixels = lambda a: a.batch_size * np.prod(a.crop_size)
+        get_dummy = lambda a: torch.arange(pixels(a)).reshape(
+            [a.batch_size, 1, *a.crop_size]
+        ) / pixels(a)
+
+        # export induction
+        fname = output_dir / f"induction/{self.modeltype}_{self.task}.onnx"
+        # prepare dummy input
+        print(iargs)
+        exit()
+        iinputs = get_dummy(iargs)
+        torch.onnx.export(
+            self.model.induction.module,
+            iinputs,
+            fname,  # path to save
+            verbose=False,
+            input_names=["input"],
+            output_names=["output"],
+        )
+        logger.info(f"Saved onnx module at: {fname}")
+
+        # export collection
+        fname = output_dir / f"collection/{self.modeltype}_{self.task}.onnx"
+        # prepare dummy input
+        cinputs = get_dummy(cargs)
+        torch.onnx.export(
+            self.model.collection.module,
+            cinputs,
+            fname,  # path to save
+            verbose=False,
+            input_names=["input"],
+            output_names=["output"],
+        )
+        logger.info(f"Saved onnx module at: {fname}")
+
 
 class DnModel(BaseModel):
     """
     Wrapper class for denoising model.
     """
 
-    def __init__(self, modeltype, ckpt=None):
+    def __init__(self, modeltype, ckpt=None, dev="cpu", should_use_onnx=False):
         """
         Parameters
         ----------
@@ -254,8 +345,12 @@ class DnModel(BaseModel):
             - ckpt: Path, saved checkpoint path. The path should point to a folder
                     containing a collection and an induction .pth file. If None,
                     an un-trained model will be used.
+            - dev: str, device hosting the computation
+            - should_use_onnx: bool, wether to use ONNX exported model
         """
-        super(DnModel, self).__init__(modeltype, "dn", ckpt)
+        super(DnModel, self).__init__(
+            modeltype, "dn", ckpt, dev="cpu", should_use_onnx=should_use_onnx
+        )
 
 
 class RoiModel(BaseModel):
@@ -263,15 +358,19 @@ class RoiModel(BaseModel):
     Wrapper class for ROI selection model.
     """
 
-    def __init__(self, modeltype, ckpt=None):
+    def __init__(self, modeltype, ckpt=None, dev="cpu", should_use_onnx=False):
         """
         Parameters
         ----------
             - modeltype: str, valid options: "cnn" | "gcnn" | "sgc"
             - ckpt: Path, saved checkpoint path. If None, an un-trained model
                     will be used
+            - dev: str, device hosting the computation
+            - should_use_onnx: bool, wether to use ONNX exported model
         """
-        super(RoiModel, self).__init__(modeltype, "roi", ckpt)
+        super(RoiModel, self).__init__(
+            modeltype, "roi", ckpt, dev="cpu", should_use_onnx=should_use_onnx
+        )
 
 
 class DnRoiModel:
@@ -279,16 +378,21 @@ class DnRoiModel:
     Wrapper class for denoising and ROI selection model.
     """
 
-    def __init__(self, modeltype, roi_ckpt=None, dn_ckpt=None):
+    def __init__(
+        self, modeltype, roi_ckpt=None, dn_ckpt=None, dev="cpu", should_use_onnx=False
+    ):
         """
         Parameters
         ----------
             - modeltype: str, valid options: "cnn" | "gcnn" | "sgc"
             - ckpt: Path, saved checkpoint path. If None, an un-trained model
                     will be used
+            - dev: str, device hosting the computation
         """
-        self.roi = RoiModel(modeltype, roi_ckpt)
-        self.dn = DnModel(modeltype, dn_ckpt)
+        self.roi = RoiModel(
+            modeltype, roi_ckpt, dev=dev, should_use_onnx=should_use_onnx
+        )
+        self.dn = DnModel(modeltype, dn_ckpt, dev=dev, should_use_onnx=should_use_onnx)
 
 
 def to_dev(*args, dev="cuda:0"):

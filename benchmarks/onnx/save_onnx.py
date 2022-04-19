@@ -4,10 +4,13 @@
     Usage: (assuming being in DUNEdn root folder)
 
     ```
-    python benchmarks/onnx/save_onnx.py <modeltype> --onnx <path>
+    python benchmarks/onnx/save_onnx.py <modeltype> --onnx <path> --dev <device>
     ```
 
-    Note: the current implementation works only for modeltype cnn | gcnn 
+    Note: the current implementation works only for modeltype cnn | gcnn
+
+    It is user responsibility to provide the correct device host through the
+    `--dev` flag.
 
     The onnx export has a fixed input shape. Change the value of the 
     batch_size with `--batch_size` flag according to your needs, default is 32.
@@ -88,11 +91,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--onnx",
         type=Path,
-        help="the output onnx model filename",
+        help="the output onnx model filename. Default: 'network.onnx'",
         default="network.onnx",
     )
     parser.add_argument(
-        "--batch_size", type=int, help="onnx model batch size", default=32
+        "--batch_size", type=int, help="onnx model batch size. Default: 32", default=32
+    )
+    parser.add_argument("--dev", help="device name. Default: cpu", default="cpu")
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="print verbose exported model representation",
     )
     args = parser.parse_args()
 
@@ -109,7 +118,9 @@ if __name__ == "__main__":
         model,
         dummy_input,
         args.onnx,
-        verbose=True,
+        verbose=args.verbose,
         input_names=input_names,
         output_names=output_names,
     )
+
+# TODO: add --dev flag to run computation on different devices (cpu / gpu)

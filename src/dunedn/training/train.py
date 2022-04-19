@@ -153,7 +153,7 @@ def choose_train(modeltype, *args):
     raise NotImplementedError("Model not implemented")
 
 
-def inference(test_loader, stride, model, dev):
+def uscg_inference(test_loader, stride, model, dev):
     """
     Parameters
     ----------
@@ -209,6 +209,29 @@ def gcnn_inference(test_loader, model, dev):
     for noisy, _ in test_loader:
         noisy = noisy.to(dev)
         out = model(noisy).data
+        outs.append(out)
+    return torch.cat(outs)
+
+
+def gcnn_onnx_inference(test_loader, ort_session):
+    """
+    Parameters
+    ----------
+        - test_loader: torch.utils.data.DataLoader, inference loader
+        - ort_session: ort.InferenceSession, the onnxruntime inference session
+
+    Returns
+    -------
+        - torch.Tensor, output tensor of shape=(N,C,H,W)
+    """
+    outs = []
+    for noisy, _ in test_loader:
+        out = ort_session.run(
+            None,
+            {"input": noisy.numpy().astype(np.float32)},
+        )[0]
+        print(type(out), out.shape)
+        exit()
         outs.append(out)
     return torch.cat(outs)
 
@@ -322,7 +345,7 @@ def test_epoch(test_data, model, args, task, dry_inference=True):
         logger.debug("Testing epoch")
     start = tm()
     if args.model == "uscg":
-        outputs = inference(test_loader, args.patch_stride, model, args.dev[0])
+        outputs = uscg_inference(test_loader, args.patch_stride, model, args.dev[0])
     elif args.model in ["cnn", "gcnn"]:
         outputs = gcnn_inference(test_loader, model, args.dev[0])
         outputs = test_data.converter.tiles2planes(outputs)

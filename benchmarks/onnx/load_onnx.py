@@ -36,6 +36,7 @@ if __name__ == "__main__":
         "--batch_size", type=int, help="onnx model batch size", default=32
     )
     parser.add_argument("--check", action="store_true", help="check the onnx model")
+    parser.add_argument("--dev", help="device name", default="cpu")
     args = parser.parse_args()
 
     # dummy dataset
@@ -73,3 +74,5 @@ if __name__ == "__main__":
     print(
         f"ONNX speedup, absolute: {pyt_time/onnx_time:.3}x relative: {100*(pyt_time - onnx_time)/pyt_time:.2}%"
     )
+
+# TODO: add --dev flag to run computation on different devices (cpu / gpu)
