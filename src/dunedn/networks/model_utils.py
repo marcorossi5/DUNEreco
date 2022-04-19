@@ -9,7 +9,8 @@ import torch.nn as nn
 
 model2batch = {
     "uscg": {"dn": 1, "roi": 1},
-    "gcnn": {"dn": 128, "roi": 512},
+    # "gcnn": {"dn": 128, "roi": 512},
+    "gcnn": {"dn": 96, "roi": 512},
     "cnn": {"dn": 376, "roi": 2048},
 }
 

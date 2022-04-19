@@ -304,8 +304,6 @@ class BaseModel:
         # export induction
         fname = output_dir / f"induction/{self.modeltype}_{self.task}.onnx"
         # prepare dummy input
-        print(iargs)
-        exit()
         iinputs = get_dummy(iargs)
         torch.onnx.export(
             self.model.induction.module,

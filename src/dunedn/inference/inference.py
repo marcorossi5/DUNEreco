@@ -59,7 +59,16 @@ def add_arguments_inference(parser):
         "--dev", help="(optional) device hosting computation", default="cpu"
     )
     parser.add_argument(
-        "--onnx", action="store_true", help="wether to use ONNX exported model"
+        "--onnx",
+        action="store_true",
+        help="wether to use ONNX exported model",
+        dest="should_use_onnx",
+    )
+    parser.add_argument(
+        "--export",
+        action="store_true",
+        help="wether to use ONNX exported model",
+        dest="should_export_to_onnx",
     )
     parser.set_defaults(func=inference)
 
@@ -83,11 +92,20 @@ def inference(args):
         args.modeltype,
         args.ckpt,
         args.dev,
-        should_use_onnx=args.onnx,
+        should_use_onnx=args.should_use_onnx,
+        should_export_to_onnx=args.should_export_to_onnx,
     )
 
 
-def inference_main(input, output, modeltype, ckpt, dev, should_use_onnx=False):
+def inference_main(
+    input,
+    output,
+    modeltype,
+    ckpt,
+    dev,
+    should_use_onnx=False,
+    should_export_to_onnx=False,
+):
     """
     Inference main function. Loads an input event from file, makes inference and
     saves the ouptut. Eventually returns the output array.
@@ -109,8 +127,9 @@ def inference_main(input, output, modeltype, ckpt, dev, should_use_onnx=False):
     evt = np.load(input)[:, 2:]
     model = DnModel(modeltype, ckpt, dev, should_use_onnx=should_use_onnx)
 
-    model.export_onnx(ckpt)
-    exit()
+    if should_export_to_onnx:
+        model.export_onnx(ckpt)
+        exit(-1)
 
     evt_dn = model.inference(evt)
     np.save(output, evt_dn)

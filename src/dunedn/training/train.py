@@ -225,13 +225,13 @@ def gcnn_onnx_inference(test_loader, ort_session):
         - torch.Tensor, output tensor of shape=(N,C,H,W)
     """
     outs = []
-    for noisy, _ in test_loader:
+    import tqdm
+
+    for noisy, _ in tqdm.tqdm(test_loader):
         out = ort_session.run(
             None,
             {"input": noisy.numpy().astype(np.float32)},
         )[0]
-        print(type(out), out.shape)
-        exit()
         outs.append(out)
     return torch.cat(outs)
 
