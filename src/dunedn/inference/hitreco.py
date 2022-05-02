@@ -69,7 +69,10 @@ def get_model_and_args(
     if should_use_onnx and ckpt is not None:
         fname = ckpt / f"{channel}" / f"{modeltype}_{task}.onnx"
         logger.debug(f"Loading onnx model at {fname}")
-        model = ort.InferenceSession(fname.as_posix())
+        model = ort.InferenceSession(
+            fname.as_posix(),
+            providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+        )
     else:
         model = get_model_from_args(args)
         if ckpt is not None:
@@ -285,7 +288,7 @@ class BaseModel:
         #     dn [dn <= args.threshold] = 0
         return planes2evt(iout, cout)
 
-    def export_onnx(self, output_dir):
+    def export_onnx(self, output_dir=None):
         """
         Exports the model to onnx format.
 
@@ -294,6 +297,9 @@ class BaseModel:
             - output_dir: Path, the directory to save the onnx files
 
         """
+        if output_dir is None:
+            output_dir = self.ckpt
+
         logger.debug(f"Exporting onnx model")
         iargs, cargs = self.args
         pixels = lambda a: a.batch_size * np.prod(a.crop_size)
@@ -312,6 +318,7 @@ class BaseModel:
             verbose=False,
             input_names=["input"],
             output_names=["output"],
+            dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
         )
         logger.info(f"Saved onnx module at: {fname}")
 
@@ -326,6 +333,7 @@ class BaseModel:
             verbose=False,
             input_names=["input"],
             output_names=["output"],
+            dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
         )
         logger.info(f"Saved onnx module at: {fname}")
 
@@ -347,7 +355,7 @@ class DnModel(BaseModel):
             - should_use_onnx: bool, wether to use ONNX exported model
         """
         super(DnModel, self).__init__(
-            modeltype, "dn", ckpt, dev=dev, should_use_onnx=should_use_onnx
+            modeltype, "dn", ckpt, dev="cpu", should_use_onnx=should_use_onnx
         )
 
 
@@ -367,7 +375,7 @@ class RoiModel(BaseModel):
             - should_use_onnx: bool, wether to use ONNX exported model
         """
         super(RoiModel, self).__init__(
-            modeltype, "roi", ckpt, dev=dev, should_use_onnx=should_use_onnx
+            modeltype, "roi", ckpt, dev="cpu", should_use_onnx=should_use_onnx
         )
 
 

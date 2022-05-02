@@ -56,9 +56,6 @@ def add_arguments_inference(parser):
         dest="ckpt",
     )
     parser.add_argument(
-        "--dev", help="(optional) device hosting computation", default="cpu"
-    )
-    parser.add_argument(
         "--onnx",
         action="store_true",
         help="wether to use ONNX exported model",
@@ -91,7 +88,6 @@ def inference(args):
         args.output,
         args.modeltype,
         args.ckpt,
-        args.dev,
         should_use_onnx=args.should_use_onnx,
         should_export_to_onnx=args.should_export_to_onnx,
     )
@@ -102,7 +98,6 @@ def inference_main(
     output,
     modeltype,
     ckpt,
-    dev,
     should_use_onnx=False,
     should_export_to_onnx=False,
 ):
@@ -116,7 +111,6 @@ def inference_main(
         - output: Path, path to the output event file
         - modeltype: str, model name. Available options: uscg|gcnn|cnn|id
         - ckpt: path to directory with saved model
-        - dev: str, device hosting computation
         - should_use_onnx: bool, wether to use onnx format
 
     Returns
@@ -125,7 +119,7 @@ def inference_main(
     """
     logger.info(f"Denoising event at {input}")
     evt = np.load(input)[:, 2:]
-    model = DnModel(modeltype, ckpt, dev, should_use_onnx=should_use_onnx)
+    model = DnModel(modeltype, ckpt, should_use_onnx=should_use_onnx)
 
     if should_export_to_onnx:
         model.export_onnx(ckpt)
@@ -137,7 +131,7 @@ def inference_main(
     return evt_dn
 
 
-def compare_performance_dn(evt_dn, target, dev):
+def compare_performance_dn(evt_dn, target):
     """
     Computes perfromance metrics between denoising inference output and ground
     truth labels.
@@ -146,12 +140,11 @@ def compare_performance_dn(evt_dn, target, dev):
     ----------
         - evt_roi: np.array, denoised event of shape=(nb wires, nb tdc ticks)
         - target: np.array, ground truth labels of shape=(nb wires, nb tdc ticks)
-        - dev: str, device hosting computation
     """
-    compute_metrics(evt_dn, target, "dn", dev)
+    compute_metrics(evt_dn, target, "dn")
 
 
-def compare_performance_roi(evt_roi, target, dev):
+def compare_performance_roi(evt_roi, target):
     """
     Computes perfromance metrics between ROI inference output and ground truth
     labels.
@@ -160,14 +153,13 @@ def compare_performance_roi(evt_roi, target, dev):
     ----------
         - evt_roi: np.array, event ROI selection of shape=(nb wires, nb tdc ticks)
         - target: np.array, ground truth labels of shape=(nb wires, nb tdc ticks)
-        - dev: str, device hosting computation
     """
     # bind target variable to a copy to prevent in place substitution
     mask = np.abs(target) <= THRESHOLD
     target = deepcopy(target)
     target[mask] = 0
     target[~mask] = 1
-    compute_metrics(evt_roi, target, "roi", dev)
+    compute_metrics(evt_roi, target, "roi")
 
 
 def thresholding_dn(evt, t=THRESHOLD):

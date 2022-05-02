@@ -210,7 +210,7 @@ def gcnn_inference(test_loader, model, dev):
         noisy = noisy.to(dev)
         out = model(noisy).data
         outs.append(out)
-    return torch.cat(outs)
+    return torch.tensor(np.concatenate(outs))
 
 
 def gcnn_onnx_inference(test_loader, ort_session):
