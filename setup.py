@@ -4,7 +4,7 @@ from sys import version_info
 import os
 import re
 
-requirements = ["numpy", "pyyaml", "torch", "torchvision", "matplotlib", "hyperopt"]
+requirements = ["numpy", "pyyaml", "torch", "torchvision", "matplotlib", "hyperopt", "onnx", "onnxruntime"]
 
 PACKAGE = "dunedn"
 
