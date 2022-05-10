@@ -73,16 +73,16 @@ def analysis(args):
         Parsed from command line or from code.
     """
     return analysis_main(
-        args.task,
         args.input_path,
         args.target_path,
+        args.task,
     )
 
 
 def analysis_main(
-    task,
-    input_path,
-    target_path,
+    input_path: Path,
+    target_path: Path,
+    task: str = "dn",
 ):
     """Inference main function.
 
@@ -91,12 +91,12 @@ def analysis_main(
 
     Parameters
     ----------
-    task: str
-        Performed task. Available options: dn|roi
     input_path: Path
         Path to the denoised event file.
     target_path: Path
         Path to the target event file.
+    task: str
+        Performed task. Available options: dn|roi
 
     Returns
     -------

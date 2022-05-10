@@ -154,8 +154,8 @@ def inference_main(
     evt = np.load(input_path)[:, 2:]
     evt_dn = model.predict(evt)
 
-    # comment out the following line to threshold the reconstructed images
-    # evt_dn = thresholding_dn(evt_dn)
+    # comment the following line to avoid thresholding
+    evt_dn = thresholding_dn(evt_dn)
 
     name = (input_path.name).split("_")
     name.insert(-1, "dn")
