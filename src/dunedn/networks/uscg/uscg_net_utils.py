@@ -1,4 +1,3 @@
-# This file is part of DUNEdn by M. Rossi
 """
     This module contains the utility functions for USCG network.
 """

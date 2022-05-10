@@ -21,7 +21,7 @@ import numpy as np
 import torch
 import onnx
 import onnxruntime as ort
-from dunedn.networks.models import GCNN_Net, USCG_Net
+from dunedn.networks.gcnn.gcnn_net import GCNN_Net, USCG_Net
 from save_onnx import get_dummy_input_and_gcnn, get_dummy_input_and_uscg
 
 if __name__ == "__main__":

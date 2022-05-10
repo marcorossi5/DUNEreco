@@ -1,4 +1,3 @@
-# This file is part of DUNEdn by M. Rossi
 import torch
 import torch.nn.functional as F
 

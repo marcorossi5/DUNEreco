@@ -2,37 +2,39 @@
     Ensures DUNEdn networks objects run the forwrd pass without errors.
 """
 import logging
-from collections import namedtuple
+from pathlib import Path
 import torch
 from dunedn.configdn import PACKAGE
-from dunedn.networks.helpers import get_supported_models, get_model_from_args
+from dunedn.networks.gcnn.training import load_and_compile_gcnn_network
+from dunedn.networks.uscg.training import load_and_compile_uscg_network
+from dunedn.networks.utils import get_supported_models
+from dunedn.utils.utils import load_runcard
 
 # instantiate logger
 logger = logging.getLogger(PACKAGE + ".test")
 
-# namedtuple for uscg arguments
-UscgArgsTuple = namedtuple("Args", ["model", "dev", "task", "patch_h", "patch_w"])
 
-# namedtuple for gcnn arguments
-GcnnArgsTuple = namedtuple(
-    "Args",
-    ["model", "dev", "task", "crop_edge", "input_channels", "hidden_channels", "k"],
-)
+def run_test_uscg(setup):
+    """Run USCG network test.
 
-
-def run_test_uscg():
-    """Run USCG network test."""
+    Parameters
+    ----------
+    setup: dict
+        Runcard settings.
+    """
     # tuple containing induction and collection inference arguments
-    batch_size = 32
-    patch_h = 100
-    patch_w = 160
+    msetup = setup["model"]["uscg"]
+    batch_size = 1
+    msetup["net_dict"]["h_collection"] = 64
+    msetup["net_dict"]["w"] = 128
 
     # load dummy dataset
-    dummy_dataset = torch.rand(batch_size, 1, patch_h, patch_w)
+    dummy_dataset = torch.rand(
+        batch_size, 1, msetup["net_dict"]["h_collection"], msetup["net_dict"]["w"]
+    )
 
     # load cnn model
-    args = UscgArgsTuple("uscg", "cpu", "dn", patch_h, patch_w)
-    model = get_model_from_args(args)
+    model = load_and_compile_uscg_network("collection", msetup, "cpu")
     model.eval()
 
     # forward pass
@@ -48,26 +50,22 @@ def run_test_uscg():
         raise err
 
 
-def run_test_gcnn(modeltype):
-    """
-    Run GCNN-like network test.
+def run_test_cnn(setup):
+    """Run CNN network test.
 
     Parameters
     ----------
-        - modeltype: str, available options cnn | gcnn
+    setup: dict
+        Runcard settings.
     """
     # tuple containing induction and collection inference arguments
-    batch_size = 32
-    crop_edge = 32
-    input_channels = 1
-    k = 8 if modeltype == "gcnn" else None
+    msetup = setup["model"]["cnn"]
 
     # load dummy dataset
-    dummy_dataset = torch.rand(batch_size, input_channels, crop_edge, crop_edge)
+    dummy_dataset = torch.rand(msetup["batch_size"], 1, *setup["dataset"]["crop_size"])
 
     # load cnn model
-    args = GcnnArgsTuple(modeltype, "cpu", "dn", crop_edge, input_channels, 32, k)
-    model = get_model_from_args(args)
+    model = load_and_compile_gcnn_network("collection", msetup, "cpu")
     model.eval()
 
     # forward pass
@@ -78,7 +76,38 @@ def run_test_gcnn(modeltype):
         assert dummy_dataset.shape == output.shape
     except AssertionError as err:
         logger.critical(
-            "Assertion fail: %s model input and output shapes do not match", modeltype
+            "Assertion fail: CNN model input and output shapes do not match"
+        )
+        raise err
+
+
+def run_test_gcnn(setup):
+    """Run GCNN network test.
+
+    Parameters
+    ----------
+    setup: dict
+        Runcard settings.
+    """
+    # tuple containing induction and collection inference arguments
+    msetup = setup["model"]["gcnn"]
+
+    # load dummy dataset
+    dummy_dataset = torch.rand(msetup["batch_size"], 1, *setup["dataset"]["crop_size"])
+
+    # load cnn model
+    model = load_and_compile_gcnn_network("collection", msetup, "cpu")
+    model.eval()
+
+    # forward pass
+    output = model(dummy_dataset)
+
+    # check that input and output have the same shape
+    try:
+        assert dummy_dataset.shape == output.shape
+    except AssertionError as err:
+        logger.critical(
+            "Assertion fail: GCNN model input and output shapes do not match"
         )
         raise err
 
@@ -91,11 +120,16 @@ def run_test(modeltype):
     ----------
         - modeltype: str, available options uscg | cnn | gcnn
     """
+    setup = load_runcard(Path("runcards/default.yaml"))
     logger.info("Running forward-pass test on %s model", modeltype)
-    if modeltype == "uscg":
-        run_test_uscg()
-    elif modeltype in ["cnn", "gcnn"]:
-        run_test_gcnn(modeltype)
+    if modeltype == "cnn":
+        run_test_cnn(setup)
+    elif modeltype == "gcnn":
+        run_test_gcnn(setup)
+    elif modeltype == "uscg":
+        run_test_uscg(setup)
+    else:
+        raise NotImplementedError(f"Modeltype not implemented, got {modeltype}")
 
 
 def test_networks():
