@@ -14,6 +14,43 @@ from dunedn.training.metrics import DN_METRICS
 logger = logging.getLogger(PACKAGE + ".inference")
 
 
+def get_models(task, modeltype, ckpt, msetup, dev):
+    load_fn = (
+        load_and_compile_uscg_network
+        if modeltype == "uscg"
+        else load_and_compile_gcnn_network
+    )
+    if ckpt is not None:
+        ckpt_induction = ckpt / "induction" / f"{ckpt.name}_{task}_induction.pth"
+        ckpt_collection = ckpt / "collection" / f"{ckpt.name}_{task}_collection.pth"
+    else:
+        ckpt_induction = None
+        ckpt_collection = None
+    inetwork = load_fn("induction", msetup, dev, ckpt_induction)
+    cnetwork = load_fn("collection", msetup, dev, ckpt_collection)
+    return inetwork, cnetwork
+
+
+def get_onnx_models(task, modeltype, ckpt):
+    from dunedn.networks.onnx.onnx_gcnn_net import OnnxGcnnNetwork
+
+    fname = ckpt / f"induction/{modeltype}_{task}.onnx"
+    logger.debug(f"Loading onnx model at {fname}")
+    inetwork = OnnxGcnnNetwork(
+        fname.as_posix(),
+        DN_METRICS,
+        # providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+    )
+    fname = ckpt / f"collection/{modeltype}_{task}.onnx"
+    logger.debug(f"Loading onnx model at {fname}")
+    cnetwork = OnnxGcnnNetwork(
+        fname.as_posix(),
+        DN_METRICS,
+        # providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+    )
+    return inetwork, cnetwork
+
+
 class BaseModel:
     """
     Mother class for inference model.
@@ -48,45 +85,17 @@ class BaseModel:
         msetup = setup["model"][self.modeltype]
 
         if should_use_onnx:
-            from dunedn.networks.onnx.onnx_gcnn_net import OnnxGcnnNetwork
-
             if modeltype == "uscg":
                 raise NotImplementedError(
                     "Cannot call with onnx inference with USCG network."
                 )
-            fname = self.ckpt / f"induction/{modeltype}_{task}.onnx"
-            logger.debug(f"Loading onnx model at {fname}")
-            self.inetwork = OnnxGcnnNetwork(
-                fname.as_posix(),
-                DN_METRICS,
-                # providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
-            )
-            fname = self.ckpt / f"collection/{modeltype}_{task}.onnx"
-            logger.debug(f"Loading onnx model at {fname}")
-            self.cnetwork = OnnxGcnnNetwork(
-                fname.as_posix(),
-                DN_METRICS,
-                # providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+            self.inetwork, self.cnetwork = get_onnx_models(
+                self.task, self.modeltype, self.ckpt
             )
         else:
-
-            load_fn = (
-                load_and_compile_uscg_network
-                if modeltype == "uscg"
-                else load_and_compile_gcnn_network
+            self.inetwork, self.cnetwork = get_models(
+                self.task, self.modeltype, self.ckpt, msetup, self.dev
             )
-            if self.ckpt is not None:
-                ckpt_induction = (
-                    self.ckpt / "induction" / f"{ckpt.name}_{self.task}_induction.pth"
-                )
-                ckpt_collection = (
-                    self.ckpt / "collection" / f"{ckpt.name}_{self.task}_collection.pth"
-                )
-            else:
-                ckpt_induction = None
-                ckpt_collection = None
-            self.inetwork = load_fn("induction", msetup, dev, ckpt_induction)
-            self.cnetwork = load_fn("collection", msetup, dev, ckpt_collection)
 
         gen_kwargs = {
             "task": setup["task"],

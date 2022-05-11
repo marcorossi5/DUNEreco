@@ -54,6 +54,9 @@ def load_and_compile_gcnn_network(
     )
 
     network.compile(loss, optimizer, DN_METRICS)
+    
+    # move model to device
+    network.to(first_dev)
     return network
 
 
