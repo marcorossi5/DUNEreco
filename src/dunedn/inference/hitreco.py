@@ -187,7 +187,7 @@ class DnModel(BaseModel):
             Wether to use ONNX exported model.
         """
         super(DnModel, self).__init__(
-            setup, modeltype, "dn", ckpt, dev="cpu", should_use_onnx=should_use_onnx
+            setup, modeltype, "dn", ckpt, dev, should_use_onnx
         )
 
 
@@ -208,7 +208,7 @@ class RoiModel(BaseModel):
             Wether to use ONNX exported model.
         """
         super(RoiModel, self).__init__(
-            setup, modeltype, "roi", ckpt, dev="cpu", should_use_onnx=should_use_onnx
+            setup, modeltype, "roi", ckpt, dev, should_use_onnx
         )
 
 
@@ -234,9 +234,5 @@ class DnRoiModel:
         dev: str
             Device hosting the computation.
         """
-        self.roi = RoiModel(
-            setup, modeltype, roi_ckpt, dev=dev, should_use_onnx=should_use_onnx
-        )
-        self.dn = DnModel(
-            setup, modeltype, dn_ckpt, dev=dev, should_use_onnx=should_use_onnx
-        )
+        self.roi = RoiModel(setup, modeltype, roi_ckpt, dev, should_use_onnx)
+        self.dn = DnModel(setup, modeltype, dn_ckpt, dev, should_use_onnx)
