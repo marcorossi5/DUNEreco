@@ -75,13 +75,17 @@ class BaseModel:
                 if modeltype == "uscg"
                 else load_and_compile_gcnn_network
             )
-            ckpt_induction = (
-                self.ckpt / "induction" / f"{ckpt.name}_{self.task}_induction.pth"
-            )
+            if self.ckpt is not None:
+                ckpt_induction = (
+                    self.ckpt / "induction" / f"{ckpt.name}_{self.task}_induction.pth"
+                )
+                ckpt_collection = (
+                    self.ckpt / "collection" / f"{ckpt.name}_{self.task}_collection.pth"
+                )
+            else:
+                ckpt_induction = None
+                ckpt_collection = None
             self.inetwork = load_fn("induction", msetup, dev, ckpt_induction)
-            ckpt_collection = (
-                self.ckpt / "collection" / f"{ckpt.name}_{self.task}_collection.pth"
-            )
             self.cnetwork = load_fn("collection", msetup, dev, ckpt_collection)
 
         gen_kwargs = {
