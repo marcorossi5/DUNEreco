@@ -35,7 +35,7 @@ def check_in_output_folder(folders: dict):
     shutil.copyfile(runcard_path, folders["cards"] / "runcard_default.yaml")
 
     # extract input tarball
-    tarzip = "dunetpc_inspired_v09_p2GeV_rawdigits.tar.gz"
+    tarzip = "dunetpc_inspired_v08_p2GeV_rawdigits.tar.gz"
     sp.run(["tar", "-xzf", tarzip, "-C", folders["out"]])
 
 
