@@ -2,6 +2,13 @@
 
 This directory contains examples scripts.
 
+## Note
+
+The examples in this directory assume that the `DUNEdn` package with the
+`example` extensions is installed in the current environment.  
+This can be done running `pip install -e .[example]` from the package [root](..)
+directory.
+
 ## Plot example
 
 The plotting example reproduces the analogous images of Fig. 5 from
@@ -18,3 +25,15 @@ and execute the relative convenience script:
 
 This will produce a `plot_example` output folder containing three `.png` images
 with the rawdigits image and the two noisy and clear waveforms of a single wire.
+
+## Onnx example
+
+This folder contains a comparison between PyTorch and Onnx model inference.  
+
+The example can be executed as a script with:
+
+```bash
+python onnx_example.py
+```
+
+And as a [jupyter notebook](onnx_example.ipynb).
