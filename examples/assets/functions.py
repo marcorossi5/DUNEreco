@@ -5,6 +5,7 @@ import subprocess as sp
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
+from dunedn.inference.inference import thresholding_dn
 from dunedn.networks.abstract_net import AbstractNet
 from dunedn.utils.utils import add_info_columns
 
@@ -25,7 +26,7 @@ def check_in_output_folder(folders: dict):
     # create directories
     folders["cards"].mkdir(parents=True, exist_ok=True)
     folders["onnx_save"].mkdir(parents=True, exist_ok=True)
-    folders["base_plot"].mkdir(parents=True, exist_ok=True)
+    folders["id_plot"].mkdir(parents=True, exist_ok=True)
     folders["pytorch_plot"].mkdir(exist_ok=True)
     folders["onnx_plot"].mkdir(exist_ok=True)
 
@@ -64,6 +65,9 @@ def inference(model: AbstractNet, evt: np.ndarray, fname: Path, dev: str = None)
     evt_dn = model.predict(evt, dev)
     inference_time = tm() - start
 
+    # thresholding
+    evt_dn = thresholding_dn(evt_dn)
+    
     # add info columns
     evt_dn = add_info_columns(evt_dn)
 
