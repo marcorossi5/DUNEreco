@@ -148,7 +148,8 @@ class UscgPlanesDataset(BaseUscgDataset):
         batch_size: int
             The number of examples to be batched.
         """
-        self.noisy = noisy.astype(np.float32)
+        noisy = noisy.astype(np.float32)
+        self.noisy = median_subtraction(noisy)
         super().__init__(
             "test",
             task,
@@ -156,6 +157,7 @@ class UscgPlanesDataset(BaseUscgDataset):
             dsetup,
             batch_size,
         )
+
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, int]:
         """
