@@ -32,7 +32,7 @@ def main(modeltype, version, pytorch_dev):
         "cards": base_folder / f"cards",
         "onnx_save": base_folder / f"models/onnx/saved_models/{modeltype}_{version}",
         "plot": base_folder / "models/onnx/plots",
-        "base_plot": base_folder / "models/onnx/plots/inputs",
+        "id_plot": base_folder / "models/onnx/plots/identity",
         "pytorch_plot": base_folder / "models/onnx/plots/torch",
         "onnx_plot": base_folder / "models/onnx/plots/onnx",
     }
@@ -49,7 +49,7 @@ def main(modeltype, version, pytorch_dev):
         / f"p2GeV_cosmics_inspired_rawdigit_onnx_{modeltype}_evt8.npy",
     }
 
-    plot_example(paths["input"], paths["target"], outdir=folders["base_plot"])
+    plot_example(paths["input"], paths["target"], outdir=folders["id_plot"])
 
     evt = np.load(paths["input"])[:, 2:]
     print(f"Loaded event at {paths['input']}")

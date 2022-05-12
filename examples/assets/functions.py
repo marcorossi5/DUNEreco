@@ -132,7 +132,7 @@ def plot_wire_sample(
         Wether to show matplotlib plots or not.
     """
     plt.rcParams.update({"text.usetex": True})
-    fname = outdir / "visual_noisy_wire.png"
+    fname = outdir / "visual_denoised_wire.png"
     plt.title(
         r"""Inspired to ProtoDUNE SP simulation
     Collection wire, Raw waveform
