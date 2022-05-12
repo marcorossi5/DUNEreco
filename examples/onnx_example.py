@@ -5,7 +5,7 @@
 
     .. code-block:: bash
 
-        python onnx_example.py    
+        python onnx_example.py -m <modeltype> -v v08 -d cuda:0
 """
 from pathlib import Path
 import argparse
@@ -79,8 +79,10 @@ def main(modeltype, version, pytorch_dev):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dev", "-d", help="device hosting the computation")
     parser.add_argument("--model", "-m", help="modeltype", dest="modeltype")
     parser.add_argument("--version", "-v", help="model version", default="v08")
+    parser.add_argument(
+        "--dev", "-d", help="device hosting the computation", default="cpu"
+    )
     args = parser.parse_args()
     main(args.modeltype, args.version, args.dev)
