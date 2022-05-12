@@ -50,7 +50,7 @@ This process will copy the DUNEdn program to your environment python path.
 ### Note
 
 The [saved_models](saved_models) and [examples](examples) directories contain
-the checkpoints to reproduce the results presented in
+data to reproduce the results presented in
 [arXiv:2103.01596](https://arxiv.org/abs/2103.01596).
 
 Since some of the saved models files are quite large (~100 MB), they are uploaded
