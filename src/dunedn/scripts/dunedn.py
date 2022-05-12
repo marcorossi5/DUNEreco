@@ -2,29 +2,36 @@
     This script is the DUNEdn package entry point. Parses the subcommands from
     command line and calls the appropriate function to run.
 
+    Example
+    -------
+
     Main help output:
 
-    ```
-    usage: dunedn [-h] {preprocess,train,training,inference,infer} ...
+    .. code-block:: text
+    
+        $ dunedn --help
+        usage: dunedn [-h] {preprocess,train,inference,analysis} ...
 
-    dunedn
+        dunedn
 
-    positional arguments:
-      {preprocess,train,training,inference,infer}
-        preprocess          preprocess dataset of protodune events
-        train (training)    train model loading settings from configcard
-        inference (infer)   load event and make inference with saved model
+        positional arguments:
+          {preprocess,train,inference,analysis}
+            preprocess          preprocess dataset of protodune events
+            train               train model loading settings from configcard
+            inference           load event and make inference with saved model
+            analysis            load reconstructed and target events and compute accuracy metrics
 
-    optional arguments:
-      -h, --help            show this help message and exit
-    ```
+        optional arguments:
+          -h, --help            show this help message and exit
+
+
 """
-# This file is part of DUNEdn by M. Rossi
 import argparse
 from time import time as tm
 from dunedn.preprocessing.preprocess import add_arguments_preprocessing
 from dunedn.training.denoise_training import add_arguments_training
 from dunedn.inference.inference import add_arguments_inference
+from dunedn.inference.analysis import add_arguments_analysis
 
 
 def main():
@@ -43,7 +50,7 @@ def main():
     # train
     t_msg = "Train model loading settings from configcard."
     t_subparser = subparsers.add_parser(
-        "train", aliases=["training"], description=t_msg, help=t_msg.lower().strip(".")
+        "train", description=t_msg, help=t_msg.lower().strip(".")
     )
     add_arguments_training(t_subparser)
 
@@ -51,11 +58,19 @@ def main():
     dn_msg = "Load event and make inference with saved model."
     dn_subparser = subparsers.add_parser(
         "inference",
-        aliases=["infer"],
         description=dn_msg,
         help=dn_msg.lower().strip("."),
     )
     add_arguments_inference(dn_subparser)
+
+    # analysis
+    ana_msg = "Load reconstructed and target events and compute accuracy metrics."
+    dn_subparser = subparsers.add_parser(
+        "analysis",
+        description=ana_msg,
+        help=ana_msg.lower().strip("."),
+    )
+    add_arguments_analysis(dn_subparser)
 
     args = parser.parse_args()
 

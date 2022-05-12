@@ -1,4 +1,3 @@
-# This file is part of DUNEdn by M. Rossi
 import os
 import logging
 import glob

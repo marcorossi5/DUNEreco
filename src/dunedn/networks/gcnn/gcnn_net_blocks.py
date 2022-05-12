@@ -1,10 +1,9 @@
-# This file is part of DUNEdn by M. Rossi
 """
     This module contains the GCNN Net building blocks.
 """
 import torch
 from torch import nn
-from dunedn.networks.GCNN_Net_utils import (
+from dunedn.networks.gcnn.gcnn_net_utils import (
     pairwise_dist,
     batched_index_select,
     local_mask,
@@ -17,19 +16,21 @@ class ROI(nn.Module):
     def __init__(self, kernel_size, ic, hc, getgraph_fn, model):
         super(ROI, self).__init__()
         self.getgraph_fn = getgraph_fn
-        self.PreProcessBlock = PreProcessBlock(kernel_size, ic, hc, getgraph_fn, model)
-        self.GCs = nn.ModuleList([choose_conv(model, hc, hc) for i in range(8)])
-        self.GC_final = choose_conv(model, hc, 1)
+        self.pre_process_block = PreProcessBlock(
+            kernel_size, ic, hc, getgraph_fn, model
+        )
+        self.gcs = nn.ModuleList([choose_conv(model, hc, hc) for i in range(8)])
+        self.gc_final = choose_conv(model, hc, 1)
         self.activ = nn.LeakyReLU(0.05)
         self.act = nn.Sigmoid()
 
     def forward(self, x):
-        x = self.PreProcessBlock(x)
-        for i, GC in enumerate(self.GCs):
+        x = self.pre_process_block(x)
+        for i, gc in enumerate(self.gcs):
             if i % 3 == 0:
                 graph = self.getgraph_fn(x)
-            x = self.activ(GC(x, graph))
-        return self.act(self.GC_final(x, graph))
+            x = self.activ(gc(x, graph))
+        return self.act(self.gc_final(x, graph))
 
 
 class PreProcessBlock(nn.Module):
@@ -48,12 +49,12 @@ class PreProcessBlock(nn.Module):
             self.activ,
         )
         self.bn = nn.BatchNorm2d(oc)
-        self.GC = choose_conv(model, oc, oc)
+        self.gc = choose_conv(model, oc, oc)
 
     def forward(self, x):
         x = self.convs(x)
         graph = self.getgraph_fn(x)
-        return self.activ(self.GC(x, graph))
+        return self.activ(self.gc(x, graph))
 
 
 class HPF(nn.Module):
@@ -65,7 +66,7 @@ class HPF(nn.Module):
         self.conv = nn.Sequential(
             nn.Conv2d(ic, ic, 3, padding=1), nn.BatchNorm2d(ic), nn.LeakyReLU(0.05)
         )
-        self.GCs = nn.ModuleList(
+        self.gcs = nn.ModuleList(
             [
                 choose_conv(model, ic, ic),
                 choose_conv(model, ic, oc),
@@ -77,8 +78,8 @@ class HPF(nn.Module):
     def forward(self, x):
         x = self.conv(x)
         graph = self.getgraph_fn(x)
-        for GC in self.GCs:
-            x = self.act(GC(x, graph))
+        for gc in self.gcs:
+            x = self.act(gc(x, graph))
         return x
 
 
@@ -91,14 +92,14 @@ class LPF(nn.Module):
         self.conv = nn.Sequential(
             nn.Conv2d(ic, ic, 5, padding=2), nn.BatchNorm2d(ic), nn.LeakyReLU(0.05)
         )
-        self.GCs = nn.ModuleList(
+        self.gcs = nn.ModuleList(
             [
                 choose_conv(model, ic, ic),
                 choose_conv(model, ic, oc),
                 choose_conv(model, oc, oc),
             ]
         )
-        self.BNs = nn.ModuleList(
+        self.bns = nn.ModuleList(
             [nn.BatchNorm2d(ic), nn.BatchNorm2d(oc), nn.BatchNorm2d(oc)]
         )
         self.act = nn.LeakyReLU(0.05)
@@ -106,8 +107,8 @@ class LPF(nn.Module):
     def forward(self, x):
         y = self.conv(x)
         graph = self.getgraph_fn(y)
-        for BN, GC in zip(self.BNs, self.GCs):
-            y = self.act(BN(GC(y, graph)))
+        for bn, gc in zip(self.bns, self.gcs):
+            y = self.act(bn(gc(y, graph)))
         return x + y
 
 
@@ -115,14 +116,14 @@ class PostProcessBlock(nn.Module):
     def __init__(self, ic, hc, getgraph_fn, model):
         super(PostProcessBlock, self).__init__()
         self.getgraph_fn = getgraph_fn
-        self.GCs = nn.ModuleList(
+        self.gcs = nn.ModuleList(
             [
                 choose_conv(model, hc * 3 + 1, hc * 2),
                 choose_conv(model, hc * 2, hc),
                 choose_conv(model, hc, ic),
             ]
         )
-        self.BNs = nn.ModuleList(
+        self.bns = nn.ModuleList(
             [nn.BatchNorm2d(hc * 2), nn.BatchNorm2d(hc), nn.Identity()]
         )
         self.acts = nn.ModuleList(
@@ -130,9 +131,9 @@ class PostProcessBlock(nn.Module):
         )
 
     def forward(self, x):
-        for act, BN, GC in zip(self.acts, self.BNs, self.GCs):
+        for act, bn, gc in zip(self.acts, self.bns, self.gcs):
             graph = self.getgraph_fn(x)
-            x = act(BN(GC(x, graph)))
+            x = act(bn(gc(x, graph)))
         return x
 
 
@@ -213,10 +214,10 @@ class GConv(nn.Module):
         """
         super(GConv, self).__init__()
         self.conv1 = nn.Conv2d(ic, oc, 3, padding=1)
-        self.NLA = NonLocalAggregator(ic, oc)
+        self.nla = NonLocalAggregator(ic, oc)
 
     def forward(self, x, graph):
-        return torch.mean(torch.stack([self.conv1(x), self.NLA(x, graph)]), dim=0)
+        return torch.mean(torch.stack([self.conv1(x), self.nla(x, graph)]), dim=0)
 
 
 class Conv(nn.Module):

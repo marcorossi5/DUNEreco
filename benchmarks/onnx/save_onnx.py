@@ -18,7 +18,7 @@
 from pathlib import Path
 import argparse
 import torch
-from dunedn.networks.models import USCG_Net, GCNN_Net
+from dunedn.networks.gcnn.gcnn_net import USCG_Net, GCNN_Net
 
 
 def get_dummy_input_and_uscg():
