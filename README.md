@@ -49,13 +49,32 @@ This process will copy the DUNEdn program to your environment python path.
 
 ### Note
 
-The [saved_models](saved_models) directory contains the checkpoints to reproduce
-the results presented in [arXiv:2103.01596](https://arxiv.org/abs/2103.01596).  
+The [saved_models](saved_models) and [examples](examples) directories contain
+the checkpoints to reproduce the results presented in
+[arXiv:2103.01596](https://arxiv.org/abs/2103.01596).
+
 Since some of the saved models files are quite large (~100 MB), they are uploaded
-via [git-lfs](https://git-lfs.github.com/). when cloning the repo, it is possible
-to download pointers to those large files rather than the whole binaries. This can
-be achieved adding the flag `--config lfs.fetchexclude="*.pth*"` to the `git clone`
-command above.
+via [git-lfs](https://git-lfs.github.com/).  
+When cloning the repo, it is possible to download pointers to those large files
+rather than the whole binaries.  
+This can be achieved with:
+
+```bash
+git clone --config lfs.fetchexclude="*.pth*,*.tar.gz" https://github.com/marcorossi5/DUNEdn.git
+```
+
+The actual files can be downloaded from the server with the command:
+
+```bash
+git lfs pull --exclude="" --include="*.pth,*.tar.gz"
+```
+
+This overrides the settings in [.gitconfig](.git/config) and ensures that the
+desired files are downloaded.
+
+Please, refere to this
+[tutorial](https://www.atlassian.com/git/tutorials/git-lfs#including-excluding-files)
+for more instructions on the usage of `git-lfs`.
 
 ### Requirements
 
