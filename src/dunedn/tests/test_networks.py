@@ -34,7 +34,7 @@ def run_test_uscg(setup):
     )
 
     # load cnn model
-    model = load_and_compile_uscg_network("collection", msetup, "cpu")
+    model = load_and_compile_uscg_network("collection", msetup)
     model.eval()
 
     # forward pass
@@ -65,7 +65,7 @@ def run_test_cnn(setup):
     dummy_dataset = torch.rand(msetup["batch_size"], 1, *setup["dataset"]["crop_size"])
 
     # load cnn model
-    model = load_and_compile_gcnn_network("collection", msetup, "cpu")
+    model = load_and_compile_gcnn_network("collection", msetup)
     model.eval()
 
     # forward pass
@@ -96,7 +96,7 @@ def run_test_gcnn(setup):
     dummy_dataset = torch.rand(msetup["batch_size"], 1, *setup["dataset"]["crop_size"])
 
     # load cnn model
-    model = load_and_compile_gcnn_network("collection", msetup, "cpu")
+    model = load_and_compile_gcnn_network("collection", msetup)
     model.eval()
 
     # forward pass

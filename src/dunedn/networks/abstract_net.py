@@ -168,6 +168,9 @@ class AbstractNet(torch.nn.Module, ABC):
         callbacks.append(self.history)
         self.callback_list = CallbackList(callbacks)
 
+        # model on device
+        self.to(dev)
+
         logger.info(f"Training for {epochs} epochs")
 
         self.callback_list.on_train_begin()
@@ -196,7 +199,29 @@ class AbstractNet(torch.nn.Module, ABC):
 
         training_logs = None
         self.callback_list.on_train_end(training_logs)
+
+        # model to cpu to save memory
+        self.to("cpu")
+
         return self.history
+
+    @abstractmethod
+    def predict(self, generator: torch.utils.data.Dataset, device: str) -> torch.Tensor:
+        """Network inference.
+
+        Parameters
+        ----------
+        generator: torch.utils.data.Dataset
+            The inference generator.
+        device: str
+            Device hosting computation.
+
+        Returns
+        -------
+        y_pred: torch.Tensor
+            Prediction tensor. Placed on "cpu" for GPU memory saving.
+        """
+        pass
 
     @abstractmethod
     def train_epoch(

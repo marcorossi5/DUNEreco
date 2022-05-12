@@ -95,6 +95,30 @@ def confusion_matrix(hit, no_hit, t=0.5):
     return tp, fp, fn, tn
 
 
+def add_info_columns(evt: np.ndarray) -> np.ndarray:
+    """Adds event identifier and channel number columns to event.
+
+    Events come with additional information placed in the two first comlumns of
+    the 2D array. These must be removed to make the computation as they are not
+    informative.
+    When saving back the event, the information must be added again.
+
+    Parameters
+    ----------
+    evt: np.ndarray
+        The event w/o additional information, of shape=(nb channels, nb tdc ticks).
+
+    Returns
+    -------
+        The event w additional information, of shape=(nb channels, 2 + nb tdc ticks).
+    """
+    nb_channels, _ = evt.shape
+    channels_col = np.arange(nb_channels).reshape([-1, 1])
+    event_col = np.zeros_like(channels_col)
+    evt_with_info = np.concatenate([event_col, channels_col, evt], axis=1)
+    return evt_with_info
+
+
 # instantiate logger
 logger = logging.getLogger(PACKAGE + ".train")
 

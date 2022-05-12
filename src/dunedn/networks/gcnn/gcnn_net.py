@@ -118,7 +118,7 @@ class GcnnNet(AbstractNet):
         no_metrics: bool = False,
         verbose: int = 1,
     ) -> Tuple[torch.Tensor, list[Tuple[float, float]], float]:
-        """Network inference.
+        """Gcnn network inference.
 
         Parameters
         ----------
@@ -154,10 +154,16 @@ class GcnnNet(AbstractNet):
             batch_size=generator.batch_size,
         )
 
+        # model on device
+        self.to(dev)
+
         # inference pass
         start = tm()
         output = gcnn_inference_pass(test_loader, self, dev, verbose)
         inference_time = tm() - start
+
+        # model to cpu to save memory
+        self.to("cpu")
 
         # convert back to planes
         y_pred = generator.converter.tiles2planes(output)
@@ -198,13 +204,13 @@ class GcnnNet(AbstractNet):
 
         for clear, noisy in train_loader:
             self.callback_list.on_train_batch_begin()
-            step_logs = self.training_batch(noisy, clear, dev)
+            step_logs = self.train_batch(noisy, clear, dev)
             self.callback_list.on_train_batch_end(step_logs)
 
         epoch_logs = {}
         return epoch_logs
 
-    def training_batch(self, noisy: torch.Tensor, clear: torch.Tensor, dev: str):
+    def train_batch(self, noisy: torch.Tensor, clear: torch.Tensor, dev: str):
         """Makes one batch update.
 
         Parameters

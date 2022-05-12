@@ -13,7 +13,7 @@ logger = logging.getLogger(PACKAGE + ".gcnn")
 
 
 def load_and_compile_gcnn_network(
-    channel: str, msetup: dict, dev: str, checkpoint_filepath: Path = None
+    channel: str, msetup: dict, checkpoint_filepath: Path = None
 ) -> GcnnNet:
     """Loads a CNN or GCNN network.
 
@@ -23,8 +23,6 @@ def load_and_compile_gcnn_network(
         Available options induction | collection.
     msetup: dict
         The model setup dictionary.
-    dev: str
-        The device to load the model to.
     checkpoint_filepath: Path
         The `.pth` checkpoint containing network weights to be loaded.
 
@@ -33,15 +31,12 @@ def load_and_compile_gcnn_network(
     network: GcnnNet
         The loaded neural network.
     """
-    first_dev = dev[0] if isinstance(dev, list) else dev
 
     network = GcnnNet(**msetup["net_dict"])
 
     if checkpoint_filepath:
         logger.info(f"Loading weights at {checkpoint_filepath}")
-        state_dict = torch.load(
-            checkpoint_filepath, map_location=torch.device(first_dev)
-        )
+        state_dict = torch.load(checkpoint_filepath, map_location=torch.device("cpu"))
         new_state_dict = make_dict_compatible(state_dict)
         network.load_state_dict(new_state_dict)
 
@@ -55,8 +50,6 @@ def load_and_compile_gcnn_network(
 
     network.compile(loss, optimizer, DN_METRICS)
 
-    # move model to device
-    network.to(first_dev)
     return network
 
 

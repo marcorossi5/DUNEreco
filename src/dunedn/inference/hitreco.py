@@ -14,7 +14,7 @@ from dunedn.training.metrics import DN_METRICS
 logger = logging.getLogger(PACKAGE + ".inference")
 
 
-def get_models(task, modeltype, ckpt, msetup, dev):
+def get_models(task, modeltype, ckpt, msetup):
     load_fn = (
         load_and_compile_uscg_network
         if modeltype == "uscg"
@@ -26,8 +26,8 @@ def get_models(task, modeltype, ckpt, msetup, dev):
     else:
         ckpt_induction = None
         ckpt_collection = None
-    inetwork = load_fn("induction", msetup, dev, ckpt_induction)
-    cnetwork = load_fn("collection", msetup, dev, ckpt_collection)
+    inetwork = load_fn("induction", msetup, ckpt_induction)
+    cnetwork = load_fn("collection", msetup, ckpt_collection)
     return inetwork, cnetwork
 
 
@@ -56,9 +56,7 @@ class BaseModel:
     Mother class for inference model.
     """
 
-    def __init__(
-        self, setup, modeltype, task, ckpt=None, dev="cpu", should_use_onnx=False
-    ):
+    def __init__(self, setup, modeltype, task, ckpt=None, should_use_onnx=False):
         """
         Parameters
         ----------
@@ -70,8 +68,6 @@ class BaseModel:
             Available options dn | roi.
         ckpt: Path
             Saved checkpoint path. If None, an un-trained model will be used.
-        dev: str
-            Device hosting computation.
         should_use_onnx: bool
             Wether to use ONNX exported model.
         """
@@ -79,7 +75,6 @@ class BaseModel:
         self.modeltype = modeltype
         self.task = task
         self.ckpt = ckpt
-        self.dev = dev
         self.should_use_onnx = should_use_onnx
 
         msetup = setup["model"][self.modeltype]
@@ -94,7 +89,7 @@ class BaseModel:
             )
         else:
             self.inetwork, self.cnetwork = get_models(
-                self.task, self.modeltype, self.ckpt, msetup, self.dev
+                self.task, self.modeltype, self.ckpt, msetup
             )
 
         gen_kwargs = {
@@ -115,13 +110,15 @@ class BaseModel:
             **gen_kwargs,
         )
 
-    def predict(self, event: np.ndarray) -> np.ndarray:
+    def predict(self, event: np.ndarray, dev="cpu") -> np.ndarray:
         """Interface for model prediction on pDUNE event.
 
         Parameters
         ----------
         event: np.ndarray
             Event input array of shape=(nb wires, nb tdc ticks).
+        dev: str
+            Device hosting computation.
 
         Returns
         -------
@@ -138,8 +135,8 @@ class BaseModel:
             iout = self.inetwork.predict(idataset)
             cout = self.cnetwork.predict(cdataset)
         else:
-            iout = self.inetwork.predict(idataset, self.dev, no_metrics=True)
-            cout = self.cnetwork.predict(cdataset, self.dev, no_metrics=True)
+            iout = self.inetwork.predict(idataset, dev, no_metrics=True)
+            cout = self.cnetwork.predict(cdataset, dev, no_metrics=True)
 
         return planes2evt(iout, cout)
 
@@ -171,7 +168,7 @@ class BaseModel:
 class DnModel(BaseModel):
     """Wrapper class for denoising model."""
 
-    def __init__(self, setup, modeltype, ckpt=None, dev="cpu", should_use_onnx=False):
+    def __init__(self, setup, modeltype, ckpt=None, should_use_onnx=False):
         """
         Parameters
         ----------
@@ -181,20 +178,16 @@ class DnModel(BaseModel):
             Saved checkpoint path. The path should point to a folder containing
             a collection and an induction .pth file. If `None`, an un-trained
             model will be used.
-        dev: str
-            Device hosting the computation.
         should_use_onnx: bool
             Wether to use ONNX exported model.
         """
-        super(DnModel, self).__init__(
-            setup, modeltype, "dn", ckpt, dev, should_use_onnx
-        )
+        super(DnModel, self).__init__(setup, modeltype, "dn", ckpt, should_use_onnx)
 
 
 class RoiModel(BaseModel):
     """Wrapper class for ROI selection model."""
 
-    def __init__(self, setup, modeltype, ckpt=None, dev="cpu", should_use_onnx=False):
+    def __init__(self, setup, modeltype, ckpt=None, should_use_onnx=False):
         """
         Parameters
         ----------
@@ -202,14 +195,10 @@ class RoiModel(BaseModel):
             Valid options: "cnn" | "gcnn" | "usgc".
         ckpt: Path
             Saved checkpoint path. If None, an un-trained model will be used.
-        dev: str
-            Device hosting the computation.
         should_use_onnx: bool
             Wether to use ONNX exported model.
         """
-        super(RoiModel, self).__init__(
-            setup, modeltype, "roi", ckpt, dev, should_use_onnx
-        )
+        super(RoiModel, self).__init__(setup, modeltype, "roi", ckpt, should_use_onnx)
 
 
 class DnRoiModel:
@@ -221,7 +210,6 @@ class DnRoiModel:
         modeltype,
         roi_ckpt=None,
         dn_ckpt=None,
-        dev="cpu",
         should_use_onnx=False,
     ):
         """
@@ -231,8 +219,6 @@ class DnRoiModel:
             Valid options: "cnn" | "gcnn" | "usgc".
         ckpt: Path
             Saved checkpoint path. If None, an un-trained model will be used.
-        dev: str
-            Device hosting the computation.
         """
-        self.roi = RoiModel(setup, modeltype, roi_ckpt, dev, should_use_onnx)
-        self.dn = DnModel(setup, modeltype, dn_ckpt, dev, should_use_onnx)
+        self.roi = RoiModel(setup, modeltype, roi_ckpt, should_use_onnx)
+        self.dn = DnModel(setup, modeltype, dn_ckpt, should_use_onnx)

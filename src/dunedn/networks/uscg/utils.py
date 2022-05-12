@@ -107,8 +107,6 @@ def uscg_inference_pass(
         div, nwindows, idxs = time_windows(noisy, w, network.stride)
         out = torch.zeros_like(noisy)
         for nwindow, (start, end) in zip(nwindows, idxs):
-            nwindow = nwindow.to(dev)
-            res = network(nwindow).data
-            out[..., start:end] += res
+            out[..., start:end] = network(nwindow.to(dev)).detach().cpu()
         outs.append(out / div)
     return torch.cat(outs)

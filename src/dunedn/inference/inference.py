@@ -32,7 +32,7 @@ import numpy as np
 from pathlib import Path
 from .hitreco import DnModel
 from dunedn.configdn import PACKAGE
-from dunedn.utils.utils import load_runcard, check_in_folder
+from dunedn.utils.utils import load_runcard, add_info_columns
 
 THRESHOLD = 3.5  # the ADC threshold below which the output is put to zero
 # TODO: move this into some dunedn config file
@@ -162,11 +162,8 @@ def inference_main(
     name = "_".join(name)
     fname = output_folder / name
 
-    # add first two columns of event id and channel number to reconstructed event
-    nb_channels, _ = evt_dn.shape
-    channels_col = np.arange(nb_channels).reshape([-1, 1])
-    event_col = np.zeros_like(channels_col)
-    evt_dn = np.concatenate([event_col, channels_col, evt_dn], axis=1)
+    # add info columns
+    evt_dn = add_info_columns(evt_dn)
 
     # save reco array
     np.save(fname, evt_dn)
@@ -193,6 +190,3 @@ def thresholding_dn(evt, t=THRESHOLD):
     evt = deepcopy(evt)
     evt[mask] = 0
     return evt
-
-
-# TODO: think about the possibility to use un un-trained model

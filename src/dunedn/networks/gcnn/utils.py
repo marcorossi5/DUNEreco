@@ -82,8 +82,7 @@ def gcnn_inference_pass(
     outs = []
     wrap = tqdm.tqdm(test_loader) if verbose else test_loader
     for noisy, _ in wrap:
-        noisy = noisy.to(dev)
-        out = network(noisy).data
+        out = network(noisy.to(dev)).detach().cpu()
         outs.append(out)
     output = torch.cat(outs)
     return output
