@@ -27,6 +27,8 @@ dataset:
   pct: 0.5 # signal to background crop balance
   threshold: 3.5 # 500 e- | 3.5 ADC counts (threshold for inference)
 
+# test batch sizes are compatible with a single GPU with 16 GiB of memory
+
 model:
   epochs: 1
   epoch_log: 1
@@ -36,7 +38,7 @@ model:
     loss_fn: ssim_l2
     a: 0.84
     batch_size: 32
-    test_batch_size: 1024
+    test_batch_size: 320
     lr: 0.001
     amsgrad: true
     ckpt: !Path '../new_saved_models/cnn_v08/collection/cnn_v08_dn_collection.pth'
@@ -50,7 +52,7 @@ model:
     loss_fn: ssim_l2
     a: 0.84
     batch_size: 32
-    test_batch_size: 1024
+    test_batch_size: 160
     lr: 0.001
     amsgrad: true
     ckpt: !Path '../new_saved_models/gcnn_v08/collection/gcnn_v08_dn_collection.pth'
@@ -64,7 +66,7 @@ model:
   uscg:
     loss_fn: mse
     batch_size: 1
-    test_batch_size: 1
+    test_batch_size: 3
     lr: 1e-3
     amsgrad: true
     ckpt: !Path '../new_saved_models/uscg_v08/collection/uscg_v08_dn_collection.pth'
