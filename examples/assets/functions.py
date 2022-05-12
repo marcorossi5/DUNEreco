@@ -39,7 +39,7 @@ def check_in_output_folder(folders: dict):
     sp.run(["tar", "-xzf", tarzip, "-C", folders["out"]])
 
 
-def inference(model: AbstractNet, evt: np.ndarray, dev: str, fname: Path):
+def inference(model: AbstractNet, evt: np.ndarray, fname: Path, dev: str = None):
     """Makes inference on event and computes time.
 
     Saves the output file to `fname`.
@@ -50,10 +50,10 @@ def inference(model: AbstractNet, evt: np.ndarray, dev: str, fname: Path):
         The pytorch or onnx based model.
     evt: np.ndarray
         The input raw data.
-    dev: str
-        Device hosting computation.
     fname: Path
         The output file name.
+    dev: str
+        Device hosting computation.
 
     Returns
     -------

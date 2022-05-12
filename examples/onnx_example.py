@@ -60,7 +60,7 @@ def main(modeltype, version, pytorch_dev):
     model = DnModel(setup, modeltype, ckpt_folder)
     print(f"Loaded model from {ckpt_folder} folder")
 
-    pytorch_time = inference(model, evt, pytorch_dev, paths["pytorch"])
+    pytorch_time = inference(model, evt, paths["pytorch"], pytorch_dev)
     print(f"PyTorch inference done in {pytorch_time}s")
 
     analysis_main(paths["pytorch"], paths["target"])

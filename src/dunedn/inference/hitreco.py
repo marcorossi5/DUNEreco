@@ -151,6 +151,10 @@ class BaseModel:
         """
         if output_dir is None:
             output_dir = self.ckpt
+        
+        # create directory
+        output_dir.joinpath("induction").mkdir(exist_ok=True)
+        output_dir.joinpath("collection").mkdir(exist_ok=True)
 
         logger.debug(f"Exporting onnx model")
 
