@@ -53,6 +53,7 @@ def main(modeltype, version, pytorch_dev):
         / f"p2GeV_cosmics_inspired_rawdigit_torch_{modeltype}_evt8.npy",
         "onnx": folders["out"]
         / f"p2GeV_cosmics_inspired_rawdigit_onnx_{modeltype}_evt8.npy",
+        "performance_csv": folders["out"] / "performance_comparison.csv"
     }
 
     plot_example(paths["input"], paths["target"], outdir=folders["id_plot"])
@@ -86,15 +87,11 @@ def main(modeltype, version, pytorch_dev):
     # Speed comparison
     batch_size_list = [32, 64, 128, 256, 512, 1024]
     nb_batches = 10
-    performance_dict = compare_performance_onnx(
+    performance_df = compare_performance_onnx(
         model, model_onnx, pytorch_dev, batch_size_list, nb_batches
     )
-
-    iterables = [batch_size_list, ["mean", "err"]]
-    index = pd.MultiIndex.from_product(iterables, names=["batch_size", "value"])
-    columns = ["torch", "onnx"]
-    df = pd.DataFrame(performance_dict, index=index, columns=columns)
-    plot_comparison_catplot(df, folders["plot"])
+    performance_df.to_csv(paths["performance_csv"])
+    plot_comparison_catplot(performance_df, folders["plot"])
 
 
 if __name__ == "__main__":
