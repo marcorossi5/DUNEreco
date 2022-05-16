@@ -125,7 +125,7 @@ def compare_performance_onnx(
         onnx_pr = BatchProfiler()
         gcnn_onnx_inference_pass(zip(*inputs), onnx_model.cnetwork, profiler=onnx_pr)
         onnx_mean, onnx_err = onnx_pr.get_stats()
-        performance.extend(torch_mean, onnx_mean, torch_err, onnx_err)
+        performance.extend([torch_mean, onnx_mean, torch_err, onnx_err])
 
     iterables = [batch_size_list, ["mean", "err"]]
     index = pd.MultiIndex.from_product(iterables, names=["batch", "value"])
