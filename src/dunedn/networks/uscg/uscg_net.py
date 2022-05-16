@@ -209,16 +209,10 @@ class UscgNet(AbstractNet):
             batch_size=generator.batch_size,
         )
 
-        # model on device
-        self.to(dev)
-
         # inference pass
         start = tm()
         y_pred = uscg_inference_pass(test_loader, self, dev, verbose)
         inference_time = tm() - start
-
-        # model to cpu to save memory
-        self.to("cpu")
 
         if no_metrics:
             return y_pred

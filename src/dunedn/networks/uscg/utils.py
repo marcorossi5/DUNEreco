@@ -101,6 +101,7 @@ def uscg_inference_pass(
     """
     w = network.w
     network.eval()
+    network.to(dev)
     outs = []
     wrap = tqdm.tqdm(test_loader) if verbose else test_loader
     for noisy, _ in wrap:
@@ -109,4 +110,6 @@ def uscg_inference_pass(
         for nwindow, (start, end) in zip(nwindows, idxs):
             out[..., start:end] = network(nwindow.to(dev)).detach().cpu()
         outs.append(out / div)
-    return torch.cat(outs)
+    output =  torch.cat(outs)
+    network.to("cpu")
+    return output

@@ -162,16 +162,10 @@ class GcnnNet(AbstractNet):
             batch_size=generator.batch_size,
         )
 
-        # model on device
-        self.to(dev)
-
         # inference pass
         start = tm()
         output = gcnn_inference_pass(test_loader, self, dev, verbose, profiler=profiler)
         inference_time = tm() - start
-
-        # model to cpu to save memory
-        self.to("cpu")
 
         # convert back to planes
         y_pred = generator.converter.tiles2planes(output)

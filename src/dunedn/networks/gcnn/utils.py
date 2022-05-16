@@ -89,6 +89,8 @@ def gcnn_inference_pass(
     output: torch.Tensor
         Denoised data, of shape=(N,1,H,W).
     """
+    network.eval()
+    network.to(dev)
     outs = []
     wrap = tqdm.tqdm(test_loader) if verbose else test_loader
     if profiler is not None:
@@ -97,4 +99,5 @@ def gcnn_inference_pass(
         out = network(noisy.to(dev)).detach().cpu()
         outs.append(out)
     output = torch.cat(outs)
+    network.to("cpu")
     return output
