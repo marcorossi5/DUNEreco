@@ -36,14 +36,14 @@ def get_onnx_models(task, modeltype, ckpt):
     from dunedn.networks.onnx.onnx_gcnn_net import OnnxGcnnNetwork
 
     fname = ckpt / f"induction/{modeltype}_{task}.onnx"
-    logger.debug(f"Loading onnx model at {fname}")
+    logger.info(f"Loaded onnx model at {fname}")
     inetwork = OnnxGcnnNetwork(
         fname.as_posix(),
         DN_METRICS,
         # providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
     )
     fname = ckpt / f"collection/{modeltype}_{task}.onnx"
-    logger.debug(f"Loading onnx model at {fname}")
+    logger.info(f"Loading onnx model at {fname}")
     cnetwork = OnnxGcnnNetwork(
         fname.as_posix(),
         DN_METRICS,
