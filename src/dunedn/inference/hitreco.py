@@ -36,7 +36,7 @@ def get_onnx_models(task, modeltype, ckpt):
     from dunedn.networks.onnx.onnx_gcnn_net import OnnxGcnnNetwork
 
     fname = ckpt / f"induction/{modeltype}_{task}.onnx"
-    logger.info(f"Loaded onnx model at {fname}")
+    logger.info(f"Loading onnx model at {fname}")
     inetwork = OnnxGcnnNetwork(
         fname.as_posix(),
         DN_METRICS,
