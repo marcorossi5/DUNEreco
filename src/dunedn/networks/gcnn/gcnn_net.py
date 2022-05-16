@@ -10,6 +10,7 @@ from time import time as tm
 import torch
 from torch import nn
 from ..abstract_net import AbstractNet
+from ..utils import BatchProfiler
 from .gcnn_dataloading import BaseGcnnDataset
 from .gcnn_net_blocks import (
     PreProcessBlock,
@@ -60,6 +61,9 @@ class GcnnNet(AbstractNet):
         ic = input_channels
         hc = hidden_channels
         self.k = k
+
+        self.input_shape = (1,) + self.crop_size
+
         self.getgraph_fn = (
             NonLocalGraph(k, self.crop_size) if self.model == "gcnn" else lambda x: None
         )
@@ -117,6 +121,7 @@ class GcnnNet(AbstractNet):
         dev: str = "cpu",
         no_metrics: bool = False,
         verbose: int = 1,
+        profiler: BatchProfiler = None,
     ) -> Tuple[torch.Tensor, list[Tuple[float, float]], float]:
         """Gcnn network inference.
 
@@ -134,6 +139,9 @@ class GcnnNet(AbstractNet):
 
             - 0: no logs.
             - 1: display progress bar.
+
+        profiler: BatchProfiler
+            The profiler object to record batch inference time.
 
         Returns
         -------
@@ -159,7 +167,7 @@ class GcnnNet(AbstractNet):
 
         # inference pass
         start = tm()
-        output = gcnn_inference_pass(test_loader, self, dev, verbose)
+        output = gcnn_inference_pass(test_loader, self, dev, verbose, profiler=profiler)
         inference_time = tm() - start
 
         # model to cpu to save memory

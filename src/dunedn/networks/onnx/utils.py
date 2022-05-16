@@ -1,3 +1,4 @@
+from dunedn.networks.utils import BatchProfiler
 import tqdm
 import numpy as np
 import torch
@@ -6,34 +7,41 @@ from ..gcnn.gcnn_dataloading import GcnnPlanesDataset
 
 
 def gcnn_onnx_inference_pass(
-    generator: GcnnPlanesDataset, ort_session: ort.InferenceSession
+    test_loader: torch.utils.data.DataLoader,
+    ort_session: ort.InferenceSession,
+    verbose: int = 1,
+    profiler: BatchProfiler = None,
 ) -> torch.Tensor:
     """
     Parameters
     ----------
-    generator: GcnnPlanesDataset
-        The inference generator.
+    generator: torch.utils.data.DataLoader
+        The inference dataset generator.
     ort_session: ort.InferenceSession
         The onnxruntime inference session.
+    verbose: int
+        Switch to log information. Defaults to 1. Available options:
+
+        - 0: no logs.
+        - 1: display progress bar.
+
+    profiler: BatchProfiler
+            The profiler object to record batch inference time.
 
     Returns
     -------
     torch.Tensor
         Output tensor of shape=(N,C,H,W).
     """
-    generator.to_crops()
-    test_loader = torch.utils.data.DataLoader(
-        dataset=generator,
-        batch_size=generator.batch_size,
-    )
     outs = []
-    for noisy, _ in tqdm.tqdm(test_loader):
+    wrap = tqdm.tqdm(test_loader) if verbose else test_loader
+    if profiler is not None:
+        wrap = profiler.set_iterable(wrap)
+    for noisy, _ in wrap:
         out = ort_session.run(
             None,
             {"input": noisy.numpy().astype(np.float32)},
         )[0]
         outs.append(torch.Tensor(out))
-    outs = torch.cat(outs)
-    y_pred = generator.converter.tiles2planes(outs)
-    generator.to_planes()
-    return y_pred
+    output = torch.cat(outs)
+    return output

@@ -1,13 +1,103 @@
 """This module implements utility function for all the networks."""
 from logging import Logger
+from typing import Tuple
+from collections.abc import Iterable
+from time import time as tm
 import numpy as np
 
 supported_models = ["uscg", "cnn", "gcnn"]
 
 
-def get_supported_models():
+class BatchProfiler:
+    """Class to profile for loops steps.
+
+    Useful to profile each batch prediction during DnModel inference.
+
+    Example
+    -------
+
+    >>> from dunedn.networks.utils import BatchProfiler
+    >>> from time import sleep
+    >>> bp = BatchProfiler()
+    >>> wrap = bp.set_iterable(range(10))
+    >>> for i in wrap:
+    ...     print(i)
+    ...     sleep(0.01)
+    >>> msg = bp.print_stats()
+    >>> print(msg)
     """
-    Gets the names of the supported models.
+
+    def __init__(self, drop_last=False):
+        self.drop_last = drop_last
+
+    def __iter__(self):
+        self.times = []
+        return self
+
+    def __next__(self):
+        self.times.append(tm())
+        return next(self.iterable)
+
+    @property
+    def deltas(self) -> np.ndarray:
+        """Computes the wall time intervals between steps.
+
+        Sets the ``nb_batches`` attribute.
+
+        Returns
+        -------
+        deltas: np.ndarray
+            The result time intervals, of shape=(nb intervals,).
+        """
+        times = self.times[:-1] if self.drop_last else self.times
+        deltas = np.diff(times)
+        self.nb_batches = len(deltas)
+        return deltas
+
+    def get_stats(self) -> Tuple[float, float]:
+        """Computes average and mean standard error on timings.
+
+        Returns
+        -------
+        mean: float
+            The average batch inference time.
+        err: float
+            The uncertainty on the batch inference step average time.
+        """
+        deltas = self.deltas
+        sqrtn = np.sqrt(self.nb_batches)
+        mean = deltas.mean()
+        err = deltas.std() / sqrtn
+        return mean.item(), err.item()
+
+    def print_stats(self) -> str:
+        """Human-readable message on profiled inference.
+
+        Returns
+        -------
+        message: str
+            The message with profiling information.
+        """
+        mean, std = self.get_stats()
+        msg = (
+            f"Forward pass with {self.nb_batches} batches. "
+            f"Time per batch: {mean:.3e} +/- {std:.3e} s"
+        )
+        return msg
+
+    def set_iterable(self, iterable: Iterable):
+        """Sets the iterable to be profiled.
+
+        Parameters
+        ----------
+        iterable
+        """
+        self.iterable = iter(iterable)
+        return self
+
+
+def get_supported_models():
+    """Returns the names of the supported models.
 
     Returns
     -------

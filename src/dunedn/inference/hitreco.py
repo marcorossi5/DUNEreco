@@ -9,6 +9,7 @@ from dunedn.networks.gcnn.gcnn_dataloading import GcnnPlanesDataset
 from dunedn.geometry.helpers import evt2planes, planes2evt
 from dunedn.networks.uscg.training import load_and_compile_uscg_network
 from dunedn.networks.uscg.uscg_dataloading import UscgPlanesDataset
+from dunedn.networks.utils import BatchProfiler
 from dunedn.training.metrics import DN_METRICS
 
 logger = logging.getLogger(PACKAGE + ".inference")
@@ -110,7 +111,9 @@ class BaseModel:
             **gen_kwargs,
         )
 
-    def predict(self, event: np.ndarray, dev="cpu") -> np.ndarray:
+    def predict(
+        self, event: np.ndarray, dev="cpu", profiler: BatchProfiler = None
+    ) -> np.ndarray:
         """Interface for model prediction on pDUNE event.
 
         Parameters
@@ -119,6 +122,8 @@ class BaseModel:
             Event input array of shape=(nb wires, nb tdc ticks).
         dev: str
             Device hosting computation.
+        profiler: BatchProfiler
+            The profiler object to record batch inference time.
 
         Returns
         -------
@@ -132,13 +137,20 @@ class BaseModel:
         cdataset = self.collection_generator(cplanes)
 
         if self.should_use_onnx:
-            iout = self.inetwork.predict(idataset)
-            cout = self.cnetwork.predict(cdataset)
+            iout = self.inetwork.predict(idataset, profiler=profiler)
+            cout = self.cnetwork.predict(cdataset, profiler=profiler)
         else:
-            iout = self.inetwork.predict(idataset, dev, no_metrics=True)
-            cout = self.cnetwork.predict(cdataset, dev, no_metrics=True)
+            iout = self.inetwork.predict(
+                idataset, dev, no_metrics=True, profiler=profiler
+            )
+            cout = self.cnetwork.predict(
+                cdataset, dev, no_metrics=True, profiler=profiler
+            )
+        out_evt = planes2evt(iout, cout)
 
-        return planes2evt(iout, cout)
+        if profiler is not None:
+            return out_evt, profiler
+        return out_evt
 
     def onnx_export(self, output_dir=None):
         """
@@ -151,7 +163,7 @@ class BaseModel:
         """
         if output_dir is None:
             output_dir = self.ckpt
-        
+
         # create directory
         output_dir.joinpath("induction").mkdir(exist_ok=True)
         output_dir.joinpath("collection").mkdir(exist_ok=True)

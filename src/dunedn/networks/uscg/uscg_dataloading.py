@@ -158,7 +158,6 @@ class UscgPlanesDataset(BaseUscgDataset):
             batch_size,
         )
 
-
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, int]:
         """
         Returns

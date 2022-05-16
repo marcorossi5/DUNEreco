@@ -79,6 +79,8 @@ class UscgNet(AbstractNet):
 
         self.h = self.h_induction if self.channel == "induction" else self.h_collection
 
+        self.input_shape = (1, self.h, self.w)
+
         resnet = resnext50_32x4d(pretrained=self.pretrained, progress=True)
         resnet_12 = nn.Sequential(
             nn.Conv2d(1, 3, 1),

@@ -4,9 +4,14 @@ import shutil
 import subprocess as sp
 from pathlib import Path
 import numpy as np
+import pandas as pd
+import torch
 import matplotlib.pyplot as plt
+from dunedn.inference.hitreco import DnModel
 from dunedn.inference.inference import thresholding_dn
-from dunedn.networks.abstract_net import AbstractNet
+from dunedn.networks.gcnn.utils import gcnn_inference_pass
+from dunedn.networks.onnx.utils import gcnn_onnx_inference_pass
+from dunedn.networks.utils import BatchProfiler
 from dunedn.utils.utils import add_info_columns
 
 
@@ -40,14 +45,14 @@ def check_in_output_folder(folders: dict):
     sp.run(["tar", "-xzf", tarzip, "-C", folders["out"]])
 
 
-def inference(model: AbstractNet, evt: np.ndarray, fname: Path, dev: str = None):
+def inference(model: DnModel, evt: np.ndarray, fname: Path, dev: str = None):
     """Makes inference on event and computes time.
 
     Saves the output file to `fname`.
 
     Parameters
     ----------
-    model: DnModel
+    model: AbstractNet
         The pytorch or onnx based model.
     evt: np.ndarray
         The input raw data.
@@ -67,13 +72,65 @@ def inference(model: AbstractNet, evt: np.ndarray, fname: Path, dev: str = None)
 
     # thresholding
     evt_dn = thresholding_dn(evt_dn)
-    
+
     # add info columns
     evt_dn = add_info_columns(evt_dn)
 
     # save inference outputs
     np.save(fname, evt_dn)
     return inference_time
+
+
+def compare_performance_onnx(
+    pytorch_model: DnModel,
+    onnx_model: DnModel,
+    dev: str,
+    batch_size_list: list,
+    nb_batches: int = 100,
+) -> pd.DataFrame:
+    """Compares PyTorch and Onnx inference time for different batch sizes.
+
+    Parameters
+    ----------
+    pytorch_model: DnModel
+        The pytorch model to make inference
+    onnx_model: DnModel
+        The Onnx model to make inference
+    dev: str
+        Device hosting PyTorch computation.
+    batch_size_list: list
+        The list of batch sizes.
+    nb_batches: int
+        The number of batches to be passed to the network.
+
+    Returns
+    -------
+    performance_dict: dict
+        The dictionary containing profiled inference times.
+    """
+    input_shape = pytorch_model.cnetwork.input_shape
+
+    performance = []
+
+    for batch_size in batch_size_list:
+        batched_input_shape = (nb_batches, batch_size) + input_shape
+        inputs = (torch.randn(batched_input_shape), torch.randn(batched_input_shape))
+
+        torch_pr = BatchProfiler()
+        gcnn_inference_pass(
+            zip(*inputs), pytorch_model.cnetwork, dev, profiler=torch_pr
+        )
+        torch_mean, torch_err = torch_pr.get_stats()
+
+        onnx_pr = BatchProfiler()
+        gcnn_onnx_inference_pass(zip(*inputs), onnx_model.cnetwork, profiler=onnx_pr)
+        onnx_mean, onnx_err = onnx_pr.get_stats()
+        performance.append(torch_mean, onnx_mean, torch_err, onnx_err)
+
+    iterables = [batch_size_list, ["mean", "err"]]
+    index = pd.MultiIndex.from_product(iterables, names=["batch", "value"])
+    df = pd.DataFrame(performance, index=index, columns=["torch", "onnx"])
+    return df
 
 
 def plot_image_sample(
@@ -161,6 +218,86 @@ def plot_wire_sample(
     )
     plt.plot(wire_target, lw=0.3, color="red")
     plt.savefig(fname, bbox_inches="tight")
+    print(f"Saved image at {fname}")
+    if with_graphics:
+        plt.show()
+    plt.close()
+
+
+def plot_comparison_catplot(
+    data: pd.DataFrame,
+    out_folder: Path,
+    with_graphics: bool = False,
+):
+    """Categorical plot for PyTorch vs Onnx performance.
+
+    Parameters
+    ----------
+    data: pd.DataFrame
+        The dataframe with the collected inference timings.
+    out_folder: Path
+        The folder to save the categorical plot to.
+    with_graphics: bool
+        Wether to show matplotlib plots or not.
+    """
+    lang = data.index.levels[0]
+    torch_mean = data.loc[(slice(None), "mean"), "torch"].to_numpy()
+    torch_err = data.loc[(slice(None), "err"), "torch"].to_numpy()
+    onnx_mean = data.loc[(slice(None), "mean"), "onnx"].to_numpy()
+    onnx_err = data.loc[(slice(None), "err"), "onnx"].to_numpy()
+
+    ind = np.arange(len(lang))
+    width = 0.4
+
+    fname = out_folder / "pytorch_onnx_performance_comparison.png"
+    ax = plt.subplot()
+    ax.bar(
+        ind - width,
+        torch_mean,
+        width,
+        yerr=torch_err,
+        align="center",
+        alpha=0.5,
+        color="b",
+        label="PyTorch",
+    )
+    ax.bar(
+        ind,
+        onnx_mean,
+        width,
+        yerr=onnx_err,
+        align="center",
+        alpha=0.5,
+        color="r",
+        label="Onnx",
+    )
+    ax.set(xticks=ind - width / 2, xticklabels=lang)
+
+    rel_perc = 100 * (onnx_mean - torch_mean) / torch_mean
+
+    maxes = np.maximum(onnx_mean + onnx_err, torch_mean + torch_err)
+
+    for i, (v, m) in enumerate(zip(rel_perc, maxes)):
+        if v > 0:
+            sgn = "+"
+        elif v == 0:
+            sgn = ""
+        else:
+            sgn = "-"
+        ax.text(
+            i - width / 2,
+            m + 0.1,
+            f"{sgn}{v:.2f} %",
+            ha="center",
+            color="black",
+            fontsize=10,
+        )
+
+    plt.xlabel("Batch size")
+    plt.ylabel("Time $[s]$")
+    plt.title("Inference time for different batch sizes")
+    plt.legend(frameon=False)
+    plt.savefig(fname, bbox_inches="tight", dpi=600)
     print(f"Saved image at {fname}")
     if with_graphics:
         plt.show()

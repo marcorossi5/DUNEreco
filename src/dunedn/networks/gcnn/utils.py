@@ -1,8 +1,11 @@
 """This module implements utility functions for the `networks.gcnn` subpackage."""
 from collections import OrderedDict
-from .gcnn_dataloading import BaseGcnnDataset
+from time import time as tm
+from dunedn.networks.utils import BatchProfiler
 import tqdm
+import numpy as np
 import torch
+from .gcnn_dataloading import BaseGcnnDataset
 from ..abstract_net import AbstractNet
 
 
@@ -56,13 +59,17 @@ def make_dict_compatible(state_dict: OrderedDict):
 
 
 def gcnn_inference_pass(
-    test_loader: BaseGcnnDataset, network: AbstractNet, dev: str, verbose: int = 1
+    test_loader: torch.utils.data.DataLoader,
+    network: AbstractNet,
+    dev: str,
+    verbose: int = 1,
+    profiler: BatchProfiler = None,
 ) -> torch.Tensor:
     """Consumes data through CNN or GCNN network and gives outputs.
 
     Parameters
     ----------
-    test_loader: BaseGcnnDataset
+    test_loader: torch.utils.data.DataLoader
         The inference dataset generator.
     network: AbstractNet
         The denoising network.
@@ -74,6 +81,9 @@ def gcnn_inference_pass(
         - 0: no logs.
         - 1: display progress bar.
 
+    profiler: BatchProfiler
+            The profiler object to record batch inference time.
+
     Returns
     -------
     output: torch.Tensor
@@ -81,6 +91,8 @@ def gcnn_inference_pass(
     """
     outs = []
     wrap = tqdm.tqdm(test_loader) if verbose else test_loader
+    if profiler is not None:
+        wrap = profiler.set_iterable(wrap)
     for noisy, _ in wrap:
         out = network(noisy.to(dev)).detach().cpu()
         outs.append(out)
