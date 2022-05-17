@@ -130,6 +130,8 @@ def compare_performance_onnx(
         )
         onnx_mean, onnx_err = onnx_pr.get_stats()
         performance.extend([torch_mean, onnx_mean, torch_err, onnx_err])
+    
+    performance = np.reshape(performance, [-1,2])
 
     iterables = [batch_size_list, ["mean", "err"]]
     index = pd.MultiIndex.from_product(iterables, names=["batch", "value"])
