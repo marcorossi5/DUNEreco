@@ -1,6 +1,6 @@
 """This module implements utility functions for the `networks.uscg` subpackage."""
 from typing import Tuple
-import tqdm
+from tqdm.auto import tqdm
 from math import ceil
 import torch
 from collections import OrderedDict
@@ -103,13 +103,13 @@ def uscg_inference_pass(
     network.eval()
     network.to(dev)
     outs = []
-    wrap = tqdm.tqdm(test_loader) if verbose else test_loader
+    wrap = tqdm(test_loader, desc="uscg.predict") if verbose else test_loader
     for noisy, _ in wrap:
         div, nwindows, idxs = time_windows(noisy, w, network.stride)
         out = torch.zeros_like(noisy)
         for nwindow, (start, end) in zip(nwindows, idxs):
             out[..., start:end] = network(nwindow.to(dev)).detach().cpu()
         outs.append(out / div)
-    output =  torch.cat(outs)
+    output = torch.cat(outs)
     network.to("cpu")
     return output

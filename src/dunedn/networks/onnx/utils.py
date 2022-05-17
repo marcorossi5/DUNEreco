@@ -1,9 +1,8 @@
 from dunedn.networks.utils import BatchProfiler
-import tqdm
+from tqdm.auto import tqdm
 import numpy as np
 import torch
 import onnxruntime as ort
-from ..gcnn.gcnn_dataloading import GcnnPlanesDataset
 
 
 def gcnn_onnx_inference_pass(
@@ -34,7 +33,7 @@ def gcnn_onnx_inference_pass(
         Output tensor of shape=(N,C,H,W).
     """
     outs = []
-    wrap = tqdm.tqdm(test_loader) if verbose else test_loader
+    wrap = tqdm(test_loader, desc="onnx.predict") if verbose else test_loader
     if profiler is not None:
         wrap = profiler.set_iterable(wrap)
     for noisy, _ in wrap:

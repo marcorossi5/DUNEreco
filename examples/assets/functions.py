@@ -3,6 +3,8 @@ from time import time as tm
 import shutil
 import subprocess as sp
 from pathlib import Path
+from tqdm.auto import tqdm
+from itertools import zip_longest
 import numpy as np
 import pandas as pd
 import torch
@@ -112,18 +114,20 @@ def compare_performance_onnx(
 
     performance = []
 
-    for batch_size in batch_size_list:
+    for batch_size in tqdm(batch_size_list, desc="batch_size"):
         batched_input_shape = (nb_batches, batch_size) + input_shape
-        inputs = (torch.randn(batched_input_shape), torch.randn(batched_input_shape))
+        inputs = torch.randn(batched_input_shape)
 
         torch_pr = BatchProfiler()
         gcnn_inference_pass(
-            zip(*inputs), pytorch_model.cnetwork, dev, profiler=torch_pr
+            zip_longest(inputs, []), pytorch_model.cnetwork, dev, profiler=torch_pr
         )
         torch_mean, torch_err = torch_pr.get_stats()
 
         onnx_pr = BatchProfiler()
-        gcnn_onnx_inference_pass(zip(*inputs), onnx_model.cnetwork, profiler=onnx_pr)
+        gcnn_onnx_inference_pass(
+            zip_longest(inputs, []), onnx_model.cnetwork, profiler=onnx_pr
+        )
         onnx_mean, onnx_err = onnx_pr.get_stats()
         performance.extend([torch_mean, onnx_mean, torch_err, onnx_err])
 

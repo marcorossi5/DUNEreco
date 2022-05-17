@@ -1,11 +1,8 @@
 """This module implements utility functions for the `networks.gcnn` subpackage."""
 from collections import OrderedDict
-from time import time as tm
 from dunedn.networks.utils import BatchProfiler
-import tqdm
-import numpy as np
+from tqdm.auto import tqdm
 import torch
-from .gcnn_dataloading import BaseGcnnDataset
 from ..abstract_net import AbstractNet
 
 
@@ -92,7 +89,7 @@ def gcnn_inference_pass(
     network.eval()
     network.to(dev)
     outs = []
-    wrap = tqdm.tqdm(test_loader) if verbose else test_loader
+    wrap = tqdm(test_loader, desc="gcnn.predict") if verbose else test_loader
     if profiler is not None:
         wrap = profiler.set_iterable(wrap)
     for noisy, _ in wrap:

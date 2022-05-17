@@ -53,7 +53,7 @@ def main(modeltype, version, pytorch_dev):
         / f"p2GeV_cosmics_inspired_rawdigit_torch_{modeltype}_evt8.npy",
         "onnx": folders["out"]
         / f"p2GeV_cosmics_inspired_rawdigit_onnx_{modeltype}_evt8.npy",
-        "performance_csv": folders["out"] / "performance_comparison.csv"
+        "performance_csv": folders["out"] / f"{modeltype}_performance_comparison.csv",
     }
 
     plot_example(paths["input"], paths["target"], outdir=folders["id_plot"])
