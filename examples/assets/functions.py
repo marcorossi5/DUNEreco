@@ -225,12 +225,12 @@ def compare_performance_onnx(
 
 def enhance_plane(plane: np.ndarray):
     """Transforms plane to enhance details.
-    
+
     Parameters
     ----------
     plane: np.ndarray
         The input plane, of shape=(nb wires, nb tdc ticks).
-    
+
     Returns
     -------
     transformed: np.ndarray
@@ -238,7 +238,7 @@ def enhance_plane(plane: np.ndarray):
     """
     pmin = plane.min()
     pmax = plane.max()
-    transformed = pmax * ((plane - pmin)/ pmax)**0.5 + pmin
+    transformed = pmax * ((plane - pmin) / pmax) ** 0.5 + pmin
     return transformed
 
 
@@ -259,15 +259,17 @@ def plot_image_sample(
         Wether to show matplotlib plots or not.
     """
     fname = outdir / "visual_collection_plane.png"
-    plt.rcParams.update({
-        "axes.titlesize": 20,
-        "xtick.labelsize": 17,
-        "ytick.labelsize": 17,
-        "xtick.direction": "in",
-        "ytick.direction": "in",
-        "figure.dpi": 300,
-    })
-    plt.figure(figsize=[6.4*1.5, 4.8*1.5])
+    plt.rcParams.update(
+        {
+            "axes.titlesize": 20,
+            "xtick.labelsize": 17,
+            "ytick.labelsize": 17,
+            "xtick.direction": "in",
+            "ytick.direction": "in",
+            "figure.dpi": 300,
+        }
+    )
+    plt.figure(figsize=[6.4 * 1.5, 4.8 * 1.5])
     plt.title(
         r"""Inspired to ProtoDUNE SP simulation
     Collection plane, ADC heatmap
@@ -280,7 +282,9 @@ def plot_image_sample(
     # use a sequential cmap giving more importance to higher values to highlight
     # spikes
     cmap = plt.get_cmap("PuBu")
-    z = plt.imshow(enhance_plane(plane), aspect="auto", cmap=cmap)  # , vmin=vmin, vmax=vmax)
+    z = plt.imshow(
+        enhance_plane(plane), aspect="auto", cmap=cmap
+    )  # , vmin=vmin, vmax=vmax)
     plt.axhline(y=wire, color="orange", lw=1, alpha=0.6, linestyle="dashed")
     plt.colorbar()
     plt.savefig(fname, bbox_inches="tight")  # , dpi=300)
@@ -311,7 +315,7 @@ def plot_wire_sample(
     """
     # plt.rcParams.update({"text.usetex": True})
     fname = outdir / "visual_denoised_wire.png"
-    plt.figure(figsize=[6.4*1.5, 4.8*1.5])
+    plt.figure(figsize=[6.4 * 1.5, 4.8 * 1.5])
     plt.title(
         r"""Inspired to ProtoDUNE SP simulation
     Collection wire, Raw waveform
@@ -327,7 +331,7 @@ def plot_wire_sample(
     plt.close()
 
     fname = outdir / "visual_clear_wire.png"
-    plt.figure(figsize=[6.4*1.5, 4.8*1.5])
+    plt.figure(figsize=[6.4 * 1.5, 4.8 * 1.5])
     plt.title(
         r"""Inspired to ProtoDUNE SP simulation
     Collection wire, Clear waveform
