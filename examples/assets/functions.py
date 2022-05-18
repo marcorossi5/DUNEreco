@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import torch
 import matplotlib.pyplot as plt
+from dunedn.geometry.helpers import evt2planes
 from dunedn.inference.hitreco import DnModel
 from dunedn.inference.inference import thresholding_dn
 from dunedn.networks.gcnn.utils import gcnn_inference_pass
@@ -222,6 +223,25 @@ def compare_performance_onnx(
     return df
 
 
+def enhance_plane(plane: np.ndarray):
+    """Transforms plane to enhance details.
+    
+    Parameters
+    ----------
+    plane: np.ndarray
+        The input plane, of shape=(nb wires, nb tdc ticks).
+    
+    Returns
+    -------
+    transformed: np.ndarray
+        The transformed plane, of shape=(nb wires, nb tdc ticks).
+    """
+    pmin = plane.min()
+    pmax = plane.max()
+    transformed = pmax * ((plane - pmin)/ pmax)**0.5 + pmin
+    return transformed
+
+
 def plot_image_sample(
     plane: np.ndarray, wire: int, outdir: Path, with_graphics: bool = False
 ):
@@ -239,7 +259,15 @@ def plot_image_sample(
         Wether to show matplotlib plots or not.
     """
     fname = outdir / "visual_collection_plane.png"
-    plt.rcParams.update({"text.usetex": True})
+    plt.rcParams.update({
+        "axes.titlesize": 20,
+        "xtick.labelsize": 17,
+        "ytick.labelsize": 17,
+        "xtick.direction": "in",
+        "ytick.direction": "in",
+        "figure.dpi": 300,
+    })
+    plt.figure(figsize=[6.4*1.5, 4.8*1.5])
     plt.title(
         r"""Inspired to ProtoDUNE SP simulation
     Collection plane, ADC heatmap
@@ -252,7 +280,7 @@ def plot_image_sample(
     # use a sequential cmap giving more importance to higher values to highlight
     # spikes
     cmap = plt.get_cmap("PuBu")
-    plt.imshow(plane, aspect="auto", cmap=cmap)  # , vmin=vmin, vmax=vmax)
+    z = plt.imshow(enhance_plane(plane), aspect="auto", cmap=cmap)  # , vmin=vmin, vmax=vmax)
     plt.axhline(y=wire, color="orange", lw=1, alpha=0.6, linestyle="dashed")
     plt.colorbar()
     plt.savefig(fname, bbox_inches="tight")  # , dpi=300)
@@ -281,8 +309,9 @@ def plot_wire_sample(
     with_graphics: bool
         Wether to show matplotlib plots or not.
     """
-    plt.rcParams.update({"text.usetex": True})
+    # plt.rcParams.update({"text.usetex": True})
     fname = outdir / "visual_denoised_wire.png"
+    plt.figure(figsize=[6.4*1.5, 4.8*1.5])
     plt.title(
         r"""Inspired to ProtoDUNE SP simulation
     Collection wire, Raw waveform
@@ -298,6 +327,7 @@ def plot_wire_sample(
     plt.close()
 
     fname = outdir / "visual_clear_wire.png"
+    plt.figure(figsize=[6.4*1.5, 4.8*1.5])
     plt.title(
         r"""Inspired to ProtoDUNE SP simulation
     Collection wire, Clear waveform
@@ -311,6 +341,54 @@ def plot_wire_sample(
     if with_graphics:
         plt.show()
     plt.close()
+
+
+def plot_example(
+    input_path: Path,
+    target_path: Path,
+    outdir: Path = None,
+    with_graphics: bool = False,
+):
+    """Plots the first collection plane and a wire waveform from an event sample.
+
+    Three plots are produced:
+
+    - collection plane ADC heatmap
+    - reconstructed waveform of a wire sample
+    - target waveform
+
+    The plots are saved in the ``outdir`` directory.
+    If ``with_graphics`` is ``True``, plots are shown in the matplotlib GUI.
+
+    Parameters
+    ----------
+    input_path: Path
+        The path to the noisy inputs file.
+    target_path: Path
+        The path to the clear target file.
+    outdir: Path
+        Directory to save plots into. Defaults to the same directory of
+        `input_path`.
+    with_graphics: bool
+        Wether to show matplotlib plots or not.
+    """
+    if outdir is None:
+        outdir = input_path.parent
+    evt = np.load(input_path)[:, 2:]
+    # file_clear.unlink()
+    evt_target = np.load(target_path)[:, 2:]
+    # file_noisy.unlink()
+
+    _, cplanes = evt2planes(evt)
+    _, cplanes_target = evt2planes(evt_target)
+
+    plane = cplanes[0, 0, 480:]
+    plane_target = cplanes_target[0, 0, 480:]
+    wire = 330
+
+    plot_image_sample(plane, wire, outdir, with_graphics)
+
+    plot_wire_sample(plane[wire], plane_target[wire], outdir, with_graphics)
 
 
 def plot_comparison_catplot(
