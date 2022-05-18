@@ -6,13 +6,16 @@
     .. code-block:: bash
 
         python onnx_example.py -m <modeltype> -v v08 -d cuda:0
+    
+    Use the optional ``--export`` flag to export the PyTorch model to Onnx
+    format.
 """
 from pathlib import Path
 import argparse
 import numpy as np
-import pandas as pd
 from plot_event_example import plot_example
 from assets.functions import (
+    prepare_folders_and_paths,
     check_in_output_folder,
     inference,
     compare_performance_onnx,
@@ -25,36 +28,16 @@ from dunedn.utils.utils import load_runcard
 # TODO: the check-in is not complete if runcard do not get copied into the tmp folder
 
 
-def main(modeltype, version, pytorch_dev):
+def main(modeltype, version, pytorch_dev, should_export_onnx):
     # base folders
     base_folder = Path("../../output/tmp")
     ckpt_folder = Path(f"../saved_models/{modeltype}_{version}")
 
-    # relative folders
-    folders = {
-        "base": base_folder,
-        "out": base_folder / "models/onnx",
-        "ckpt": ckpt_folder,
-        "cards": base_folder / f"cards",
-        "onnx_save": base_folder / f"models/onnx/saved_models/{modeltype}_{version}",
-        "plot": base_folder / "models/onnx/plots",
-        "id_plot": base_folder / "models/onnx/plots/identity",
-        "pytorch_plot": base_folder / "models/onnx/plots/torch",
-        "onnx_plot": base_folder / "models/onnx/plots/onnx",
-    }
+    folders, paths = prepare_folders_and_paths(
+        modeltype, version, base_folder, ckpt_folder
+    )
 
     check_in_output_folder(folders)
-
-    # path to files
-    paths = {
-        "input": folders["out"] / "p2GeV_cosmics_inspired_rawdigit_evt8.npy",
-        "target": folders["out"] / "p2GeV_cosmics_inspired_rawdigit_noiseoff_evt8.npy",
-        "pytorch": folders["out"]
-        / f"p2GeV_cosmics_inspired_rawdigit_torch_{modeltype}_evt8.npy",
-        "onnx": folders["out"]
-        / f"p2GeV_cosmics_inspired_rawdigit_onnx_{modeltype}_evt8.npy",
-        "performance_csv": folders["out"] / f"{modeltype}_performance_comparison.csv",
-    }
 
     plot_example(paths["input"], paths["target"], outdir=folders["id_plot"])
 
@@ -75,23 +58,14 @@ def main(modeltype, version, pytorch_dev):
 
     ############################################################################
     # Onnx
-    model.onnx_export(folders["onnx_save"])
+    if should_export_onnx:
+        model.onnx_export(folders["onnx_save"])
     model_onnx = DnModel(setup, modeltype, folders["onnx_save"], should_use_onnx=True)
     onnx_time = inference(model_onnx, evt, paths["onnx"])
     print(f"ONNX inference done in {onnx_time}s")
 
     analysis_main(paths["onnx"], paths["target"])
     plot_example(paths["onnx"], paths["target"], outdir=folders["onnx_plot"])
-
-    ############################################################################
-    # Speed comparison
-    batch_size_list = [32, 64, 128, 256, 512, 1024]
-    nb_batches = 10
-    performance_df = compare_performance_onnx(
-        model, model_onnx, pytorch_dev, batch_size_list, nb_batches
-    )
-    performance_df.to_csv(paths["performance_csv"])
-    plot_comparison_catplot(performance_df, folders["plot"])
 
 
 if __name__ == "__main__":
@@ -101,5 +75,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dev", "-d", help="device hosting the computation", default="cpu"
     )
+    parser.add_argument(
+        "--export",
+        action="store_true",
+        dest="should_export_onnx",
+        help="wether to export to onnx or not",
+    )
     args = parser.parse_args()
-    main(args.modeltype, args.version, args.dev)
+    main(args.modeltype, args.version, args.dev, args.should_export_onnx)

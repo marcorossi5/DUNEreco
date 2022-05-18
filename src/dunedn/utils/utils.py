@@ -1,4 +1,6 @@
 """ This module contains utility functions of general interest. """
+import subprocess as sp
+import multiprocessing
 import shutil
 from pathlib import Path, PosixPath
 import logging
@@ -258,3 +260,33 @@ def print_summary_file(args):
         for k in d.keys():
             f.writelines("\n%s     %s" % (str(k), str(d[k])))
         f.close()
+
+
+def get_cpu_info() -> dict:
+    """Parses ``lscpu`` command to dictionary.
+    
+    Returns
+    -------
+
+    """
+    output = sp.check_output("lscpu", shell=True).decode("utf-8")
+    cpu_info = {}
+    for line in output.split('\n'):
+        line = line.strip()
+        if line:
+            splits = line.split(":")
+            key = splits[0]
+            value = ":".join(splits[1:])
+            cpu_info[key.strip().lower()] = value.strip()
+    return cpu_info
+
+
+def get_nb_cpu_cores() -> int:
+    """Returns the number of available cpus for the current process.
+    
+    Returns
+    -------
+    nb_cpus: int
+        The number of available cpus for the current process.
+    """
+    return multiprocessing.cpu_count()

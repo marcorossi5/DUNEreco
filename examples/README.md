@@ -9,40 +9,27 @@ The examples in this directory assume that the `DUNEdn` package with the
 This can be done running `pip install -e .[example]` from the package [root](..)
 directory.
 
-## Plot example
-
-The plotting example reproduces the analogous images of Fig. 5 from
-[arXiv:2103.01596](https://arxiv.org/abs/2103.01596) based on the saved event
-sample at
-[dunetpc_inspired_p2GeV_cosmics_rawdigits.npy.tar.gz](dunetpc_inspired_p2GeV_cosmics_rawdigits..npy.tar.gz).
-
-In order to run the example on your local machine, `cd` in the current directory
-and execute the relative convenience script:
-
-```bash
-./run_plot_example.sh
-```
-
-This will produce a `plot_example` output folder containing three `.png` images
-with the rawdigits image and the two noisy and clear waveforms of a single wire.
-
-## Onnx example
+## Onnx examples
 
 This folder contains a comparison between PyTorch and Onnx model inference.  
 
-The example can be executed as a script with:
+The examples can be executed as scripts with:
 
 ```bash
-python onnx_example.py
+python onnx_accuracy_example.py
 ```
 
-And as a [jupyter notebook](onnx_example.ipynb).
+And as a [jupyter notebook](onnx_accuracy_example.ipynb).
+
+The performance examples can be executed in the same manner through the
+`onnx_performance_example` files in this folder.
 
 ## GPU memory usage
 
 GPU memory is precious and OOM errors are extremely annoying.
 
-This section gives an idea of the memory consumption for each model.
+This section gives an idea of the memory consumption for each model, so that the
+user can decide the best strategy based on the available hardware.
 
 ### CNN
 
@@ -65,7 +52,8 @@ GCNN usage ~ batch_size * 84 MB
 ### USCG
 
 The USCG Network typically acts on image windows of different pixels resolution.  
-Induction windows are `(800,2000)`, collection ones are `(960,2000)`.
+Default values for induction windows are `(800,2000)`, while collection ones are
+`(960,2000)`.
 
 The memory consuptions are listed in the following table
 

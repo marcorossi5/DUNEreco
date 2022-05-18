@@ -1,4 +1,5 @@
 """This module implements utility functions for the ``onnx`` example."""
+from typing import Tuple
 from time import time as tm
 import shutil
 import subprocess as sp
@@ -14,7 +15,56 @@ from dunedn.inference.inference import thresholding_dn
 from dunedn.networks.gcnn.utils import gcnn_inference_pass
 from dunedn.networks.onnx.utils import gcnn_onnx_inference_pass
 from dunedn.networks.utils import BatchProfiler
-from dunedn.utils.utils import add_info_columns
+from dunedn.utils.utils import add_info_columns, get_cpu_info, get_nb_cpu_cores
+
+
+def prepare_folders_and_paths(
+    modeltype: str, version: str, base_folder: Path, ckpt_folder: Path
+) -> Tuple[dict, dict]:
+    """Utility function for onnx example notebook.
+
+    Loads the folder and path names.
+
+    Parameters
+    ----------
+    modeltype: str
+        Available options: gcnn | cnn | uscg.
+    version: str
+        The training dataset version. Available options: v08 | v09
+    base_folder: Path
+        The output root folder.
+    ckpt_folder: Path
+        The checkpoint folder.
+
+    Returns
+    -------
+    folders: dict
+    paths: dict
+    """
+    # relative folders
+    folders = {
+        "base": base_folder,
+        "out": base_folder / "models/onnx",
+        "ckpt": ckpt_folder,
+        "cards": base_folder / f"cards",
+        "onnx_save": base_folder / f"models/onnx/saved_models/{modeltype}_{version}",
+        "plot": base_folder / "models/onnx/plots",
+        "id_plot": base_folder / "models/onnx/plots/identity",
+        "pytorch_plot": base_folder / "models/onnx/plots/torch",
+        "onnx_plot": base_folder / "models/onnx/plots/onnx",
+    }
+
+    # path to files
+    paths = {
+        "input": folders["out"] / "p2GeV_cosmics_inspired_rawdigit_evt8.npy",
+        "target": folders["out"] / "p2GeV_cosmics_inspired_rawdigit_noiseoff_evt8.npy",
+        "pytorch": folders["out"]
+        / f"p2GeV_cosmics_inspired_rawdigit_torch_{modeltype}_evt8.npy",
+        "onnx": folders["out"]
+        / f"p2GeV_cosmics_inspired_rawdigit_onnx_{modeltype}_evt8.npy",
+        "performance_csv": folders["out"] / f"{modeltype}_performance_comparison.csv",
+    }
+    return folders, paths
 
 
 def check_in_output_folder(folders: dict):
@@ -83,6 +133,30 @@ def inference(model: DnModel, evt: np.ndarray, fname: Path, dev: str = None):
     return inference_time
 
 
+def add_platform_info(info: dict, nb_events: int, dev: str):
+    """Adds platform dependent information to dictionary.
+
+    Parameters
+    ----------
+    info: int
+        The dictionary to be filled.
+    nb_events: int
+        The list length for each dictionary key.
+    dev: str
+        The device hosting PyTorch computation.
+    """
+    cpu_info = get_cpu_info()
+    cpu_name = cpu_info["model name"]
+    cuda = True if "cuda" in dev else False
+    nb_cores = get_nb_cpu_cores()
+    nb_all_cores = int(cpu_info["cpu(s)"])
+
+    info["cpu_name"] = [cpu_name] * nb_events
+    info["cuda"] = [cuda] * nb_events
+    info["nb_cores"] = [nb_cores] * nb_events
+    info["all_cores"] = [nb_all_cores] * nb_events
+
+
 def compare_performance_onnx(
     pytorch_model: DnModel,
     onnx_model: DnModel,
@@ -107,12 +181,20 @@ def compare_performance_onnx(
 
     Returns
     -------
-    performance_dict: dict
-        The dictionary containing profiled inference times.
+    df: pd.DataFrame
+        The dataframe containing profiled inference times.
     """
     input_shape = pytorch_model.cnetwork.input_shape
 
-    performance = []
+    performance = {
+        "batch_size": [],
+        "framework": [],
+        "network": [],
+        "time": [],
+        "error": [],
+    }
+
+    add_platform_info(performance, len(batch_size_list) * 2, dev)
 
     for batch_size in tqdm(batch_size_list, desc="batch_size"):
         batched_input_shape = (nb_batches, batch_size) + input_shape
@@ -129,13 +211,14 @@ def compare_performance_onnx(
             zip_longest(inputs, []), onnx_model.cnetwork, profiler=onnx_pr
         )
         onnx_mean, onnx_err = onnx_pr.get_stats()
-        performance.extend([torch_mean, onnx_mean, torch_err, onnx_err])
-    
-    performance = np.reshape(performance, [-1,2])
 
-    iterables = [batch_size_list, ["mean", "err"]]
-    index = pd.MultiIndex.from_product(iterables, names=["batch", "value"])
-    df = pd.DataFrame(performance, index=index, columns=["torch", "onnx"])
+        performance["batch_size"].extend([batch_size] * 2)
+        performance["framework"].extend(["torch", "onnx"])
+        performance["time"].extend([torch_mean, onnx_mean])
+        performance["error"].extend([torch_err, onnx_err])
+        performance["network"].extend([pytorch_model.modeltype, onnx_model.modeltype])
+
+    df = pd.DataFrame(performance)
     return df
 
 
@@ -246,63 +329,64 @@ def plot_comparison_catplot(
     with_graphics: bool
         Wether to show matplotlib plots or not.
     """
-    lang = data.index.levels[0]
-    torch_mean = data.loc[(slice(None), "mean"), "torch"].to_numpy()
-    torch_err = data.loc[(slice(None), "err"), "torch"].to_numpy()
-    onnx_mean = data.loc[(slice(None), "mean"), "onnx"].to_numpy()
-    onnx_err = data.loc[(slice(None), "err"), "onnx"].to_numpy()
-
-    ind = np.arange(len(lang))
-    width = 0.4
-
     fname = out_folder / "pytorch_onnx_performance_comparison.png"
-    ax = plt.subplot()
-    ax.bar(
-        ind - width,
-        torch_mean,
-        width,
-        yerr=torch_err,
-        align="center",
-        alpha=0.5,
-        color="b",
-        label="PyTorch",
+
+    pv_time = data.pivot_table(values="time", index="batch_size", columns="framework")
+    pv_err = data.pivot_table(values="error", index="batch_size", columns="framework")
+
+    rel = pd.DataFrame(
+        (pv_time["torch"] - pv_time["onnx"]) / pv_time["torch"], columns=["speed-up"]
     )
-    ax.bar(
-        ind,
-        onnx_mean,
-        width,
-        yerr=onnx_err,
-        align="center",
-        alpha=0.5,
-        color="r",
-        label="Onnx",
+    rel["maxes"] = np.maximum(pv_time["torch"], pv_time["onnx"])
+
+    fig = plt.figure(figsize=(16, 9))
+    ax = fig.add_subplot()
+    title = (
+        f"Platform: {data['cpu_name'][0]}, "
+        f"cores: {data['nb_cores'][0]}\n"
+        f"PyTorch is using CUDA: {data['cuda'][0]}"
     )
-    ax.set(xticks=ind - width / 2, xticklabels=lang)
+    ax.set_title(title, fontsize=18)
+    pv_time.plot.bar(yerr=pv_err, ax=ax, alpha=0.5, rot=0, fontsize=18, xlabel="")
 
-    rel_perc = 100 * (onnx_mean - torch_mean) / torch_mean
-
-    maxes = np.maximum(onnx_mean + onnx_err, torch_mean + torch_err)
-
-    for i, (v, m) in enumerate(zip(rel_perc, maxes)):
-        if v > 0:
-            sgn = "+"
-        elif v == 0:
-            sgn = ""
-        else:
-            sgn = "-"
+    for j, (_, row) in enumerate(rel.iterrows()):
+        sgn = "+" if row["speed-up"] > 0 else ""
         ax.text(
-            i - width / 2,
-            m + 0.1,
-            f"{sgn}{v:.2f} %",
+            j,
+            row["maxes"] + 0.05,
+            f"{sgn}{row['speed-up']:.2f}x",
             ha="center",
             color="black",
-            fontsize=10,
+            fontsize=18,
         )
 
-    plt.xlabel("Batch size")
-    plt.ylabel("Time $[s]$")
-    plt.title("Inference time for different batch sizes")
-    plt.legend(frameon=False)
+    ax.set_xlabel("Batch size", fontsize=18)
+    ax.set_ylabel("Time [s]", fontsize=18)
+    ax.legend(fontsize=18)
+    ax.tick_params(
+        axis="x",
+        direction="in",
+        bottom=True,
+        labelbottom=False,
+        top=True,
+        labeltop=False,
+    )
+    ax.tick_params(
+        axis="x",
+        direction="in",
+        bottom=True,
+        labelbottom=True,
+        top=True,
+        labeltop=False,
+    )
+    ax.tick_params(
+        axis="y",
+        direction="in",
+        left=True,
+        labelleft=True,
+        right=True,
+        labelright=False,
+    )
     plt.savefig(fname, bbox_inches="tight", dpi=600)
     print(f"Saved image at {fname}")
     if with_graphics:
