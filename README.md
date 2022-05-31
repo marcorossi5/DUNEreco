@@ -2,6 +2,7 @@
 
 [![arxiv](https://img.shields.io/badge/arXiv-hep--ph%2F2103.01596-%23B31B1B.svg)](https://arxiv.org/abs/2103.01596)
 [![DOI](https://zenodo.org/badge/248536693.svg)](https://zenodo.org/badge/latestdoi/248536693)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6599305.svg)](https://doi.org/10.5281/zenodo.6599305)
 
 ![pytest](https://github.com/N3PDF/pdfflow/workflows/pytest/badge.svg)
 
@@ -49,32 +50,19 @@ This process will copy the DUNEdn program to your environment python path.
 
 ### Note
 
-The [saved_models](saved_models) and [examples](examples) directories contain
-data to reproduce the results presented in
+Large files like dataset and models checkpoints are not included in the code
+repository, but are available on [Zenodo](https://doi.org/10.5281/zenodo.6599305).
+
+The `download_dataset.sh` convenience script automates the download of those
+files, populating the [saved_models](saved_models) and [examples](examples)
+directories with data to reproduce the results presented in
 [arXiv:2103.01596](https://arxiv.org/abs/2103.01596).
 
-Since some of the saved models files are quite large (~100 MB), they are uploaded
-via [git-lfs](https://git-lfs.github.com/).  
-When cloning the repo, it is possible to download pointers to those large files
-rather than the whole binaries.  
-This can be achieved with:
+Just launch the following command to start the job:
 
 ```bash
-git clone --config lfs.fetchexclude="*.pth*,*.tar.gz" https://github.com/marcorossi5/DUNEdn.git
+./download_dataset.sh
 ```
-
-The actual files can be downloaded from the server with the command:
-
-```bash
-git lfs pull --exclude="" --include="*.pth,*.tar.gz"
-```
-
-This overrides the settings in [.gitconfig](.git/config) and ensures that the
-desired files are downloaded.
-
-Please, refere to this
-[tutorial](https://www.atlassian.com/git/tutorials/git-lfs#including-excluding-files)
-for more instructions on the usage of `git-lfs`.
 
 ### Requirements
 
