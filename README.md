@@ -61,7 +61,7 @@ directories with data to reproduce the results presented in
 Just launch the following command to start the job:
 
 ```bash
-./download_dataset.sh
+bash ./download_dataset.sh
 ```
 
 ### Requirements
