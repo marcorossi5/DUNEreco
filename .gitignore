@@ -156,3 +156,4 @@ cython_debug/
 *.tar.gz
 *.npy
 *.pth
+dunedn_checkpoints
