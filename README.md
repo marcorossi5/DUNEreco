@@ -48,9 +48,9 @@ pip install .
 
 This process will copy the DUNEdn program to your environment python path.
 
-### Note
+## Download large dataset files
 
-Large files like dataset and models checkpoints are not included in the code
+Large files like dataset samples and models checkpoints are not included in the
 repository, but are available on [Zenodo](https://doi.org/10.5281/zenodo.6599305).
 
 The `download_dataset.sh` convenience script automates the download of those
@@ -58,7 +58,7 @@ files, populating the [saved_models](saved_models) and [examples](examples)
 directories with data to reproduce the results presented in
 [arXiv:2103.01596](https://arxiv.org/abs/2103.01596).
 
-Just launch the following command to start the job:
+Launch the following command to start the job:
 
 ```bash
 bash ./download_dataset.sh

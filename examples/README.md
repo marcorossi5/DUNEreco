@@ -9,6 +9,9 @@ The examples in this directory assume that the `DUNEdn` package with the
 This can be done running `pip install -e .[example]` from the package [root](..)
 directory.
 
+The dataset sample and checkpoints must be downloaded to be able to run the
+examples. Refere to the main [README](../README.md) for more information.
+
 ## Onnx examples
 
 This folder contains a comparison between PyTorch and Onnx model inference.  
