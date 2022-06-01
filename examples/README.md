@@ -10,7 +10,7 @@ This can be done running `pip install -e .[example]` from the package [root](..)
 directory.
 
 The dataset sample and checkpoints must be downloaded to be able to run the
-examples. Refere to the main [README](../README.md) for more information.
+examples. Refere to the main [README](../README.md#download-large-dataset-files) for more information.
 
 ## Onnx examples
 

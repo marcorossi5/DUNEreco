@@ -48,6 +48,17 @@ pip install .
 
 This process will copy the DUNEdn program to your environment python path.
 
+### Requirements
+
+DUNEdn requires the following packages:
+
+- python3
+- numpy
+- pytorch
+- torchvision
+- matplotlib
+- hyperopt
+
 ## Download large dataset files
 
 Large files like dataset samples and models checkpoints are not included in the
@@ -63,17 +74,6 @@ Launch the following command to start the job:
 ```bash
 bash ./download_dataset.sh
 ```
-
-### Requirements
-
-DUNEdn requires the following packages:
-
-- python3
-- numpy
-- pytorch
-- torchvision
-- matplotlib
-- hyperopt
 
 ## Running the code
 
