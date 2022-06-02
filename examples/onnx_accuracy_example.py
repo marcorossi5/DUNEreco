@@ -13,13 +13,11 @@
 from pathlib import Path
 import argparse
 import numpy as np
-from plot_event_example import plot_example
 from assets.functions import (
     prepare_folders_and_paths,
     check_in_output_folder,
     inference,
-    compare_performance_onnx,
-    plot_comparison_catplot,
+    plot_example,
 )
 from dunedn.inference.hitreco import DnModel
 from dunedn.inference.analysis import analysis_main
@@ -31,7 +29,7 @@ from dunedn.utils.utils import load_runcard
 def main(modeltype, version, pytorch_dev, should_export_onnx):
     # base folders
     base_folder = Path("../../output/tmp")
-    ckpt_folder = Path(f"../saved_models/{modeltype}_{version}")
+    ckpt_folder = Path(f"../dunedn_checkpoints/{modeltype}_{version}")
 
     folders, paths = prepare_folders_and_paths(
         modeltype, version, base_folder, ckpt_folder

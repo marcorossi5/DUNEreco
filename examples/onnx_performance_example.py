@@ -21,13 +21,11 @@ from assets.functions import (
 from dunedn.inference.hitreco import DnModel
 from dunedn.utils.utils import load_runcard
 
-# TODO: the check-in is not complete if runcard do not get copied into the tmp folder
-
 
 def main(modeltype, version, pytorch_dev, should_export_onnx):
     # base folders
     base_folder = Path("../../output/tmp")
-    ckpt_folder = Path(f"../saved_models/{modeltype}_{version}")
+    ckpt_folder = Path(f"../dunedn_checkpoints/{modeltype}_{version}")
 
     folders, paths = prepare_folders_and_paths(
         modeltype, version, base_folder, ckpt_folder
