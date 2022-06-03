@@ -1,4 +1,3 @@
-# This file is part of DUNEdn by M. Rossi
 import os
 from pathlib import Path
 import logging
@@ -75,7 +74,6 @@ def get_dunedn_search_path():
     env_var = os.environ.get("DUNEDN_SEARCH_PATH")
     search_path = [] if env_var is None else env_var.split(":")
 
-    
     # prepend current directory
     search_path.insert(0, ".")
 

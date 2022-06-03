@@ -1,4 +1,3 @@
-# This file is part of DUNEdn by M. Rossi
 import torch
 import torch.nn.functional as F
 
@@ -14,7 +13,7 @@ def _fspecial_gauss_1d(size, sigma):
     coords = torch.arange(size).to(dtype=torch.float)
     coords -= size // 2
 
-    g = torch.exp(-(coords ** 2) / (2 * sigma ** 2))
+    g = torch.exp(-(coords**2) / (2 * sigma**2))
     g /= g.sum()
 
     return g.unsqueeze(0).unsqueeze(0)
@@ -234,9 +233,9 @@ def ms_ssim(
 
     smaller_side = min(X.shape[-2:])
     assert smaller_side > (win_size - 1) * (
-        2 ** 4
+        2**4
     ), "Image size should be larger than %d due to the 4 downsamplings in ms-ssim" % (
-        (win_size - 1) * (2 ** 4)
+        (win_size - 1) * (2**4)
     )
 
     if weights is None:

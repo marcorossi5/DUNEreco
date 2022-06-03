@@ -1,0 +1,83 @@
+task: dn # roi | dn
+scan: False # wether to run hyperopt scan
+dev: cpu # cpu | cuda:0 | [0,1,2,3]
+     # - 0
+     # - 1
+     # - 2
+     # - 3
+
+# dataset
+# dataset directory tree structure:
+# dataset_dir
+#   |-- train
+#   |    |--- evts
+#   |    |--- planes (preprocess product)
+#   |    |--- crops (preprocess product)
+#   |-- val
+#   |    |--- evts
+#   |    |--- planes (preprocess product)
+#   |-- test
+#   |    |--- evts
+#   |    |--- planes (preprocess product)
+dataset:
+  data_folder: !Path '../test_dataset'
+  nb_crops: 5000 # number of crops from each plane
+  crop_edge: 32 # crop edge size
+  crop_size: [32, 32]
+  pct: 0.5 # signal to background crop balance
+  threshold: 3.5 # 500 e- | 3.5 ADC counts (threshold for inference)
+
+# test batch sizes are compatible with a single GPU with 16 GiB of memory
+
+model:
+  epochs: 1
+  epoch_log: 1
+  epoch_test_start: 0
+  epoch_test: 1
+  cnn:
+    loss_fn: ssim_l2
+    a: 0.84
+    batch_size: 32
+    test_batch_size: 320
+    lr: 0.001
+    amsgrad: true
+    ckpt: !Path '../new_saved_models/cnn_v08/collection/cnn_v08_dn_collection.pth'
+    net_dict:
+      model: cnn
+      task: dn # dn | roi
+      crop_edge: 32
+      input_channels: 1
+      hidden_channels: 32
+  gcnn:
+    loss_fn: ssim_l2
+    a: 0.84
+    batch_size: 32
+    test_batch_size: 160
+    lr: 0.001
+    amsgrad: true
+    ckpt: !Path '../new_saved_models/gcnn_v08/collection/gcnn_v08_dn_collection.pth'
+    net_dict:
+      model: gcnn
+      task: dn # dn | roi
+      crop_edge: 32
+      input_channels: 1
+      hidden_channels: 32
+      k: 8
+  uscg:
+    loss_fn: mse
+    batch_size: 1
+    test_batch_size: 3
+    lr: 1e-3
+    amsgrad: true
+    ckpt: !Path '../new_saved_models/uscg_v08/collection/uscg_v08_dn_collection.pth'
+    net_dict:
+      out_channels: 1
+      h_collection: 960
+      h_induction: 800
+      w: 2000
+      stride: 1000
+      pretrained: true
+      node_size: [28, 28]
+      dropout: 0.5
+      enhance_diag: true
+      aux_pred: true

@@ -1,4 +1,3 @@
-# This file is part of DUNEdn by M. Rossi
 """
     This module contains the geometry helper functions that transform events into
     planes and vice versa.
