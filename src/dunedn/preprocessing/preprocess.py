@@ -25,6 +25,7 @@
           --save_sample         extract a smaller dataset
 """
 from pathlib import Path
+from argparse import ArgumentParser, Namespace
 from dunedn.preprocessing.putils import (
     get_planes_and_dump,
     save_normalization_info,
@@ -33,13 +34,13 @@ from dunedn.preprocessing.putils import (
 from dunedn.utils.utils import load_runcard, initialize_output_folder, save_runcard
 
 
-def add_arguments_preprocessing(parser):
-    """
-    Adds preprocessing subparser arguments.
+def add_arguments_preprocessing(parser: ArgumentParser):
+    """Adds preprocessing subparser arguments.
 
     Parameters
     ----------
-        - parser: ArgumentParser, preprocessing subparser object
+    parser: ArgumentParser
+        Preprocessing subparser object.
     """
     parser.add_argument(
         "runcard",
@@ -59,15 +60,14 @@ def add_arguments_preprocessing(parser):
     parser.set_defaults(func=preprocess)
 
 
-def preprocess(args):
-    """
-    Wrapper preprocessing function.
+def preprocess(args: Namespace):
+    """Wrapper preprocessing function.
 
     Parameters
     ----------
-        - args: NameSpace object, command line parsed arguments. It should
-                contain configcard file name, dataset directory path, plus
-                save_sample boolean options.
+    args: Namespace
+        Command line parsed arguments. It should contain configcard file name,
+        dataset directory path, plus save_sample boolean options.
     """
     setup = load_runcard(args.runcard)
     setup.update({"output": args.output})

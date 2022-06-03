@@ -1,7 +1,7 @@
 """
     This module implements several losses.
     
-    Main option is reduction, which could be either 'mean' (default) or 'none'.
+    Main option is reduction, which could be either `mean` (default) or `None`.
 """
 import torch
 import numpy as np
@@ -21,9 +21,12 @@ class Loss(ABC):
         """
         Parameters
         ----------
-            - a: float, relative weight of the loss constributions
-            - data_range: float
-            - reduction: str: available options mean | none
+        a: float
+            Relative weight of the loss constributions.
+        data_range: float
+            Data interval.
+        reduction: str
+            Available options mean | none.
         """
         self.a = a
         self.data_range = data_range
@@ -38,7 +41,7 @@ class Loss(ABC):
 class LossMse(Loss):
     """Mean squared error loss function.
 
-    Computes `L2(y_true, y_pred) = mean((y_true - y_pred)**2)`.
+    Computes ``L2(y_true, y_pred) = mean((y_true - y_pred)**2)``.
     """
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
@@ -50,8 +53,10 @@ class LossMse(Loss):
         """
         Parameters
         ----------
-            - y_pred: torch.Tensor, of shape=(N,C,W,H)
-            - y_true: torch.Tensor, of shape=(N,C,W,H)
+        y_pred: torch.Tensor
+            Predicted tensor, of shape=(N,C,W,H).
+        y_true: torch.Tensor
+            Target tensor, of shape=(N,C,W,H).
         """
         loss = self.loss(y_pred, y_true)
         if self.reduction == "mean":
@@ -62,7 +67,7 @@ class LossMse(Loss):
 class LossImae(Loss):
     """Mean absolute error on integrated charge loss function.
 
-    Computes `IMAE(y_true, y_pred) = mean(|y_true.sum(-1) - y_pred.sum(-1)|)`.
+    Computes ``IMAE(y_true, y_pred) = mean(|y_true.sum(-1) - y_pred.sum(-1)|)``.
     """
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
@@ -74,8 +79,10 @@ class LossImae(Loss):
         """
         Parameters
         ----------
-            - y_pred: torch.Tensor, of shape=(N,C,W,H)
-            - y_true: torch.Tensor, of shape=(N,C,W,H)
+        y_pred: torch.Tensor
+            Predicted tensor, of shape=(N,C,W,H).
+        y_true: torch.Tensor
+            Target tensor, of shape=(N,C,W,H).
         """
         loss = self.loss(y_pred.sum(-1), y_true.sum(-1))
         if self.reduction == "mean":
@@ -86,7 +93,7 @@ class LossImae(Loss):
 class LossSsim(Loss):
     """Statistical structural similarity loss function.
 
-    Computes `Lssim(y_true, y_pred) = 1 - stat-ssim(y_true, y_pred) `.
+    Computes ``Lssim(y_true, y_pred) = 1 - stat-ssim(y_true, y_pred)``.
     """
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
@@ -97,8 +104,10 @@ class LossSsim(Loss):
         """
         Parameters
         ----------
-            - x_pred: torch.Tensor, of shape=(N,C,W,H)
-            - y_true: torch.Tensor, of shape=(N,C,W,H)
+        y_pred: torch.Tensor
+            Predicted tensor, of shape=(N,C,W,H).
+        y_true: torch.Tensor
+            Target tensor, of shape=(N,C,W,H).
         """
         return 1 - stat_ssim(
             x_pred, y_true, data_range=self.data_range, reduction=self.reduction
@@ -108,29 +117,31 @@ class LossSsim(Loss):
 class Ssim(Loss):
     """Statistical structural similarity function.
 
-    Computes `ssim(y_true, y_pred) = stat-ssim(y_true, y_pred) `.
+    Computes ``ssim(y_true, y_pred) = stat-ssim(y_true, y_pred)``.
     """
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super(Ssim, self).__init__(a, data_range, reduction)
         self.name = "ssim"
 
-    def __call__(self, x_pred, y_true):
+    def __call__(self, y_pred, y_true):
         """
         Parameters
         ----------
-            - x_pred: torch.Tensor, of shape=(N,C,W,H)
-            - y_true: torch.Tensor, of shape=(N,C,W,H)
+        y_pred: torch.Tensor
+            Predicted tensor, of shape=(N,C,W,H).
+        y_true: torch.Tensor
+            Target tensor, of shape=(N,C,W,H).
         """
         return stat_ssim(
-            x_pred, y_true, data_range=self.data_range, reduction=self.reduction
+            y_pred, y_true, data_range=self.data_range, reduction=self.reduction
         )
 
 
 class LossSsimL2(Loss):
     """Stat ssim + MSE loss function.
 
-    Computes `(a * L2 + (1 - a) * 1e-3 * Lssim)(y_true, y_pred)`.
+    Computes ``(a * L2 + (1 - a) * 1e-3 * Lssim)(y_true, y_pred)``.
     """
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
@@ -141,8 +152,10 @@ class LossSsimL2(Loss):
         """
         Parameters
         ----------
-            - y_pred: torch.Tensor, of shape=(N,C,W,H)
-            - y_true: torch.Tensor, of shape=(N,C,W,H)
+        y_pred: torch.Tensor
+            Predicted tensor, of shape=(N,C,W,H).
+        y_true: torch.Tensor
+            Target tensor, of shape=(N,C,W,H).
         """
         loss1 = nn.MSELoss(reduction=self.reduction)(y_pred, y_true)
         if self.reduction == "none":
@@ -156,7 +169,7 @@ class LossSsimL2(Loss):
 class LossSsimL1(Loss):
     """Stat ssim + mean absolute error loss function.
 
-    Computes `(a * L1 + (1 - a) * 1e-3 * Lssim)(y_true, y_pred)`.
+    Computes ``(a * L1 + (1 - a) * 1e-3 * Lssim)(y_true, y_pred)``.
     """
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
@@ -167,8 +180,10 @@ class LossSsimL1(Loss):
         """
         Parameters
         ----------
-            - y_pred: torch.Tensor, of shape=(N,C,W,H)
-            - y_true: torch.Tensor, of shape=(N,C,W,H)
+        y_pred: torch.Tensor
+            Predicted tensor, of shape=(N,C,W,H).
+        y_true: torch.Tensor
+            Target tensor, of shape=(N,C,W,H).
         """
         loss1 = (y_pred - y_true).abs()
         if self.reduction == "mean":
@@ -184,7 +199,7 @@ class LossSsimL1(Loss):
 class LossBce(Loss):
     """Binary cross entropy loss function.
 
-    Computes `Xent(y_true, y_pred)`.
+    Computes ``Xent(y_true, y_pred)``.
     """
 
     def __init__(self, ratio=0.5, reduction="mean"):
@@ -194,7 +209,8 @@ class LossBce(Loss):
 
         Parameters
         ----------
-            - reduction: str, available options mean | sum | none
+        reduction: str
+            Available options mean | sum | none.
         """
         super(LossBce, self).__init__(0, 0, reduction)
         self.ratio = ratio
@@ -204,8 +220,10 @@ class LossBce(Loss):
         """
         Parameters
         ----------
-            - y_pred: torch.Tensor, of shape=(N,C,W,H)
-            - y_true: torch.Tensor, of shape=(N,C,W,H)
+        y_pred: torch.Tensor
+            Predicted tensor, of shape=(N,C,W,H).
+        y_true: torch.Tensor
+            Target tensor, of shape=(N,C,W,H).
         """
         log = lambda x: torch.log(x + EPS.to(x.device))
         loss = -y_true * log(y_pred) / self.ratio - (1 - y_true) * log(1 - y_pred) / (
@@ -233,8 +251,10 @@ class LossSoftDice(Loss):
         """
         Parameters
         ----------
-            - x: torch.Tensor, of shape=(N,C,W,H)
-            - y: torch.Tensor, of shape=(N,C,W,H)
+        x: torch.Tensor
+            Predicted tensor, of shape=(N,C,W,H).
+        y: torch.Tensor
+            Target tensor, of shape=(N,C,W,H).
         """
         eps = EPS.to(x.device)
         ix = 1 - x
@@ -249,8 +269,10 @@ class LossSoftDice(Loss):
         """
         Parameters
         ----------
-            - y_pred: torch.Tensor, of shape=(N,C,W,H)
-            - y_true: torch.Tensor, of shape=(N,C,W,H)
+        y_pred: torch.Tensor
+            Predicted tensor, of shape=(N,C,W,H).
+        y_true: torch.Tensor
+            Target tensor, of shape=(N,C,W,H).
         """
         ratio = self.dice(y_pred, y_true)
         loss = 1 - ratio
@@ -276,8 +298,10 @@ class LossBceDice(Loss):
         """
         Parameters
         ----------
-            - y_pred: torch.Tensor, of shape=(N,C,W,H)
-            - y_true: torch.Tensor, of shape=(N,C,W,H)
+        y_pred: torch.Tensor
+            Predicted tensor, of shape=(N,C,W,H).
+        y_true: torch.Tensor
+            Target tensor, of shape=(N,C,W,H).
         """
         shape = [y_pred.shape[0], -1]
         bce = self.bce(y_pred, y_true).reshape(shape).mean(-1)
@@ -300,8 +324,10 @@ class LossPsnr(Loss):
         """
         Parameters
         ----------
-            - y_clear: torch.Tensor, of shape=(N,C,W,H)
-            - y_noisy: torch.Tensor, of shape=(N,C,W,H)
+        y_pred: torch.Tensor
+            Predicted tensor, of shape=(N,C,W,H).
+        y_true: torch.Tensor
+            Target tensor, of shape=(N,C,W,H).
         """
         nimages = y_clear.shape[0]
         x1 = y_clear.reshape(nimages, -1)

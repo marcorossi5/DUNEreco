@@ -31,12 +31,12 @@ class GcnnNet(AbstractNet):
 
     def __init__(
         self,
-        model,
-        task,
-        crop_edge,
-        input_channels,
-        hidden_channels,
-        k=None,
+        model: str,
+        task: str,
+        crop_edge: int,
+        input_channels: int,
+        hidden_channels: int,
+        k: int = None,
     ):
         """
         Parameters
@@ -89,7 +89,7 @@ class GcnnNet(AbstractNet):
 
         self.combine = lambda x, y: x + y
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Gcnn forward pass.
 
         Parameters

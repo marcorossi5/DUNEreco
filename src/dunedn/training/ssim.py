@@ -1,14 +1,22 @@
+from typing import Tuple
 import torch
 import torch.nn.functional as F
 
 
-def _fspecial_gauss_1d(size, sigma):
-    r"""Create 1-D gauss kernel
-    Args:
-        size (int): the size of gauss kernel
-        sigma (float): sigma of normal distribution
-    Returns:
-        torch.Tensor: 1D kernel (1 x 1 x size)
+def _fspecial_gauss_1d(size: int, sigma: float) -> torch.Tensor:
+    """Create 1-D gauss kernel
+
+    Parameters
+    ----------
+    size: int
+        The size of gauss kernel.
+    sigma: float
+        Sigma of normal distribution.
+
+    Returns
+    -------
+    torch.Tensor
+        1-D kernel, of shape=(1, 1, size).
     """
     coords = torch.arange(size).to(dtype=torch.float)
     coords -= size // 2
@@ -19,114 +27,160 @@ def _fspecial_gauss_1d(size, sigma):
     return g.unsqueeze(0).unsqueeze(0)
 
 
-def gaussian_filter(input, win):
-    r"""Blur input with 1-D kernel (valid padding)
-    Args:
-        input (torch.Tensor): a batch of tensors to be blured
-        window (torch.Tensor): 1-D gauss kernel
-    Returns:
+def gaussian_filter(inputs: torch.Tensor, win: torch.Tensor) -> torch.Tensor:
+    """Blur input with 1-D kernel (valid padding)
+
+    Parameters
+    ----------
+    inputs: torch.Tensor
+        A batch of tensors to be blured, of shape=(N,C,H,W).
+    window: torch.Tensor
+        1-D gauss kernel, of shape=(1, 1, size).
+
+    Returns
+    -------
         torch.Tensor: blured tensors
     """
-    N, C, H, W = input.shape
-    out = F.conv2d(input, win, groups=C)
-    out = F.conv2d(out, win.transpose(2, 3), groups=C)
+    c = inputs.shape[1]
+    out = F.conv2d(input, win, groups=c)
+    out = F.conv2d(out, win.transpose(2, 3), groups=c)
     return out
 
 
-def stat_gaussian_filter(input, win):
-    r"""Blur input with 1-D kernel (same padding)
-    Args:
-        input (torch.Tensor): a batch of tensors to be blured
-        window (torch.Tensor): 1-D gauss kernel
-    Returns:
-        torch.Tensor: blured tensors
+def stat_gaussian_filter(inputs: torch.Tensor, win: torch.Tensor):
+    """Blur input with 1-D kernel, applying `same` padding.
+
+    Parameters
+    ----------
+    inputs: torch.Tensor
+        A batch of tensors to be blured, of shape=(N,C,H,W).
+    win: torch.Tensor
+        1-D gauss kernel, of shape=(1, 1, size).
+
+    Returns
+    -------
+    torch.Tensor
+        Blured tensors, of shape=(N,C,H,W).
     """
-    N, C, H, W = input.shape
+    c = inputs.shape[1]
     k = win.shape[-1]
-    input = F.pad(input, (k // 2, k // 2), value=input.mean().item())
-    out = F.conv2d(input, win, groups=C)
-    out = F.pad(out, (0, 0, k // 2, k // 2), value=input.mean().item())
-    out = F.conv2d(out, win.transpose(2, 3), groups=C)
+    inputs = F.pad(inputs, (k // 2, k // 2), value=inputs.mean().item())
+    out = F.conv2d(inputs, win, groups=c)
+    out = F.pad(out, (0, 0, k // 2, k // 2), value=inputs.mean().item())
+    out = F.conv2d(out, win.transpose(2, 3), groups=c)
     return out
 
 
-def _ssim(X, Y, data_range, win, reduction=True, K=(0.01, 0.03)):
+def _ssim(
+    x: torch.Tensor,
+    y: torch.Tensor,
+    data_range: float,
+    win: torch.Tensor,
+    reduction: bool = True,
+    k: Tuple[float, float] = (0.01, 0.03),
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Calculate statistical ssim map between inputs.
 
-    r"""Calculate ssim index for X and Y
-    Args:
-        X (torch.Tensor): images
-        Y (torch.Tensor): images
-        win (torch.Tensor): 1-D gauss kernel
-        data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-        reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
-    Returns:
-        torch.Tensor: ssim results.
+    Parameters
+    ----------
+    x: torch.Tensor
+        Images, of shape=(N,C,H,W).
+    y: torch.Tensor
+        Images, of shape=(N,C,H,W).
+    data_range: float
+        Value range of input images. Usually 1.0 or 255.
+    win: torch.Tensor
+        1-D gauss kernel, of shape=(1, 1, size).
+    reduction: bool
+        If reduction=True, ssim of all images will be averaged as a scalar.
+    k: list[float]
+        Cut-off values for fraction numerical stability.
+
+    Returns
+    -------
+    torch.Tensor
+        Ssim results, of shape=(N,C,H,W).
+    torch.Tensor
+        Contrast time structure fraction results, of shape=(N,C,H,W).
     """
-    K1, K2 = K
-    batch, channel, height, width = X.shape
+    k1, k2 = k
     compensation = 1.0
 
-    C1 = (K1 * data_range) ** 2
-    C2 = (K2 * data_range) ** 2
+    c1 = (k1 * data_range) ** 2
+    c2 = (k2 * data_range) ** 2
 
-    win = win.to(X.device, dtype=X.dtype)
+    win = win.to(x.device, dtype=x.dtype)
 
-    mu1 = gaussian_filter(X, win)
-    mu2 = gaussian_filter(Y, win)
+    mu1 = gaussian_filter(x, win)
+    mu2 = gaussian_filter(y, win)
 
     mu1_sq = mu1.pow(2)
     mu2_sq = mu2.pow(2)
     mu1_mu2 = mu1 * mu2
 
-    sigma1_sq = compensation * (gaussian_filter(X * X, win) - mu1_sq)
-    sigma2_sq = compensation * (gaussian_filter(Y * Y, win) - mu2_sq)
-    sigma12 = compensation * (gaussian_filter(X * Y, win) - mu1_mu2)
+    sigma1_sq = compensation * (gaussian_filter(x * x, win) - mu1_sq)
+    sigma2_sq = compensation * (gaussian_filter(y * y, win) - mu2_sq)
+    sigma12 = compensation * (gaussian_filter(x * y, win) - mu1_mu2)
 
-    cs_map = (2 * sigma12 + C2) / (sigma1_sq + sigma2_sq + C2)  # set alpha=beta=gamma=1
-    ssim_map = ((2 * mu1_mu2 + C1) / (mu1_sq + mu2_sq + C1)) * cs_map
+    cs_map = (2 * sigma12 + c2) / (sigma1_sq + sigma2_sq + c2)  # set alpha=beta=gamma=1
+    ssim_map = ((2 * mu1_mu2 + c1) / (mu1_sq + mu2_sq + c1)) * cs_map
 
     ssim_per_channel = torch.flatten(ssim_map, 2).mean(-1)
     cs = torch.flatten(cs_map, 2).mean(-1)
     return ssim_per_channel, cs
 
 
-def _stat_ssim(X, Y, data_range, win, reduction=True, K=(0.01, 0.03)):
+def _stat_ssim(
+    x, y, data_range, win, reduction=True, k=(0.01, 0.03)
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Calculate statistical Ssim map between inputs.
 
-    r"""Calculate stat_ssim index for X and Y
-    Args:
-        X (torch.Tensor): images
-        Y (torch.Tensor): images
-        win (torch.Tensor): 1-D gauss kernel
-        data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-        reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
-    Returns:
-        torch.Tensor: ssim results.
+    Parameters
+    ----------
+    x: torch.Tensor
+        Images, of shape=(N,C,H,W).
+    y: torch.Tensor
+        Images, of shape=(N,C,H,W).
+    data_range: float
+        Value range of input images. Usually 1.0 or 255.
+    win: torch.Tensor
+        1-D gauss kernel, of shape=(1, 1, size).
+    reduction: bool
+        If reduction=True, ssim of all images will be averaged as a scalar.
+    k: list[float]
+        Cut-off values for fraction numerical stability.
+
+    Returns
+    -------
+    torch.Tensor
+        Statistica Ssim results, of shape=(N,C,H,W).
+    torch.Tensor
+        Contrast time structure fraction results, of shape=(N,C,H,W).
     """
-    K1, K2 = K
-    batch, channel, height, width = X.shape
+    k1, k2 = k
     compensation = 1.0
 
-    C1 = (K1 * data_range) ** 2
-    C2 = (K2 * data_range) ** 2
+    c1 = (k1 * data_range) ** 2
+    c2 = (k2 * data_range) ** 2
 
-    win = win.to(X.device, dtype=X.dtype)
+    win = win.to(x.device, dtype=x.dtype)
 
-    mu1 = stat_gaussian_filter(X, win)
-    mu2 = stat_gaussian_filter(Y, win)
+    mu1 = stat_gaussian_filter(x, win)
+    mu2 = stat_gaussian_filter(y, win)
 
     mu1_sq = mu1.pow(2)
     mu2_sq = mu2.pow(2)
     mu1_mu2 = mu1 * mu2
 
-    X_ = X - mu1
-    Y_ = Y - mu2
+    x_ = x - mu1
+    y_ = y - mu2
 
-    sigma1_sq = compensation * (stat_gaussian_filter(X_ * X_, win))
-    sigma2_sq = compensation * (stat_gaussian_filter(Y_ * Y_, win))
-    sigma12 = compensation * (stat_gaussian_filter(X_ * Y_, win))
+    sigma1_sq = compensation * (stat_gaussian_filter(x_ * x_, win))
+    sigma2_sq = compensation * (stat_gaussian_filter(y_ * y_, win))
+    sigma12 = compensation * (stat_gaussian_filter(x_ * y_, win))
 
-    cs_map = (2 * sigma12 + C2) / (sigma1_sq + sigma2_sq + C2)  # set alpha=beta=gamma=1
-    ssim_map = ((2 * mu1_mu2 + C1) / (mu1_sq + mu2_sq + C1)) * cs_map
+    cs_map = (2 * sigma12 + c2) / (sigma1_sq + sigma2_sq + c2)
+    ssim_map = ((2 * mu1_mu2 + c1) / (mu1_sq + mu2_sq + c1)) * cs_map
 
     ssim_per_channel = torch.flatten(ssim_map, 2).mean(-1)
     cs = torch.flatten(cs_map, 2).mean(-1)
@@ -134,41 +188,55 @@ def _stat_ssim(X, Y, data_range, win, reduction=True, K=(0.01, 0.03)):
 
 
 def ssim(
-    X,
-    Y,
-    data_range=255,
-    reduction=True,
-    win_size=11,
-    win_sigma=3,
-    win=None,
-    K=(1e-13, 1e-13),
-    nonnegative_ssim=False,
-):
-    r"""interface of ssim
-    Args:
-        X (torch.Tensor): a batch of images, (N,C,H,W)
-        Y (torch.Tensor): a batch of images, (N,C,H,W)
-        data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-        reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
-        win_size: (int, optional): the size of gauss kernel
-        win_sigma: (float, optional): sigma of normal distribution
-        win (torch.Tensor, optional): 1-D gauss kernel. if None, a new kernel will be created according to win_size and win_sigma
-        K (list or tuple, optional): scalar constants (K1, K2). Try a larger K2 constant (e.g. 0.4) if you get a negative or NaN results.
-        nonnegative_ssim (bool, optional): force the ssim response to be nonnegative with relu
-    Returns:
-        torch.Tensor: ssim results
+    x: torch.Tensor,
+    y: torch.Tensor,
+    data_range: float = 255.0,
+    reduction: bool = True,
+    win_size: int = 11,
+    win_sigma: int = 3,
+    win: torch.Tensor = None,
+    k: Tuple[int, int] = (1e-13, 1e-13),
+    nonnegative_ssim: bool = False,
+) -> torch.Tensor:
+    """Interface for Structural Similarity function.
+
+    Parameters
+    ----------
+    x: torch.Tensor
+        Images, of shape=(N,C,H,W).
+    y: torch.Tensor
+        Images, of shape=(N,C,H,W).
+    data_range: float
+        Value range of input images. Usually 1.0 or 255.
+    reduction: bool
+        If reduction=True, ssim of all images will be averaged as a scalar.
+    win_size: int
+        The size of the gaussian kernel.
+    win_sigma: float
+        Standard deviation in pixels units of the gaussian kernel.
+    win: torch.Tensor
+        1-D gauss kernel, of shape=(1, 1, size).
+    k: list[float]
+        Cut-off values for fraction numerical stability.
+    nonnegative_ssim: bool
+        Wether to force the ssim response to be nonnegative with relu function.
+
+    Returns
+    -------
+    torch.Tensor
+        Ssim results, of shape=(N,C,H,W).
     """
 
-    if len(X.shape) != 4:
+    if len(x.shape) != 4:
         raise ValueError("Input images should be 4-d tensors.")
 
-    if not X.type() == Y.type():
+    if not x.type() == y.type():
         raise ValueError("Input images should have the same dtype.")
 
-    if not X.shape == Y.shape:
+    if not x.shape == y.shape:
         raise ValueError("Input images should have the same shape.")
 
-    if win is not None:  # set win_size
+    if win is not None:
         win_size = win.shape[-1]
 
     if not (win_size % 2 == 1):
@@ -176,10 +244,10 @@ def ssim(
 
     if win is None:
         win = _fspecial_gauss_1d(win_size, win_sigma)
-        win = win.repeat(X.shape[1], 1, 1, 1)
+        win = win.repeat(x.shape[1], 1, 1, 1)
 
-    ssim_per_channel, cs = _ssim(
-        X, Y, data_range=data_range, win=win, reduction=False, K=K
+    ssim_per_channel, _ = _ssim(
+        x, y, data_range=data_range, win=win, reduction=False, k=k
     )
     if nonnegative_ssim:
         ssim_per_channel = torch.relu(ssim_per_channel)
@@ -191,38 +259,51 @@ def ssim(
 
 
 def ms_ssim(
-    X,
-    Y,
-    data_range=255,
-    reduction=True,
-    win_size=11,
-    win_sigma=3,
-    win=None,
-    weights=None,
-    K=(1e-13, 1e-13),
-):
+    x: torch.Tensor,
+    y: torch.Tensor,
+    data_range: float = 255.0,
+    reduction: bool = True,
+    win_size: int = 11,
+    win_sigma: int = 3,
+    win: torch.Tensor = None,
+    weights: list[float]=None,
+    k: Tuple[int, int] = (1e-13, 1e-13),
+) -> torch.Tensor:
+    """Interface for Multiscale Structural Similarity function.
 
-    r"""interface of ms-ssim
-    Args:
-        X (torch.Tensor): a batch of images, (N,C,H,W)
-        Y (torch.Tensor): a batch of images, (N,C,H,W)
-        data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-        reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
-        win_size: (int, optional): the size of gauss kernel
-        win_sigma: (float, optional): sigma of normal distribution
-        win (torch.Tensor, optional): 1-D gauss kernel. if None, a new kernel will be created according to win_size and win_sigma
-        weights (list, optional): weights for different levels
-        K (list or tuple, optional): scalar constants (K1, K2). Try a larger K2 constant (e.g. 0.4) if you get a negative or NaN results.
-    Returns:
-        torch.Tensor: ms-ssim results
+    Parameters
+    ----------
+    x: torch.Tensor
+        Images, of shape=(N,C,H,W).
+    y: torch.Tensor
+        Images, of shape=(N,C,H,W).
+    data_range: float
+        Value range of input images. Usually 1.0 or 255.
+    reduction: bool
+        If reduction=True, ssim of all images will be averaged as a scalar.
+    win_size: int
+        The size of the gaussian kernel.
+    win_sigma: float
+        Standard deviation in pixels units of the gaussian kernel.
+    win: torch.Tensor
+        1-D gauss kernel, of shape=(1, 1, size).
+    weights: list[float]
+        Weights for different levels in the multiscale computation.
+    k: list[float]
+        Cut-off values for fraction numerical stability.
+
+    Returns
+    -------
+    torch.Tensor
+        Ssim results, of shape=(N,C,H,W).
     """
-    if len(X.shape) != 4:
+    if len(x.shape) != 4:
         raise ValueError("Input images should be 4-d tensors.")
 
-    if not X.type() == Y.type():
+    if not x.type() == y.type():
         raise ValueError("Input images should have the same dtype.")
 
-    if not X.shape == Y.shape:
+    if not x.shape == y.shape:
         raise ValueError("Input images should have the same dimensions.")
 
     if win is not None:  # set win_size
@@ -231,7 +312,7 @@ def ms_ssim(
     if not (win_size % 2 == 1):
         raise ValueError("Window size should be odd.")
 
-    smaller_side = min(X.shape[-2:])
+    smaller_side = min(x.shape[-2:])
     assert smaller_side > (win_size - 1) * (
         2**4
     ), "Image size should be larger than %d due to the 4 downsamplings in ms-ssim" % (
@@ -240,29 +321,27 @@ def ms_ssim(
 
     if weights is None:
         weights = [0.0448, 0.2856, 0.3001, 0.2363, 0.1333]
-    weights = torch.FloatTensor(weights).to(X.device, dtype=X.dtype)
+    weights = torch.FloatTensor(weights).to(x.device, dtype=x.dtype)
 
     if win is None:
         win = _fspecial_gauss_1d(win_size, win_sigma)
-        win = win.repeat(X.shape[1], 1, 1, 1)
+        win = win.repeat(x.shape[1], 1, 1, 1)
 
     levels = weights.shape[0]
     mcs = []
     for i in range(levels):
         ssim_per_channel, cs = _ssim(
-            X, Y, win=win, data_range=data_range, reduction=False, K=K
+            x, y, win=win, data_range=data_range, reduction=False, k=k
         )
 
         if i < levels - 1:
             mcs.append(torch.relu(cs))
-            padding = (X.shape[2] % 2, X.shape[3] % 2)
-            X = F.avg_pool2d(X, kernel_size=2, padding=padding)
-            Y = F.avg_pool2d(Y, kernel_size=2, padding=padding)
+            padding = (x.shape[2] % 2, x.shape[3] % 2)
+            x = F.avg_pool2d(x, kernel_size=2, padding=padding)
+            y = F.avg_pool2d(y, kernel_size=2, padding=padding)
 
-    ssim_per_channel = torch.relu(ssim_per_channel)  # (batch, channel)
-    mcs_and_ssim = torch.stack(
-        mcs + [ssim_per_channel], dim=0
-    )  # (level, batch, channel)
+    ssim_per_channel = torch.relu(ssim_per_channel)
+    mcs_and_ssim = torch.stack(mcs + [ssim_per_channel], dim=0)
     ms_ssim_val = torch.prod(mcs_and_ssim ** weights.view(-1, 1, 1), dim=0)
 
     if reduction == "mean":
@@ -272,38 +351,52 @@ def ms_ssim(
 
 
 def stat_ssim(
-    X,
-    Y,
+    x,
+    y,
     data_range=255,
     reduction=True,
     win_size=11,
     win_sigma=3,
     win=None,
-    K=(1e-13, 1e-13),
+    k=(1e-13, 1e-13),
     nonnegative_ssim=False,
-):
-    r"""interface of stat_ssim
-    Args:
-        X (torch.Tensor): a batch of images, (N,C,H,W)
-        Y (torch.Tensor): a batch of images, (N,C,H,W)
-        data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-        reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
-        win_size: (int, optional): the size of gauss kernel
-        win_sigma: (float, optional): sigma of normal distribution
-        win (torch.Tensor, optional): 1-D gauss kernel. if None, a new kernel will be created according to win_size and win_sigma
-        K (list or tuple, optional): scalar constants (K1, K2). Try a larger K2 constant (e.g. 0.4) if you get a negative or NaN results.
-        nonnegative_ssim (bool, optional): force the ssim response to be nonnegative with relu
-    Returns:
-        torch.Tensor: ssim results
+) -> torch.Tensor:
+    """Interface for Statistical Structural Similarity function.
+
+    Parameters
+    ----------
+    x: torch.Tensor
+        Images, of shape=(N,C,H,W).
+    y: torch.Tensor
+        Images, of shape=(N,C,H,W).
+    data_range: float
+        Value range of input images. Usually 1.0 or 255.
+    reduction: bool
+        If reduction=True, ssim of all images will be averaged as a scalar.
+    win_size: int
+        The size of the gaussian kernel.
+    win_sigma: float
+        Standard deviation in pixels units of the gaussian kernel.
+    win: torch.Tensor
+        1-D gauss kernel, of shape=(1, 1, size).
+    k: list[float]
+        Cut-off values for fraction numerical stability.
+    nonnegative_ssim: bool
+        Wether to force the ssim response to be nonnegative with relu function.
+
+    Returns
+    -------
+    torch.Tensor
+        Stat-Ssim results, of shape=(N,C,H,W).
     """
 
-    if len(X.shape) != 4:
+    if len(x.shape) != 4:
         raise ValueError("Input images should be 4-d tensors.")
 
-    if not X.type() == Y.type():
+    if not x.type() == y.type():
         raise ValueError("Input images should have the same dtype.")
 
-    if not X.shape == Y.shape:
+    if not x.shape == y.shape:
         raise ValueError("Input images should have the same shape.")
 
     if win is not None:  # set win_size
@@ -314,22 +407,22 @@ def stat_ssim(
 
     if win is None:
         win = _fspecial_gauss_1d(win_size, win_sigma)
-        win = win.repeat(X.shape[1], 1, 1, 1)
+        win = win.repeat(x.shape[1], 1, 1, 1)
 
         if data_range == 1.0:
             # rescale inputs in unit range
             # no effect on previously rescaled data
-            xmax = X.flatten(1, -1).max(-1).values.reshape([-1, 1, 1, 1])
-            ymax = Y.flatten(1, -1).max(-1).values.reshape([-1, 1, 1, 1])
+            xmax = x.flatten(1, -1).max(-1).values.reshape([-1, 1, 1, 1])
+            ymax = y.flatten(1, -1).max(-1).values.reshape([-1, 1, 1, 1])
             maxes = torch.max(xmax, ymax)
-            xmin = X.flatten(1, -1).min(-1).values.reshape([-1, 1, 1, 1])
-            ymin = Y.flatten(1, -1).min(-1).values.reshape([-1, 1, 1, 1])
+            xmin = x.flatten(1, -1).min(-1).values.reshape([-1, 1, 1, 1])
+            ymin = y.flatten(1, -1).min(-1).values.reshape([-1, 1, 1, 1])
             mins = torch.min(xmin, ymin)
-            X = (X - mins) / (maxes - mins)
-            Y = (Y - mins) / (maxes - mins)
+            x = (x - mins) / (maxes - mins)
+            y = (y - mins) / (maxes - mins)
 
-    ssim_per_channel, cs = _stat_ssim(
-        X, Y, data_range=data_range, win=win, reduction=False, K=K
+    ssim_per_channel, _ = _stat_ssim(
+        x, y, data_range=data_range, win=win, reduction=False, k=k
     )
     if nonnegative_ssim:
         ssim_per_channel = torch.relu(ssim_per_channel)
@@ -341,25 +434,35 @@ def stat_ssim(
 
 
 class SSIM(torch.nn.Module):
+    """Strctural Similarity class."""
+
     def __init__(
         self,
-        data_range=255,
-        reduction=True,
-        win_size=11,
-        win_sigma=1.5,
-        channel=3,
-        K=(0.01, 0.03),
-        nonnegative_ssim=False,
+        data_range: float = 255,
+        reduction: bool = True,
+        win_size: int = 11,
+        win_sigma: float = 1.5,
+        channel: int = 3,
+        k: list[float] = [0.01, 0.03],
+        nonnegative_ssim: bool = False,
     ):
-        r"""class for ssim
-        Args:
-            data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-            reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
-            win_size: (int, optional): the size of gauss kernel
-            win_sigma: (float, optional): sigma of normal distribution
-            channel (int, optional): input channels (default: 3)
-            K (list or tuple, optional): scalar constants (K1, K2). Try a larger K2 constant (e.g. 0.4) if you get a negative or NaN results.
-            nonnegative_ssim (bool, optional): force the ssim response to be nonnegative with relu.
+        """
+        Parameters
+        ----------
+        data_range: float
+            Value range of input images. Usually 1.0 or 255.
+        reduction: bool
+            If reduction=True, ssim of all images will be averaged as a scalar.
+        win_size: int
+            The size of the gaussian kernel.
+        win_sigma: float
+            Standard deviation in pixels units of the gaussian kernel.
+        channel: int
+            Number of input channels. Defaults to 3.
+        k: list[float]
+            Cut-off values for fraction numerical stability.
+        nonnegative_ssim: bool
+            Wether to force the ssim response to be nonnegative with relu function.
         """
 
         super(SSIM, self).__init__()
@@ -367,41 +470,64 @@ class SSIM(torch.nn.Module):
         self.win = _fspecial_gauss_1d(win_size, win_sigma).repeat(channel, 1, 1, 1)
         self.reduction = reduction
         self.data_range = data_range
-        self.K = K
+        self.k = k
         self.nonnegative_ssim = nonnegative_ssim
 
-    def forward(self, X, Y):
+    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        """Computes the ssim between two images.
+
+        Parameters
+        ----------
+        x: torch.Tensor
+            Images, of shape=(N,C,H,W).
+        y: torch.Tensor
+            Images, of shape=(N,C,H,W).
+
+        Returns
+        -------
+        torch.Tensor
+            Ssim results, of shape=(N,C,H,W).
+        """
         return ssim(
-            X,
-            Y,
+            x,
+            y,
             data_range=self.data_range,
             reduction=self.reduction,
             win=self.win,
-            K=self.K,
+            k=self.k,
             nonnegative_ssim=self.nonnegative_ssim,
         )
 
 
 class MS_SSIM(torch.nn.Module):
+    """Multiscale Strctural Similarity class."""
     def __init__(
         self,
-        data_range=255,
-        reduction=True,
-        win_size=11,
-        win_sigma=1.5,
-        channel=3,
-        weights=None,
-        K=(0.01, 0.03),
+        data_range:float=255,
+        reduction:bool=True,
+        win_size:int=11,
+        win_sigma:float=1.5,
+        channel:int=3,
+        weights: list[float]=None,
+        k:list[float]=[0.01, 0.03],
     ):
-        r"""class for ms-ssim
-        Args:
-            data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-            reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
-            win_size: (int, optional): the size of gauss kernel
-            win_sigma: (float, optional): sigma of normal distribution
-            channel (int, optional): input channels (default: 3)
-            weights (list, optional): weights for different levels
-            K (list or tuple, optional): scalar constants (K1, K2). Try a larger K2 constant (e.g. 0.4) if you get a negative or NaN results.
+        """
+        Parameters
+        ----------
+        data_range: float
+            Value range of input images. Usually 1.0 or 255.
+        reduction: bool
+            If reduction=True, ssim of all images will be averaged as a scalar.
+        win_size: int
+            The size of the gaussian kernel.
+        win_sigma: float
+            Standard deviation in pixels units of the gaussian kernel.
+        channel: int
+            Number of input channels. Defaults to 3.
+        weights: list[float]
+            Weights for different levels in the multiscale computation.
+        k: list[float]
+            Cut-off values for fraction numerical stability.
         """
 
         super(MS_SSIM, self).__init__()
@@ -410,40 +536,62 @@ class MS_SSIM(torch.nn.Module):
         self.reduction = reduction
         self.data_range = data_range
         self.weights = weights
-        self.K = K
+        self.k = k
 
-    def forward(self, X, Y):
+    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        """Computes the multi scale ssim between two images.
+
+        Parameters
+        ----------
+        x: torch.Tensor
+            Images, of shape=(N,C,H,W).
+        y: torch.Tensor
+            Images, of shape=(N,C,H,W).
+
+        Returns
+        -------
+        torch.Tensor
+            Multi scale Ssim results, of shape=(N,C,H,W).
+        """
         return ms_ssim(
-            X,
-            Y,
+            x,
+            y,
             data_range=self.data_range,
             reduction=self.reduction,
             win=self.win,
             weights=self.weights,
-            K=self.K,
+            k=self.k,
         )
 
 
 class STAT_SSIM(torch.nn.Module):
     def __init__(
         self,
-        data_range=255,
-        reduction=True,
-        win_size=11,
-        win_sigma=1.5,
-        channel=3,
-        K=(0.01, 0.03),
-        nonnegative_ssim=False,
+        data_range: float = 255,
+        reduction: bool = True,
+        win_size: int = 11,
+        win_sigma: float = 1.5,
+        channel: int = 3,
+        k: list[float] = [0.01, 0.03],
+        nonnegative_ssim: bool = False,
     ):
-        r"""class for stat_ssim
-        Args:
-            data_range (float or int, optional): value range of input images. (usually 1.0 or 255)
-            reduction (bool, optional): if reduction=True, ssim of all images will be averaged as a scalar
-            win_size: (int, optional): the size of gauss kernel
-            win_sigma: (float, optional): sigma of normal distribution
-            channel (int, optional): input channels (default: 3)
-            K (list or tuple, optional): scalar constants (K1, K2). Try a larger K2 constant (e.g. 0.4) if you get a negative or NaN results.
-            nonnegative_ssim (bool, optional): force the ssim response to be nonnegative with relu.
+        """
+        Parameters
+        ----------
+        data_range: float
+            Value range of input images. Usually 1.0 or 255.
+        reduction: bool
+            If reduction=True, ssim of all images will be averaged as a scalar.
+        win_size: int
+            The size of the gaussian kernel.
+        win_sigma: float
+            Standard deviation in pixels units of the gaussian kernel.
+        channel: int
+            Number of input channels. Defaults to 3.
+        k: list[float]
+            Cut-off values for fraction numerical stability.
+        nonnegative_ssim: bool
+            Wether to force the ssim response to be nonnegative with relu function.
         """
 
         super(STAT_SSIM, self).__init__()
@@ -451,16 +599,30 @@ class STAT_SSIM(torch.nn.Module):
         self.win = _fspecial_gauss_1d(win_size, win_sigma).repeat(channel, 1, 1, 1)
         self.reduction = reduction
         self.data_range = data_range
-        self.K = K
+        self.k = k
         self.nonnegative_ssim = nonnegative_ssim
 
-    def forward(self, X, Y):
+    def forward(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        """Computes the statistical ssim between two images.
+
+        Parameters
+        ----------
+        x: torch.Tensor
+            Images, of shape=(N,C,H,W).
+        y: torch.Tensor
+            Images, of shape=(N,C,H,W).
+
+        Returns
+        -------
+        torch.Tensor
+            Ssim results, of shape=(N,C,H,W).
+        """
         return stat_ssim(
-            X,
-            Y,
+            x,
+            y,
             data_range=self.data_range,
             reduction=self.reduction,
             win=self.win,
-            K=self.K,
+            k=self.k,
             nonnegative_ssim=self.nonnegative_ssim,
         )

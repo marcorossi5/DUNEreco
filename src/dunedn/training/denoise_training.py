@@ -38,7 +38,8 @@ def add_arguments_training(parser):
 
     Parameters
     ----------
-        - parser: ArgumentParser, training subparser object
+    parser: ArgumentParser
+        Training subparser object.
     """
     valid_models = ["cnn", "gcnn", "uscg"]
     parser.add_argument(

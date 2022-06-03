@@ -11,17 +11,19 @@ MAX_ITERATIONS = 10  # maximmum number of allowed failing attempts
 
 
 class TimeOutError(Exception):
-    """Class for run-time error"""
+    """Exception class for time-out error."""
 
 
 def question_instance(logger: Logger, question: str) -> str:
     """Asks for user input and checks if the answer is valid
+    
     Parameters
     ----------
     logger: Logger
         The logger instance.
     question: str
         The question to ask.
+    
     Returns
     -------
     str
@@ -55,6 +57,7 @@ def timed_input(
     fct: Callable = None,
 ) -> str:
     """Poses a question with a maximal time to answer, take default otherwise.
+    
     Parameters
     ----------
     logger: Logger
@@ -69,6 +72,7 @@ def timed_input(
         Wether to raise error on TimeOutError exception.
     fct: Callable
         The callable effectively asking the question.
+    
     Returns
     -------
     str
@@ -103,8 +107,11 @@ def timed_input(
 def ask_question(
     logger: Logger, question: str, default: str, timeout: float = 10
 ) -> str:
-    """Asks question to user, who has only `timeout` seconds to answer, then the
-    `default` is returned.
+    """Asks question to user.
+    
+    The user has only ``timeout`` seconds to answer, then the ``default`` is
+    returned.
+    
     Parameters
     ----------
     logger: Logger
@@ -115,6 +122,7 @@ def ask_question(
         The default answer.
     timeout: float
         Time limit to answer in seconds.
+    
     Returns
     -------
     str
@@ -128,9 +136,11 @@ def ask_question(
 
 def ask_edit_card(logger: Logger, output: Path):
     """Asks interactively to edit the runcard.
+
     Receives the input from the user and opens an editor in the terminal as a
     subprocess. Default editor is nano, otherwise the `QUAKE_EDITOR` environment
     variable allows for custom choice.
+    
     Parameters
     ----------
     logger: logger

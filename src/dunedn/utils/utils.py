@@ -1,4 +1,5 @@
 """ This module contains utility functions of general interest. """
+from typing import Any
 import subprocess as sp
 import multiprocessing
 import shutil
@@ -9,49 +10,76 @@ import numpy as np
 from dunedn.configdn import PACKAGE, get_dunedn_search_path
 
 
-def check(check_instance, check_list):
+def check(check_instance: Any, check_list: list[Any]):
     """
     Checks that check_list contains check_instance object. If not, raises
     NotImplementedError.
 
     Parameters
     ----------
-        - check_instance: obj, object to check
-        - check_list: list, available options
+    check_instance: Any
+        Object to check.
+    check_list: list[Any]
+        Available options.
 
     Raises
     ------
-        - NotImplementedError, if check_instance is not in check_list
+    NotImplementedError
+        If ``check_instance`` is not in ``check_list``.
     """
     if not check_instance in check_list:
         raise NotImplementedError("Operation not implemented")
 
 
-def smooth(smoothed, scalars, weight):  # weight between 0 and 1
-    """Computes the next moving average item."""
+def smooth(smoothed: list[float], scalars: list[float], weight: float) -> list[float]:
+    """Computes the next element of the moving average.
+
+    In-place appending of the next element of the moving average to ``smoothed``.
+
+    Parameters
+    ----------
+    smoothed: list[float]
+        The list of smoothed scalar quantities.
+    scalars: list[float]
+        The list of scalar quantities to be smoothed.
+    weight: float
+        The weighting factor in the (0,1) range.
+    
+    Returns
+    -------
+    smoothed: list[float]
+        The extended list of computed smoothed scalar quantities.
+
+    Raises
+    ------
+    AssertionError
+        If ``scalars`` does not have one element more that ``smoothed``.
+    
+    """
     assert len(scalars) - len(smoothed) == 1
 
     if len(scalars) == 1:
         smoothed.append(scalars[0])
     else:
         smoothed.append(weight * smoothed[-1] + (1 - weight) * scalars[-1])
-
     return smoothed
 
 
-def moving_average(scalars, weight):
-    """
-    Computes the moving avarage from a list of scalar quantities.
+def moving_average(scalars: list[float], weight: float) -> list[float]:
+    """Computes the moving avarage from a list of scalar quantities.
 
     Parameters
     ----------
-        - scalars: list, of scalar quantity to be soothed
-        - weight: the weighting factor in the (0,1) range. Higher values provide
-                  more smoothing power
+    scalars: list[float]
+        List of scalar quantities to be smoothed.
+    weight: float
+        The weighting factor in the (0,1) range. Higher values provide more
+        smoothing power.
 
     Returns
     -------
-        - list, the averaged quantities
+    smoothed: list[float]
+        The list of smoothed scalar quantities.
     """
     smoothed = []
     for i in range(len(scalars)):
@@ -133,14 +161,17 @@ def path_constructor(loader, node):
 
 def load_runcard(runcard_file: Path) -> dict:
     """Load runcard from yaml file.
+
     Parameters
     ----------
     runcard_file: Path
         The yaml to dump the dictionary.
+
     Returns
     -------
     runcard: dict
         The loaded settings dictionary.
+
     Note
     ----
     The pathlib.Path objects are automatically loaded if they are encoded
@@ -162,12 +193,14 @@ def path_representer(dumper, data):
 
 def save_runcard(fname: Path, setup: dict):
     """Save runcard to yaml file.
+    
     Parameters
     ----------
     fname: Path
         The yaml output file.
     setup: Path
         The settings dictionary to be dumped.
+    
     Note
     ----
     pathlib.PosixPath objects are automatically loaded.
@@ -179,15 +212,22 @@ def save_runcard(fname: Path, setup: dict):
 
 def check_in_folder(folder: Path, should_force: bool):
     """Creates the query folder.
-    The `should_force` parameters controls the function behavior in case
-    `folder` exists. If true, it overwrites the existent directory, otherwise
-    exit.
+    
+    The ``should_force`` parameters controls the function behavior in case
+    ``folder`` exists. If true, it overwrites the existent directory, otherwise
+    exits.
+    
     Parameters
     ----------
     folder: Path
         The directory to be checked.
     should_force: bool
         Wether to replace the already existing directory.
+    
+    Raises
+    ------
+    FileExistsError
+        If output folder exists and ``should_force`` is False.
     """
     try:
         folder.mkdir()
@@ -205,6 +245,7 @@ def check_in_folder(folder: Path, should_force: bool):
 
 def initialize_output_folder(output: Path, should_force: bool):
     """Creates the output directory structure.
+    
     Parameters
     ----------
     output: Path
@@ -218,18 +259,22 @@ def initialize_output_folder(output: Path, should_force: bool):
 
 
 def get_configcard_path(fname):
-    """
-    Retrieve the configcard path.
+    """Retrieves the configcard path.
+    
+    .. deprecated:: 2.0.0
+        this function is not used anymore.
+
     If the supplied path is not a valid file, looks recursively into directories
     from DUNEDN_SEARCH_PATH environment variable to find the first match.
 
     Parameters
     ----------
-        - fname: Path, path to configcard yaml file.
+    fname: Path
+        Path to configcard yaml file.
 
     Returns
     -------
-        - Path, the retrieved configcard path
+    Path, the retrieved configcard path
 
     Raises
     ------
@@ -251,27 +296,17 @@ def get_configcard_path(fname):
     )
 
 
-def print_summary_file(args):
-    """Export Args object to file."""
-    d = args.__dict__
-    fname = args.dir_output / "readme.txt"
-    with open(fname, "w") as f:
-        f.writelines("Model summary file:\n")
-        for k in d.keys():
-            f.writelines("\n%s     %s" % (str(k), str(d[k])))
-        f.close()
-
-
 def get_cpu_info() -> dict:
     """Parses ``lscpu`` command to dictionary.
-    
+
     Returns
     -------
-
+    cpu_info: dict
+        The parsed command output.
     """
     output = sp.check_output("lscpu", shell=True).decode("utf-8")
     cpu_info = {}
-    for line in output.split('\n'):
+    for line in output.split("\n"):
         line = line.strip()
         if line:
             splits = line.split(":")
@@ -283,7 +318,7 @@ def get_cpu_info() -> dict:
 
 def get_nb_cpu_cores() -> int:
     """Returns the number of available cpus for the current process.
-    
+
     Returns
     -------
     nb_cpus: int

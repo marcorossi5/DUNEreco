@@ -14,13 +14,18 @@ from dunedn.utils.utils import load_runcard
 logger = logging.getLogger(PACKAGE + ".test")
 
 
-def run_test_uscg(setup):
+def run_test_uscg(setup: dict):
     """Run USCG network test.
 
     Parameters
     ----------
     setup: dict
         Runcard settings.
+
+    Raises
+    ------
+    AssertionError
+        If model input and output shapes do not match.
     """
     # tuple containing induction and collection inference arguments
     msetup = setup["model"]["uscg"]
@@ -50,13 +55,18 @@ def run_test_uscg(setup):
         raise err
 
 
-def run_test_cnn(setup):
+def run_test_cnn(setup: dict):
     """Run CNN network test.
 
     Parameters
     ----------
     setup: dict
         Runcard settings.
+
+    Raises
+    ------
+    AssertionError
+        If model input and output shapes do not match.
     """
     # tuple containing induction and collection inference arguments
     msetup = setup["model"]["cnn"]
@@ -81,13 +91,18 @@ def run_test_cnn(setup):
         raise err
 
 
-def run_test_gcnn(setup):
+def run_test_gcnn(setup: dict):
     """Run GCNN network test.
 
     Parameters
     ----------
     setup: dict
         Runcard settings.
+
+    Raises
+    ------
+    AssertionError
+        If model input and output shapes do not match.
     """
     # tuple containing induction and collection inference arguments
     msetup = setup["model"]["gcnn"]
@@ -112,13 +127,14 @@ def run_test_gcnn(setup):
         raise err
 
 
-def run_test(modeltype):
+def run_test(modeltype: str):
     """
     Run the appropriate test for the supported model.
 
     Parameters
     ----------
-        - modeltype: str, available options uscg | cnn | gcnn
+    modeltype: str
+        Available options uscg | cnn | gcnn.
     """
     setup = load_runcard(Path("runcards/default.yaml"))
     logger.info("Running forward-pass test on %s model", modeltype)
