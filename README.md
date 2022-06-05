@@ -28,6 +28,11 @@ url={https://doi.org/10.1007/s41781-021-00077-9}
 
 DUNEdn is a denoising algorithm for ProtoDUNE-SP raw data with Neural Networks.
 
+## Documentation
+
+The documentation for DUNEdn can be consulted in the readthedocs page:
+[dunedn.readthedocs.io](https://dunedn.readthedocs.io/en/latest).
+
 ## Installation
 
 The package can be installed with Python's pip package manager.
