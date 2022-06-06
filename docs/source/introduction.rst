@@ -35,9 +35,10 @@ implements two kind of networks for the denoising  task:
 
 
 .. toctree::
+  :maxdepth: 2
 
-   gcnn_intro
-   uscg_intro
+  gcnn_intro
+  uscg_intro
 
 All the models are implemented with the help of the PyTorch library.
 
@@ -45,8 +46,9 @@ The networks support also exporting to ONNX format for device agnostic inference
 via ONNX Runtime. More information at the relevant page:
 
 .. toctree::
+  :maxdepth: 2
 
-   onnx_intro
+  onnx_intro
 
 How to cite DUNEdn?
 ===================
