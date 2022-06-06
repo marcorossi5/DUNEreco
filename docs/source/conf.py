@@ -22,7 +22,7 @@ release = '2.0.0'
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath(f"../../src/{project}"))
+sys.path.insert(0, os.path.abspath(f"../../src/")) # {project}"))
 
 # -- General configuration ---------------------------------------------------
 
