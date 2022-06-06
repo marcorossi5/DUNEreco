@@ -1,6 +1,4 @@
-"""
-    Test that the configuration is consistent
-"""
+"""Test that the configuration is consistent."""
 
 if __name__ == "__main__":
     pass

@@ -2,8 +2,10 @@
 
 [![arxiv](https://img.shields.io/badge/arXiv-hep--ph%2F2103.01596-%23B31B1B.svg)](https://arxiv.org/abs/2103.01596)
 [![DOI](https://zenodo.org/badge/248536693.svg)](https://zenodo.org/badge/latestdoi/248536693)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6599305.svg)](https://doi.org/10.5281/zenodo.6599305)
 
 ![pytest](https://github.com/N3PDF/pdfflow/workflows/pytest/badge.svg)
+[![Documentation Status](https://readthedocs.org/projects/dunedn/badge/?version=latest)](https://dunedn.readthedocs.io/en/latest/?badge=latest)
 
 If you use this software please cite this [paper](https://doi.org/10.1007/s41781-021-00077-9)
 
@@ -27,9 +29,22 @@ url={https://doi.org/10.1007/s41781-021-00077-9}
 
 DUNEdn is a denoising algorithm for ProtoDUNE-SP raw data with Neural Networks.
 
+## Documentation
+
+The documentation for DUNEdn can be consulted in the readthedocs page:
+[dunedn.readthedocs.io](https://dunedn.readthedocs.io/en/latest).
+
 ## Installation
 
-The package can be installed with Python's pip package manager:
+The package can be installed with Python's pip package manager.
+
+From PyPI:
+
+```bash
+pip install dunedn
+```
+
+or manually:
 
 ```bash
 git clone https://github.com/marcorossi5/DUNEdn.git
@@ -38,16 +53,6 @@ pip install .
 ```
 
 This process will copy the DUNEdn program to your environment python path.
-
-### Note
-
-The [saved_models](saved_models) directory contains the checkpoints to reproduce
-the results presented in [arXiv:2103.01596](https://arxiv.org/abs/2103.01596).  
-Since some of the saved models files are quite large (~100 MB), they are uploaded
-via [git-lfs](https://git-lfs.github.com/). when cloning the repo, it is possible
-to download pointers to those large files rather than the whole binaries. This can
-be achieved adding the flag `--config lfs.fetchexclude="*.pth*"` to the `git clone`
-command above.
 
 ### Requirements
 
@@ -59,6 +64,22 @@ DUNEdn requires the following packages:
 - torchvision
 - matplotlib
 - hyperopt
+
+## Download large dataset files
+
+Large files like dataset samples and models checkpoints are not included in the
+repository, but are available on [Zenodo](https://doi.org/10.5281/zenodo.6599305).
+
+The `download_dataset.sh` convenience script automates the download of those
+files, populating the [saved_models](saved_models) and [examples](examples)
+directories with data to reproduce the results presented in
+[arXiv:2103.01596](https://arxiv.org/abs/2103.01596).
+
+Launch the following command to start the job:
+
+```bash
+bash ./download_dataset.sh
+```
 
 ## Running the code
 

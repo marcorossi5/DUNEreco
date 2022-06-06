@@ -1,0 +1,49 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: DUNEdn
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Marco
+    family-names: Rossi
+    email: rssmrc.11@gmail.com
+    affiliation: CERN openlab
+    orcid: 'https://orcid.org/0000-0002-7882-2798'
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.5821521
+    description: >-
+      The package DOI for all the versions. Resolves
+      to the latest version of the work.
+repository-code: 'https://github.com/marcorossi5/DUNEdn'
+url: 'https://dunedn.readthedocs.io/en/latest/'
+abstract: >-
+  In this work, we investigate different machine
+  learning-based strategies for denoising raw
+  simulation data from the ProtoDUNE experiment. The
+  ProtoDUNE detector is hosted by CERN and it aims to
+  test and calibrate the technologies for DUNE, a
+  forthcoming experiment in neutrino physics. The
+  reconstruction workchain consists of converting
+  digital detector signals into physical high-level
+  quantities. We address the first step in
+  reconstruction, namely raw data denoising,
+  leveraging deep learning algorithms. We design two
+  architectures based on graph neural networks,
+  aiming to enhance the receptive field of basic
+  convolutional neural networks. We benchmark this
+  approach against traditional algorithms implemented
+  by the DUNE collaboration. We test the capabilities
+  of graph neural network hardware accelerator setups
+  to speed up training and inference processes.
+keywords:
+  - Deep learning
+  - ProtoDUNE
+  - Denoising
+license: GPL-3.0
+version: 2.0.0
+date-released: '2022-06-13'
