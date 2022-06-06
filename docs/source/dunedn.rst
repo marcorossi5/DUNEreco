@@ -8,6 +8,8 @@ Subpackages
    :maxdepth: 4
 
    dunedn.geometry
+   dunedn.inference
+   dunedn.networks
    dunedn.preprocessing
    dunedn.scripts
    dunedn.tests

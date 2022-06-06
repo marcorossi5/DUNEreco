@@ -6,18 +6,18 @@
 Welcome to DUNEdn's documentation!
 ==================================
 
-.. image:: https://img.shields.io/badge/CERN-Open%20Source-%232980b9.svg
-   :target: https://home.cern
-
-.. image:: https://img.shields.io/badge/CERN-CERN%20openlab-brightgreen
-   :target: https://openlab.cern/
+.. image:: https://img.shields.io/badge/arXiv-hep--ph%2F2009.06635-%23B31B1B.svg
+   :target: https://arxiv.org/abs/2009.06635
 
 .. image:: https://zenodo.org/badge/484051775.svg
    :target: https://zenodo.org/badge/latestdoi/484051775
 
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+
+   introduction
 
 .. toctree::
    :maxdepth: 2

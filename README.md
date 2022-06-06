@@ -5,6 +5,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6599305.svg)](https://doi.org/10.5281/zenodo.6599305)
 
 ![pytest](https://github.com/N3PDF/pdfflow/workflows/pytest/badge.svg)
+[![Documentation Status](https://readthedocs.org/projects/dunedn/badge/?version=latest)](https://dunedn.readthedocs.io/en/latest/?badge=latest)
 
 If you use this software please cite this [paper](https://doi.org/10.1007/s41781-021-00077-9)
 
