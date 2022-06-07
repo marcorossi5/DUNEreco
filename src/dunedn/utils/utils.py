@@ -1,71 +1,85 @@
-# This file is part of DUNEdn by M. Rossi
 """ This module contains utility functions of general interest. """
-import os
+from typing import Any
+import subprocess as sp
+import multiprocessing
+import shutil
+from pathlib import Path, PosixPath
 import logging
 import yaml
 import numpy as np
-from hyperopt import hp
 from dunedn.configdn import PACKAGE, get_dunedn_search_path
 
 
-def check(check_instance, check_list):
+def check(check_instance: Any, check_list: list[Any]):
     """
     Checks that check_list contains check_instance object. If not, raises
     NotImplementedError.
 
     Parameters
     ----------
-        - check_instance: obj, object to check
-        - check_list: list, available options
+    check_instance: Any
+        Object to check.
+    check_list: list[Any]
+        Available options.
 
     Raises
     ------
-        - NotImplementedError, if check_instance is not in check_list
+    NotImplementedError
+        If ``check_instance`` is not in ``check_list``.
     """
     if not check_instance in check_list:
         raise NotImplementedError("Operation not implemented")
 
 
-def get_freer_gpu():
-    """ Returns the gpu number with the most available memory. """
-    os.system("nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp")
-    memory_available = [int(x.split()[2]) for x in open("tmp", "r").readlines()]
-    return np.argmax(memory_available)
+def smooth(smoothed: list[float], scalars: list[float], weight: float) -> list[float]:
+    """Computes the next element of the moving average.
 
+    In-place appending of the next element of the moving average to ``smoothed``.
 
-def get_freer_gpus(n):
-    """ Returns the n gpus with the most available memory. """
-    os.system("nvidia-smi -q -d Memory |grep -A4 GPU|grep Free >tmp")
-    memory_available = [int(x.split()[2]) for x in open("tmp", "r").readlines()]
-    np.argsort(memory_available)
-    return np.argmax(memory_available)[-n:]
+    Parameters
+    ----------
+    smoothed: list[float]
+        The list of smoothed scalar quantities.
+    scalars: list[float]
+        The list of scalar quantities to be smoothed.
+    weight: float
+        The weighting factor in the (0,1) range.
+    
+    Returns
+    -------
+    smoothed: list[float]
+        The extended list of computed smoothed scalar quantities.
 
-
-def smooth(smoothed, scalars, weight):  # weight between 0 and 1
-    """ Computes the next moving average item. """
+    Raises
+    ------
+    AssertionError
+        If ``scalars`` does not have one element more that ``smoothed``.
+    
+    """
     assert len(scalars) - len(smoothed) == 1
 
     if len(scalars) == 1:
         smoothed.append(scalars[0])
     else:
         smoothed.append(weight * smoothed[-1] + (1 - weight) * scalars[-1])
-
     return smoothed
 
 
-def moving_average(scalars, weight):
-    """
-    Computes the moving avarage from a list of scalar quantities.
+def moving_average(scalars: list[float], weight: float) -> list[float]:
+    """Computes the moving avarage from a list of scalar quantities.
 
     Parameters
     ----------
-        - scalars: list, of scalar quantity to be soothed
-        - weight: the weighting factor in the (0,1) range. Higher values provide
-                  more smoothing power
+    scalars: list[float]
+        List of scalar quantities to be smoothed.
+    weight: float
+        The weighting factor in the (0,1) range. Higher values provide more
+        smoothing power.
 
     Returns
     -------
-        - list, the averaged quantities
+    smoothed: list[float]
+        The list of smoothed scalar quantities.
     """
     smoothed = []
     for i in range(len(scalars)):
@@ -73,21 +87,22 @@ def moving_average(scalars, weight):
     return smoothed
 
 
-def median_subtraction(planes):
-    """
-    Subtracts median value from input planes.
+def median_subtraction(planes: np.ndarray) -> np.ndarray:
+    """Computes median subtraction to input planes.
 
     Parameters
     ----------
-        planes: np.array, array of shape=(N,C,H,W)
+    planes: np.ndarray
+        The data to be normalized, of shape=(N,C,H,W).
 
     Returns
     -------
-        -np.array, median subtracted planes of shape=(N,C,H,W)
+    output: np.ndarray
+        The median subtracted data, of shape=(N,C,H,W).
     """
-    shape = [planes.shape[0], -1]
-    medians = np.median(planes.reshape(shape), axis=1)
-    return planes - medians[:, None, None, None]
+    medians = np.median(planes, axis=[1, 2, 3], keepdims=True)
+    output = planes - medians
+    return output
 
 
 def confusion_matrix(hit, no_hit, t=0.5):
@@ -110,34 +125,159 @@ def confusion_matrix(hit, no_hit, t=0.5):
     return tp, fp, fn, tn
 
 
+def add_info_columns(evt: np.ndarray) -> np.ndarray:
+    """Adds event identifier and channel number columns to event.
+
+    Events come with additional information placed in the two first comlumns of
+    the 2D array. These must be removed to make the computation as they are not
+    informative.
+    When saving back the event, the information must be added again.
+
+    Parameters
+    ----------
+    evt: np.ndarray
+        The event w/o additional information, of shape=(nb channels, nb tdc ticks).
+
+    Returns
+    -------
+        The event w additional information, of shape=(nb channels, 2 + nb tdc ticks).
+    """
+    nb_channels, _ = evt.shape
+    channels_col = np.arange(nb_channels).reshape([-1, 1])
+    event_col = np.zeros_like(channels_col)
+    evt_with_info = np.concatenate([event_col, channels_col, evt], axis=1)
+    return evt_with_info
+
+
 # instantiate logger
 logger = logging.getLogger(PACKAGE + ".train")
 
 
-def load_yaml(runcard_file):
-    """Loads yaml runcard"""
+def path_constructor(loader, node):
+    """PyYaml utility function."""
+    value = loader.construct_scalar(node)
+    return Path(value)
+
+
+def load_runcard(runcard_file: Path) -> dict:
+    """Load runcard from yaml file.
+
+    Parameters
+    ----------
+    runcard_file: Path
+        The yaml to dump the dictionary.
+
+    Returns
+    -------
+    runcard: dict
+        The loaded settings dictionary.
+
+    Note
+    ----
+    The pathlib.Path objects are automatically loaded if they are encoded
+    with the following syntax:
+    ```
+    path: !Path 'path/to/file'
+    ```
+    """
+    if not isinstance(runcard_file, Path):
+        runcard_file = Path(runcard_file)
+
+    yaml.add_constructor("!Path", path_constructor)
     with open(runcard_file, "r") as stream:
         runcard = yaml.load(stream, Loader=yaml.FullLoader)
-    for key, value in runcard.items():
-        if "hp." in str(value):
-            logger.info("Evaluating: eval(%s) = %s", key, str(value))
-            runcard[key] = eval(value)
     return runcard
 
 
-def get_configcard_path(fname):
+def path_representer(dumper, data):
+    """PyYaml utility function."""
+    return dumper.represent_scalar("!Path", "%s" % data)
+
+
+def save_runcard(fname: Path, setup: dict):
+    """Save runcard to yaml file.
+    
+    Parameters
+    ----------
+    fname: Path
+        The yaml output file.
+    setup: Path
+        The settings dictionary to be dumped.
+    
+    Note
+    ----
+    pathlib.PosixPath objects are automatically loaded.
     """
-    Retrieve the configcard path.
+    yaml.add_representer(PosixPath, path_representer)
+    with open(fname, "w") as f:
+        yaml.dump(setup, f, indent=4)
+
+
+def check_in_folder(folder: Path, should_force: bool):
+    """Creates the query folder.
+    
+    The ``should_force`` parameters controls the function behavior in case
+    ``folder`` exists. If true, it overwrites the existent directory, otherwise
+    exits.
+    
+    Parameters
+    ----------
+    folder: Path
+        The directory to be checked.
+    should_force: bool
+        Wether to replace the already existing directory.
+    
+    Raises
+    ------
+    FileExistsError
+        If output folder exists and ``should_force`` is False.
+    """
+    try:
+        folder.mkdir()
+    except FileExistsError as error:
+        if should_force:
+            logger.warning(f"Overwriting output directory at {folder}")
+            shutil.rmtree(folder)
+            folder.mkdir()
+        else:
+            logger.error('Delete or run with "--force" to overwrite.')
+            raise error
+    else:
+        logger.info(f"Creating output directory at {folder}")
+
+
+def initialize_output_folder(output: Path, should_force: bool):
+    """Creates the output directory structure.
+    
+    Parameters
+    ----------
+    output: Path
+        The output directory.
+    should_force: bool
+        Wether to replace the already existing output directory.
+    """
+    check_in_folder(output, should_force)
+    output.joinpath("cards").mkdir()
+    output.joinpath("models").mkdir()
+
+
+def get_configcard_path(fname):
+    """Retrieves the configcard path.
+    
+    .. deprecated:: 2.0.0
+        this function is not used anymore.
+
     If the supplied path is not a valid file, looks recursively into directories
     from DUNEDN_SEARCH_PATH environment variable to find the first match.
 
     Parameters
     ----------
-        - fname: Path, path to configcard yaml file.
+    fname: Path
+        Path to configcard yaml file.
 
     Returns
     -------
-        - Path, the retrieved configcard path
+    Path, the retrieved configcard path
 
     Raises
     ------
@@ -159,12 +299,32 @@ def get_configcard_path(fname):
     )
 
 
-def print_summary_file(args):
-    """Export Args object to file. """
-    d = args.__dict__
-    fname = args.dir_output / "readme.txt"
-    with open(fname, "w") as f:
-        f.writelines("Model summary file:\n")
-        for k in d.keys():
-            f.writelines("\n%s     %s" % (str(k), str(d[k])))
-        f.close()
+def get_cpu_info() -> dict:
+    """Parses ``lscpu`` command to dictionary.
+
+    Returns
+    -------
+    cpu_info: dict
+        The parsed command output.
+    """
+    output = sp.check_output("lscpu", shell=True).decode("utf-8")
+    cpu_info = {}
+    for line in output.split("\n"):
+        line = line.strip()
+        if line:
+            splits = line.split(":")
+            key = splits[0]
+            value = ":".join(splits[1:])
+            cpu_info[key.strip().lower()] = value.strip()
+    return cpu_info
+
+
+def get_nb_cpu_cores() -> int:
+    """Returns the number of available cpus for the current process.
+
+    Returns
+    -------
+    nb_cpus: int
+        The number of available cpus for the current process.
+    """
+    return multiprocessing.cpu_count()

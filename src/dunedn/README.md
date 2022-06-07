@@ -7,13 +7,14 @@ The DUNEdn source is organized in the following sub-packages:
     - inference
         Modules for inference subcommand implementation.
     - networks
-        Neural networks implementations.
+        Neural networks implementations with their loading and training functions.
     - preprocessing
         Modules for inference subcommand implementation.
     - scripts
         Main entry point of dunedn command.
+    - test
+        Test scripts for CI/CD.
     - training
         Modules for training subcommand implementation.  
-        Contains also data loading and loss functions classes.
     - utils
         Utility function for general usage.

@@ -3,6 +3,7 @@
     This module contains the utility functions for the preprocessing step.
 """
 import logging
+from typing import Tuple
 from pathlib import Path
 from glob import glob
 import numpy as np
@@ -14,15 +15,17 @@ from dunedn.utils.utils import median_subtraction
 logger = logging.getLogger(PACKAGE + ".preprocess")
 
 
-def save_normalization_info(dir_name, channel):
-    """
-    Store on disk useful information to apply dataset normalization. Available
-    normalizations are MinMax | Zscore | Mednorm
+def save_normalization_info(dir_name: Path, channel: str):
+    """Stores on disk useful information to apply dataset normalization.
+
+    Available normalizations are MinMax | Zscore | Mednorm
 
     Parameters
     ----------
-        - dir_name: Path, directory path to datasets
-        - channel: str, induction | collection
+    dir_name: Path
+        Directory path to datasets.
+    channel: str
+        Induction | collection.
     """
     logger.info("Saving normalization info to %s", dir_name)
     fname = dir_name / f"train/planes/{channel}_noisy.npy"
@@ -44,21 +47,32 @@ def save_normalization_info(dir_name, channel):
     np.save(fname, [med_min, med_max])
 
 
-def get_crop(clear_plane, nb_crops=1000, crop_size=(32, 32), pct=0.5):
-    """
-    Finds crops centers indeces and return crops around them.
+def get_crop(
+    clear_plane: np.ndarray,
+    nb_crops: int = 1000,
+    crop_size: list[int] = [32, 32],
+    pct=0.5,
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Finds crops centers indeces and return crops around them.
 
     Parameters
     ----------
-        - clear_plane: np.array, clear plane of shape=(H,W)
-        - nb_crops: int, number of crops
-        - crop_size: list, crop [height, width]
-        - pct: float, signal / background crops balancing
+    clear_plane: np.ndarray
+        Clear plane of shape=(H,W).
+    nb_crops: int
+        Number of crops.
+    crop_size: list
+        Crop [height, width].
+    pct: float
+        Signal / background crops balancing.
 
     Returns
     -------
-        - tuple, (idx_h, idx_w). idx_h of shape=(nb_crops, crop_edge, 1).
-                 idx_w of shape=(nb_crops, 1, crop_edge).
+    Tuple[np.ndarray, np.ndarray]
+        Crop indices:
+
+        - row indices, of shape=(nb_crops, crop_edge, 1).
+        - column indices,  of shape=(nb_crops, 1, crop_edge).
     """
     x, y = clear_plane.shape
     c_x, c_y = crop_size[0] // 2, crop_size[1] // 2
@@ -87,16 +101,19 @@ def get_crop(clear_plane, nb_crops=1000, crop_size=(32, 32), pct=0.5):
     return (idx_h, idx_w)
 
 
-def get_planes_and_dump(dname, save_sample):
+def get_planes_and_dump(dname: Path, save_sample: bool):
     """
-    Populates the "planes" subfolder of dname directory with numpy arrays of
-    planes taken from events in the "events" subfolder. Planes arrays have
-    shape=(N,C,H,W)
+    Populates the ``<dname>/planes`` directory with APA planes arrays.
+
+    Planes  come from events in the ``<dname>/events`` directory.
+    Planes arrays have shape=(N,C,H,W).
 
     Parameters
     ----------
-        - dname: Path, path to train|val|test dataset subfolder
-        - save_sample: bool, wether to save a smaller dataset from the original one
+    dname: Path
+        Path to train|val|test dataset subfolder.
+    save_sample: bool
+        Wether to save a smaller dataset from the original one.
     """
     # TODO: this function could probably be shortened
     iclear = []
@@ -177,18 +194,24 @@ def get_planes_and_dump(dname, save_sample):
         save("sample_collection_simch", csimch[:10])
 
 
-def crop_planes_and_dump(dir_name, nb_crops, crop_size, pct):
-    """
-    Populates the "crop" folder: for each plane stored in `dir_name/planes` generate
-    nb_crops of size crop_size. The value of pct fixes the signal / background
-    crops balancing.
+def crop_planes_and_dump(
+    dir_name: Path, nb_crops: int, crop_size: list[int], pct: float
+):
+    """Populates the ``<dir_name>/crop`` folder.
+
+    For each plane stored in ``<dir_name>/planes`` generate ``nb_crops`` of size
+    ``crop_size`` according to fixed signal to background percentage.
 
     Parameters
     ----------
-        - dir_name: Path, directory path to datasets
-        - nb_crops: int, number of crops from a single plane
-        - crop_size: list, crop [height, width]
-        - pct: float, signal / background crops balancing
+    dir_name: Path
+        Directory path to datasets.
+    nb_crops: int
+        Number of crops from a single plane.
+    crop_size: list[int]
+        Crop size, (height, width).
+    pct: float
+        Signal to background crops balancing.
     """
     for s in ["induction", "collection"]:
 
