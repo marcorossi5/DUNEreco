@@ -44,7 +44,7 @@ def smooth(smoothed: list[float], scalars: list[float], weight: float) -> list[f
         The list of scalar quantities to be smoothed.
     weight: float
         The weighting factor in the (0,1) range.
-    
+
     Returns
     -------
     smoothed: list[float]
@@ -54,7 +54,7 @@ def smooth(smoothed: list[float], scalars: list[float], weight: float) -> list[f
     ------
     AssertionError
         If ``scalars`` does not have one element more that ``smoothed``.
-    
+
     """
     assert len(scalars) - len(smoothed) == 1
 
@@ -196,14 +196,14 @@ def path_representer(dumper, data):
 
 def save_runcard(fname: Path, setup: dict):
     """Save runcard to yaml file.
-    
+
     Parameters
     ----------
     fname: Path
         The yaml output file.
     setup: Path
         The settings dictionary to be dumped.
-    
+
     Note
     ----
     pathlib.PosixPath objects are automatically loaded.
@@ -215,18 +215,18 @@ def save_runcard(fname: Path, setup: dict):
 
 def check_in_folder(folder: Path, should_force: bool):
     """Creates the query folder.
-    
+
     The ``should_force`` parameters controls the function behavior in case
     ``folder`` exists. If true, it overwrites the existent directory, otherwise
     exits.
-    
+
     Parameters
     ----------
     folder: Path
         The directory to be checked.
     should_force: bool
         Wether to replace the already existing directory.
-    
+
     Raises
     ------
     FileExistsError
@@ -248,7 +248,7 @@ def check_in_folder(folder: Path, should_force: bool):
 
 def initialize_output_folder(output: Path, should_force: bool):
     """Creates the output directory structure.
-    
+
     Parameters
     ----------
     output: Path
@@ -263,7 +263,7 @@ def initialize_output_folder(output: Path, should_force: bool):
 
 def get_configcard_path(fname):
     """Retrieves the configcard path.
-    
+
     .. deprecated:: 2.0.0
         this function is not used anymore.
 

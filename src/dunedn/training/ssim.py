@@ -266,7 +266,7 @@ def ms_ssim(
     win_size: int = 11,
     win_sigma: int = 3,
     win: torch.Tensor = None,
-    weights: list[float]=None,
+    weights: list[float] = None,
     k: Tuple[int, int] = (1e-13, 1e-13),
 ) -> torch.Tensor:
     """Interface for Multiscale Structural Similarity function.
@@ -501,15 +501,16 @@ class SSIM(torch.nn.Module):
 
 class MS_SSIM(torch.nn.Module):
     """Multiscale Strctural Similarity class."""
+
     def __init__(
         self,
-        data_range:float=255,
-        reduction:bool=True,
-        win_size:int=11,
-        win_sigma:float=1.5,
-        channel:int=3,
-        weights: list[float]=None,
-        k:list[float]=[0.01, 0.03],
+        data_range: float = 255,
+        reduction: bool = True,
+        win_size: int = 11,
+        win_sigma: float = 1.5,
+        channel: int = 3,
+        weights: list[float] = None,
+        k: list[float] = [0.01, 0.03],
     ):
         """
         Parameters
