@@ -31,7 +31,6 @@ class PerformerNet(AbstractNet):
         >>> model = PerformerNet(1, 32)
         >>> x = torch.randn(1, 1, 64, 64)
         >>> print(model(x).shape)
-
         """
         super().__init__()
         ic = input_channels
@@ -50,12 +49,12 @@ class PerformerNet(AbstractNet):
 
         self.combine = lambda x, y: x + y
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         """PerformerNet forward pass.
 
         Parameters
         ----------
-        x: torch.Tensor
+        inputs: torch.Tensor
             Input tensor of shape=(N,C,H,W).
 
         Returns
@@ -63,6 +62,14 @@ class PerformerNet(AbstractNet):
         output: torch.Tensor
             Output tensor of shape=(N,C,H,W).
         """
+        # median subtraction
+        b = inputs.shape[0]
+        original_shape = inputs.shape
+        medians = torch.quantile(inputs.view(b, -1), 0.5, dim=1, keepdim=True)
+
+        # TODO: input normalization?
+
+        x = inputs - medians.view(original_shape)
         y = torch.cat([block(x) for block in self.pre_process_blocks], dim=1)
         y_hpf = self.hpf(y)
         y = self.combine(y, y_hpf)
