@@ -243,7 +243,7 @@ def enhance_plane(plane: np.ndarray):
 
 
 def plot_image_sample(
-    plane: np.ndarray, wire: int, outdir: Path, with_graphics: bool = False
+    plane: np.ndarray, wire: int
 ):
     """Plots an APA plane.
 
@@ -253,12 +253,7 @@ def plot_image_sample(
         The reconstructed plane.
     wire: int
         The wire number in the APA plane.
-    outdir: Path
-        The directory where to save the plot.
-    with_graphics: bool
-        Wether to show matplotlib plots or not.
     """
-    fname = outdir / "visual_collection_plane.png"
     plt.rcParams.update(
         {
             "axes.titlesize": 20,
@@ -287,18 +282,10 @@ def plot_image_sample(
     )  # , vmin=vmin, vmax=vmax)
     plt.axhline(y=wire, color="orange", lw=1, alpha=0.6, linestyle="dashed")
     plt.colorbar()
-    plt.savefig(fname, bbox_inches="tight")  # , dpi=300)
-    print(f"Saved image at {fname}")
-    if with_graphics:
-        plt.show()
-    plt.close()
 
 
 def plot_wire_sample(
     wire: np.ndarray,
-    wire_target: np.ndarray,
-    outdir: Path,
-    with_graphics: bool = False,
 ):
     """Plots a reconstructed wavefunction and its target one.
 
@@ -306,42 +293,23 @@ def plot_wire_sample(
     ----------
     wire: np.ndarray
         The reconstructed wavefunction.
-    wire_target: np.ndarray
-        The target wavefunction.
-    outdir: Path
-        The directory where to save the plots.
-    with_graphics: bool
-        Wether to show matplotlib plots or not.
     """
-    # plt.rcParams.update({"text.usetex": True})
-    fname = outdir / "visual_denoised_wire.png"
     plt.figure(figsize=[6.4 * 1.5, 4.8 * 1.5])
-    plt.title(
-        r"""Inspired to ProtoDUNE SP simulation
-    Collection wire, Raw waveform
-    """,
-        y=1.0,
-        pad=-10,
-    )
     plt.plot(wire, lw=0.3)
-    plt.savefig(fname, bbox_inches="tight")
-    print(f"Saved image at {fname}")
-    if with_graphics:
-        plt.show()
-    plt.close()
 
-    fname = outdir / "visual_clear_wire.png"
-    plt.figure(figsize=[6.4 * 1.5, 4.8 * 1.5])
-    plt.title(
-        r"""Inspired to ProtoDUNE SP simulation
-    Collection wire, Clear waveform
-    """,
-        y=1.0,
-        pad=-10,
-    )
-    plt.plot(wire_target, lw=0.3, color="red")
-    plt.savefig(fname, bbox_inches="tight")
-    print(f"Saved image at {fname}")
+
+def save_image_as(out_path: Path, with_graphics: bool = False):
+    """Saves the matplotlib image in memory.
+    
+    Parameters
+    ----------
+    out_path: Path
+        The image output file name.
+    with_graphics: bool
+        Wether to show matplotlib plots or not.    
+    """
+    plt.savefig(out_path, bbox_inches="tight")
+    print(f"Saved image at {out_path}")
     if with_graphics:
         plt.show()
     plt.close()
@@ -390,9 +358,34 @@ def plot_example(
     plane_target = cplanes_target[0, 0, 480:]
     wire = 330
 
-    plot_image_sample(plane, wire, outdir, with_graphics)
+    # image sample
+    plot_image_sample(plane, wire)
+    out_path = outdir / "visual_collection_plane.png"
+    save_image_as(out_path, with_graphics)
 
-    plot_wire_sample(plane[wire], plane_target[wire], outdir, with_graphics)
+    # denoised wire
+    plot_wire_sample(plane[wire])
+    plt.title(
+        r"""Inspired to ProtoDUNE SP simulation
+    Collection wire, Raw waveform
+    """,
+        y=1.0,
+        pad=-10,
+    )
+    out_path = outdir / "visual_denoised_wire.png"
+    save_image_as(out_path, with_graphics)
+
+    # clear wire
+    plot_wire_sample(plane_target[wire])
+    plt.title(
+        r"""Inspired to ProtoDUNE SP simulation
+    Collection wire, Clear waveform
+    """,
+        y=1.0,
+        pad=-10,
+    )
+    out_path = outdir / "visual_clear_wire.png"
+    save_image_as(out_path, with_graphics)
 
 
 def plot_comparison_catplot(
