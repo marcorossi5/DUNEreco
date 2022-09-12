@@ -15,6 +15,7 @@ from .uscg_net_blocks import (
     Pooling_Block,
     Recombination_Layer,
 )
+from ..utils import BatchProfiler
 from .utils import uscg_inference_pass, time_windows
 from dunedn import PACKAGE
 
@@ -176,6 +177,7 @@ class UscgNet(AbstractNet):
         dev: str = "cpu",
         no_metrics: bool = False,
         verbose: int = 1,
+        profiler: BatchProfiler = None,
     ) -> Tuple[torch.Tensor, dict]:
         """Uscg network inference.
 

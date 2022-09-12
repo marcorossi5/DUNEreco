@@ -110,7 +110,41 @@ class BaseModel:
             channel="induction",
             **gen_kwargs,
         )
+    
+    def predict_batch(
+        self, input_data: np.ndarray, is_collection: bool, dev="cpu", profiler: BatchProfiler = None
+    ) -> np.ndarray:
+        """Interface for model prediction on pDUNE raw data.
 
+        This function is used to make inference on prepared batches of data.
+
+        Parameters
+        ----------
+        input_data: np.ndarray
+            Input array of shape=(N,C,H,W).
+        collection: bool
+            Wether the dataset contain collection or induction planes.
+        dev: str
+            Device hosting computation.
+        profiler: BatchProfiler
+            The profiler object to record batch inference time.
+
+        Returns
+        -------
+        np.ndarray
+            Denoised dataset of shape=(nb wires, nb tdc ticks).
+        """
+        network = self.cnetwork if is_collection else self.inetwork
+        generator = self.collection_generator if is_collection else self.induction_generator
+        dataset = generator(input_data)
+        if self.should_use_onnx:
+            out = network.predict(dataset, profiler=profiler)
+        else:
+            out = network.predict(
+                dataset, dev, no_metrics=True, profiler=profiler
+            )
+        return out
+        
     def predict(
         self, event: np.ndarray, dev="cpu", profiler: BatchProfiler = None
     ) -> np.ndarray:
@@ -133,19 +167,9 @@ class BaseModel:
         logger.debug("Starting inference on event")
         iplanes, cplanes = evt2planes(event)
 
-        idataset = self.induction_generator(iplanes)
-        cdataset = self.collection_generator(cplanes)
-
-        if self.should_use_onnx:
-            iout = self.inetwork.predict(idataset, profiler=profiler)
-            cout = self.cnetwork.predict(cdataset, profiler=profiler)
-        else:
-            iout = self.inetwork.predict(
-                idataset, dev, no_metrics=True, profiler=profiler
-            )
-            cout = self.cnetwork.predict(
-                cdataset, dev, no_metrics=True, profiler=profiler
-            )
+        iout = self.predict_batch(iplanes, False, dev, profiler=profiler)
+        cout = self.predict_batch(cplanes, True, dev, profiler=profiler)
+        
         out_evt = planes2evt(iout, cout)
 
         if profiler is not None:
