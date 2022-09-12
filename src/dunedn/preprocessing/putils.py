@@ -3,7 +3,7 @@
     This module contains the utility functions for the preprocessing step.
 """
 import logging
-from typing import Tuple
+from typing import List, Tuple
 from pathlib import Path
 from glob import glob
 import numpy as np
@@ -50,7 +50,7 @@ def save_normalization_info(dir_name: Path, channel: str):
 def get_crop(
     clear_plane: np.ndarray,
     nb_crops: int = 1000,
-    crop_size: list[int] = [32, 32],
+    crop_size: List[int] = [32, 32],
     pct=0.5,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Finds crops centers indeces and return crops around them.
@@ -195,7 +195,7 @@ def get_planes_and_dump(dname: Path, save_sample: bool):
 
 
 def crop_planes_and_dump(
-    dir_name: Path, nb_crops: int, crop_size: list[int], pct: float
+    dir_name: Path, nb_crops: int, crop_size: List[int], pct: float
 ):
     """Populates the ``<dir_name>/crop`` folder.
 
@@ -208,7 +208,7 @@ def crop_planes_and_dump(
         Directory path to datasets.
     nb_crops: int
         Number of crops from a single plane.
-    crop_size: list[int]
+    crop_size: List[int]
         Crop size, (height, width).
     pct: float
         Signal to background crops balancing.

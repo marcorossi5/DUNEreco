@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import List, Tuple
 import torch
 import torch.nn.functional as F
 
@@ -93,7 +93,7 @@ def _ssim(
         1-D gauss kernel, of shape=(1, 1, size).
     reduction: bool
         If reduction=True, ssim of all images will be averaged as a scalar.
-    k: list[float]
+    k: List[float]
         Cut-off values for fraction numerical stability.
 
     Returns
@@ -147,7 +147,7 @@ def _stat_ssim(
         1-D gauss kernel, of shape=(1, 1, size).
     reduction: bool
         If reduction=True, ssim of all images will be averaged as a scalar.
-    k: list[float]
+    k: List[float]
         Cut-off values for fraction numerical stability.
 
     Returns
@@ -216,7 +216,7 @@ def ssim(
         Standard deviation in pixels units of the gaussian kernel.
     win: torch.Tensor
         1-D gauss kernel, of shape=(1, 1, size).
-    k: list[float]
+    k: List[float]
         Cut-off values for fraction numerical stability.
     nonnegative_ssim: bool
         Wether to force the ssim response to be nonnegative with relu function.
@@ -266,7 +266,7 @@ def ms_ssim(
     win_size: int = 11,
     win_sigma: int = 3,
     win: torch.Tensor = None,
-    weights: list[float] = None,
+    weights: List[float] = None,
     k: Tuple[int, int] = (1e-13, 1e-13),
 ) -> torch.Tensor:
     """Interface for Multiscale Structural Similarity function.
@@ -287,9 +287,9 @@ def ms_ssim(
         Standard deviation in pixels units of the gaussian kernel.
     win: torch.Tensor
         1-D gauss kernel, of shape=(1, 1, size).
-    weights: list[float]
+    weights: List[float]
         Weights for different levels in the multiscale computation.
-    k: list[float]
+    k: List[float]
         Cut-off values for fraction numerical stability.
 
     Returns
@@ -379,7 +379,7 @@ def stat_ssim(
         Standard deviation in pixels units of the gaussian kernel.
     win: torch.Tensor
         1-D gauss kernel, of shape=(1, 1, size).
-    k: list[float]
+    k: List[float]
         Cut-off values for fraction numerical stability.
     nonnegative_ssim: bool
         Wether to force the ssim response to be nonnegative with relu function.
@@ -443,7 +443,7 @@ class SSIM(torch.nn.Module):
         win_size: int = 11,
         win_sigma: float = 1.5,
         channel: int = 3,
-        k: list[float] = [0.01, 0.03],
+        k: List[float] = [0.01, 0.03],
         nonnegative_ssim: bool = False,
     ):
         """
@@ -459,7 +459,7 @@ class SSIM(torch.nn.Module):
             Standard deviation in pixels units of the gaussian kernel.
         channel: int
             Number of input channels. Defaults to 3.
-        k: list[float]
+        k: List[float]
             Cut-off values for fraction numerical stability.
         nonnegative_ssim: bool
             Wether to force the ssim response to be nonnegative with relu function.
@@ -509,8 +509,8 @@ class MS_SSIM(torch.nn.Module):
         win_size: int = 11,
         win_sigma: float = 1.5,
         channel: int = 3,
-        weights: list[float] = None,
-        k: list[float] = [0.01, 0.03],
+        weights: List[float] = None,
+        k: List[float] = [0.01, 0.03],
     ):
         """
         Parameters
@@ -525,9 +525,9 @@ class MS_SSIM(torch.nn.Module):
             Standard deviation in pixels units of the gaussian kernel.
         channel: int
             Number of input channels. Defaults to 3.
-        weights: list[float]
+        weights: List[float]
             Weights for different levels in the multiscale computation.
-        k: list[float]
+        k: List[float]
             Cut-off values for fraction numerical stability.
         """
 
@@ -573,7 +573,7 @@ class STAT_SSIM(torch.nn.Module):
         win_size: int = 11,
         win_sigma: float = 1.5,
         channel: int = 3,
-        k: list[float] = [0.01, 0.03],
+        k: List[float] = [0.01, 0.03],
         nonnegative_ssim: bool = False,
     ):
         """
@@ -589,7 +589,7 @@ class STAT_SSIM(torch.nn.Module):
             Standard deviation in pixels units of the gaussian kernel.
         channel: int
             Number of input channels. Defaults to 3.
-        k: list[float]
+        k: List[float]
             Cut-off values for fraction numerical stability.
         nonnegative_ssim: bool
             Wether to force the ssim response to be nonnegative with relu function.

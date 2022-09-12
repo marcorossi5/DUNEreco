@@ -1,16 +1,16 @@
 """ This module contains utility functions of general interest. """
-from typing import Any
-import subprocess as sp
-import multiprocessing
-import shutil
-from pathlib import Path, PosixPath
 import logging
-import yaml
+import multiprocessing
 import numpy as np
+from pathlib import Path, PosixPath
+import subprocess as sp
+import shutil
+from typing import Any, List
+import yaml
 from dunedn.configdn import PACKAGE, get_dunedn_search_path
 
 
-def check(check_instance: Any, check_list: list[Any]):
+def check(check_instance: Any, check_list: List[Any]):
     """
     Checks that check_list contains check_instance object. If not, raises
     NotImplementedError.
@@ -19,7 +19,7 @@ def check(check_instance: Any, check_list: list[Any]):
     ----------
     check_instance: Any
         Object to check.
-    check_list: list[Any]
+    check_list: List[Any]
         Available options.
 
     Raises
@@ -31,23 +31,23 @@ def check(check_instance: Any, check_list: list[Any]):
         raise NotImplementedError("Operation not implemented")
 
 
-def smooth(smoothed: list[float], scalars: list[float], weight: float) -> list[float]:
+def smooth(smoothed: List[float], scalars: List[float], weight: float) -> List[float]:
     """Computes the next element of the moving average.
 
     In-place appending of the next element of the moving average to ``smoothed``.
 
     Parameters
     ----------
-    smoothed: list[float]
+    smoothed: List[float]
         The list of smoothed scalar quantities.
-    scalars: list[float]
+    scalars: List[float]
         The list of scalar quantities to be smoothed.
     weight: float
         The weighting factor in the (0,1) range.
 
     Returns
     -------
-    smoothed: list[float]
+    smoothed: List[float]
         The extended list of computed smoothed scalar quantities.
 
     Raises
@@ -65,12 +65,12 @@ def smooth(smoothed: list[float], scalars: list[float], weight: float) -> list[f
     return smoothed
 
 
-def moving_average(scalars: list[float], weight: float) -> list[float]:
+def moving_average(scalars: List[float], weight: float) -> List[float]:
     """Computes the moving avarage from a list of scalar quantities.
 
     Parameters
     ----------
-    scalars: list[float]
+    scalars: List[float]
         List of scalar quantities to be smoothed.
     weight: float
         The weighting factor in the (0,1) range. Higher values provide more
@@ -78,7 +78,7 @@ def moving_average(scalars: list[float], weight: float) -> list[float]:
 
     Returns
     -------
-    smoothed: list[float]
+    smoothed: List[float]
         The list of smoothed scalar quantities.
     """
     smoothed = []

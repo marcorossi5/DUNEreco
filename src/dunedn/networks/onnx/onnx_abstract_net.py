@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import List
 from pathlib import Path
 import onnxruntime as ort
 from dunedn.training.metrics import MetricsList
@@ -7,7 +7,7 @@ from dunedn.training.metrics import MetricsList
 class OnnxNetwork(ort.InferenceSession):
     """Subclass"""
 
-    def __init__(self, ckpt: Path, metrics: MetricsList, providers: list[str] = None):
+    def __init__(self, ckpt: Path, metrics: MetricsList, providers: List[str] = None):
         """
         Parameters
         ----------
@@ -15,7 +15,7 @@ class OnnxNetwork(ort.InferenceSession):
             `.onnx` file path.
         metrics: MetricsList
             List of callable metrics.
-        providers: list[str]
+        providers: List[str]
             List of providers.
         """
         super().__init__(ckpt, providers=providers)

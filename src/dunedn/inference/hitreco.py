@@ -110,9 +110,13 @@ class BaseModel:
             channel="induction",
             **gen_kwargs,
         )
-    
+
     def predict_batch(
-        self, input_data: np.ndarray, is_collection: bool, dev="cpu", profiler: BatchProfiler = None
+        self,
+        input_data: np.ndarray,
+        is_collection: bool,
+        dev="cpu",
+        profiler: BatchProfiler = None,
     ) -> np.ndarray:
         """Interface for model prediction on pDUNE raw data.
 
@@ -135,16 +139,16 @@ class BaseModel:
             Denoised dataset of shape=(nb wires, nb tdc ticks).
         """
         network = self.cnetwork if is_collection else self.inetwork
-        generator = self.collection_generator if is_collection else self.induction_generator
+        generator = (
+            self.collection_generator if is_collection else self.induction_generator
+        )
         dataset = generator(input_data)
         if self.should_use_onnx:
             out = network.predict(dataset, profiler=profiler)
         else:
-            out = network.predict(
-                dataset, dev, no_metrics=True, profiler=profiler
-            )
+            out = network.predict(dataset, dev, no_metrics=True, profiler=profiler)
         return out
-        
+
     def predict(
         self, event: np.ndarray, dev="cpu", profiler: BatchProfiler = None
     ) -> np.ndarray:
@@ -169,7 +173,7 @@ class BaseModel:
 
         iout = self.predict_batch(iplanes, False, dev, profiler=profiler)
         cout = self.predict_batch(cplanes, True, dev, profiler=profiler)
-        
+
         out_evt = planes2evt(iout, cout)
 
         if profiler is not None:

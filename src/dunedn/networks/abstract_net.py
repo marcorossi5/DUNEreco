@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import logging
 from time import time as tm
 import torch
+from typing import List
 from .model_utils import MyDataParallel
 from .utils import print_epoch_logs
 from dunedn.training.callbacks import History, Callback, CallbackList
@@ -80,7 +81,7 @@ class AbstractNet(torch.nn.Module, ABC):
                 "Please call `model.compile()` method."
             )
 
-    def compile(self, loss: Loss, optimizer: torch.optim.Optimizer, metrics: list[str]):
+    def compile(self, loss: Loss, optimizer: torch.optim.Optimizer, metrics: List[str]):
         """Compiles network.
 
         Adds loss function, optimizer and metrics functions as attributes.
@@ -91,7 +92,7 @@ class AbstractNet(torch.nn.Module, ABC):
             The network loss function.
         optimizer: torch.optim.Optimizer
             The optimizer used to update network's parameters.
-        metrics: list[str]
+        metrics: List[str]
             List of metrics names.
         """
         self.loss_fn = loss
@@ -106,7 +107,7 @@ class AbstractNet(torch.nn.Module, ABC):
         epochs: int,
         val_generator: torch.utils.data.Dataset = None,
         dev: str = "cpu",
-        callbacks: list[Callback] = None,
+        callbacks: List[Callback] = None,
     ):
         """Main training function.
 
@@ -228,7 +229,7 @@ class AbstractNet(torch.nn.Module, ABC):
         self,
         train_loader: torch.utils.data.DataLoader,
         dev: str = "cpu",
-    ) -> list[float]:
+    ) -> List[float]:
         """Trains the network for one epoch.
 
         Parameters
@@ -247,7 +248,7 @@ class AbstractNet(torch.nn.Module, ABC):
             Dictionary containing epoch history. Computed quantities
             at each optimization iteration, with their uncertainties. Keys:
 
-            - loss (list[Tuple(float, float)])
-            - metrics (list[Tuple(float, float)])
+            - loss (List[Tuple(float, float)])
+            - metrics (List[Tuple(float, float)])
         """
         pass

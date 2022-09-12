@@ -1,6 +1,6 @@
 """This module implements utility function for all the networks."""
 from logging import Logger
-from typing import Tuple
+from typing import List, Tuple
 from collections.abc import Iterable
 from time import time as tm
 import numpy as np
@@ -145,14 +145,14 @@ def apply_median_subtraction(planes: np.ndarray) -> np.ndarray:
     return output
 
 
-def print_epoch_logs(logger: Logger, metrics_names: list[str], logs: dict):
+def print_epoch_logs(logger: Logger, metrics_names: List[str], logs: dict):
     """Prints logs dictionary on epoch end.
 
     Parameters
     ----------
     logger: Logger
         The logging object.
-    metrics_names: list[str]
+    metrics_names: List[str]
         The list of metrics to be printed.
     logs: dict
         The computed metrics values to be logged.

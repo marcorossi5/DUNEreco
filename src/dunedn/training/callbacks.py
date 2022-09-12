@@ -1,5 +1,6 @@
 """This module implements onjects to keep track of training details. """
 from pprint import pformat
+from typing import List
 
 
 class Callback:
@@ -32,7 +33,7 @@ class Callback:
 
 
 class CallbackList(Callback):
-    def __init__(self, callbacks: list[Callback]):
+    def __init__(self, callbacks: List[Callback]):
         self.callback_list = callbacks
 
     def hook(self, hook_name: str, logs: dict):

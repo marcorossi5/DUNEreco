@@ -4,12 +4,7 @@
 """
 from typing import Tuple
 import numpy as np
-from dunedn.geometry.pdune import (
-    nb_tdc_ticks,
-    nb_ichannels,
-    nb_apas,
-    nb_apa_channels,
-)
+from .pdune import geometry as pdune_geometry
 
 
 def evt2planes(event: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
@@ -28,9 +23,14 @@ def evt2planes(event: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     collections: np.array
         Collection planes array, of shape=(N,C,H,W).
     """
-    base = np.arange(nb_apas).reshape(-1, 1) * nb_apa_channels
-    iidxs = [[0, nb_ichannels, 2 * nb_ichannels]] + base
-    cidxs = [[2 * nb_ichannels, nb_apa_channels]] + base
+    base = (
+        np.arange(pdune_geometry["nb_apas"]).reshape(-1, 1)
+        * pdune_geometry["nb_apa_channels"]
+    )
+    iidxs = np.arange(3).reshape(1, 3) * pdune_geometry["nb_ichannels"] + base
+    cidxs = [
+        [2 * pdune_geometry["nb_ichannels"], pdune_geometry["nb_apa_channels"]]
+    ] + base
     inductions = []
     for start, idx, end in iidxs:
         induction = [event[start:idx], event[idx:end]]
@@ -57,7 +57,9 @@ def planes2evt(inductions: np.ndarray, collections: np.ndarray) -> np.ndarray:
     np.array
         Raw Digits array, of shape=(nb_event_channels, nb_tdc_ticks).
     """
-    inductions = np.array(inductions).reshape(-1, 2 * nb_ichannels, nb_tdc_ticks)
+    inductions = np.array(inductions).reshape(
+        -1, 2 * pdune_geometry["nb_ichannels"], pdune_geometry["nb_tdc_ticks"]
+    )
     collections = np.array(collections)[:, 0]
     event = []
     for i, c in zip(inductions, collections):

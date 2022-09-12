@@ -2,7 +2,7 @@
 import logging
 from pathlib import Path
 from time import time as tm
-from typing import Tuple
+from typing import List, Tuple
 import torch
 from torch import nn
 from math import ceil
@@ -34,7 +34,7 @@ class UscgNet(AbstractNet):
         w: int = 6000,
         stride: int = 1000,
         pretrained: bool = True,
-        node_size: list[int] = [28, 28],
+        node_size: List[int] = [28, 28],
         dropout: float = 0.5,
         enhance_diag: bool = True,
         aux_pred: bool = True,

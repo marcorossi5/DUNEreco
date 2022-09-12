@@ -1,8 +1,8 @@
 """This module implements utility functions for the `networks.gcnn` subpackage."""
 from collections import OrderedDict
-from dunedn.networks.utils import BatchProfiler
-from tqdm.auto import tqdm
 import torch
+from tqdm.auto import tqdm
+from dunedn.networks.utils import BatchProfiler
 from ..abstract_net import AbstractNet
 
 

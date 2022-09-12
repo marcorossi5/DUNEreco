@@ -1,16 +1,17 @@
 from pathlib import Path
-from dunedn.networks.utils import BatchProfiler
+from typing import List
 import torch
 from ..gcnn.gcnn_dataloading import GcnnDataset
 from .onnx_abstract_net import OnnxNetwork
 from .utils import gcnn_onnx_inference_pass
+from dunedn.networks.utils import BatchProfiler
 from dunedn.training.metrics import MetricsList
 
 
 class OnnxGcnnNetwork(OnnxNetwork):
     """Subclass"""
 
-    def __init__(self, ckpt: Path, metrics: MetricsList, providers: list[str] = None):
+    def __init__(self, ckpt: Path, metrics: MetricsList, providers: List[str] = None):
         """
         Parameters
         ----------
@@ -18,7 +19,7 @@ class OnnxGcnnNetwork(OnnxNetwork):
             `.onnx` file path.
         metrics: MetricsList
             List of callable metrics.
-        providers: list[str]
+        providers: List[str]
             List of providers.
         """
         super().__init__(ckpt, metrics, providers=providers)

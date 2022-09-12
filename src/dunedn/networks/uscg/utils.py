@@ -1,5 +1,5 @@
 """This module implements utility functions for the `networks.uscg` subpackage."""
-from typing import Tuple
+from typing import List, Tuple
 from tqdm.auto import tqdm
 from math import ceil
 import torch
@@ -36,7 +36,7 @@ def make_dict_compatible(state_dict: OrderedDict):
 
 def time_windows(
     planes: torch.Tensor, w: int, stride: int
-) -> Tuple[torch.Tensor, list[torch.Tensor], list[list[int]]]:
+) -> Tuple[torch.Tensor, List[torch.Tensor], List[List[int]]]:
     """Takes time windows of given width and stride from a planes.
 
     Parameters
@@ -53,9 +53,9 @@ def time_windows(
     divisions: torch.Tensor
         Number of times each pixel should be processed by denoising network, of
         shape=(N,C,H,W).
-    windows: list[torch.Tensor]
+    windows: List[torch.Tensor]
         Time windows to be processed, each of shape=(N,C,H,w)
-    idxs: list[list[int]]
+    idxs: List[List[int]]
         Start-end time indices for the correspondent window. Each elements is
         [start idx, end idx].
     """

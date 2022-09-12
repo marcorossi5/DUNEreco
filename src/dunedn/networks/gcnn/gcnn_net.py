@@ -4,7 +4,7 @@
     GcnnNet implements also the CNN variant.
 """
 import logging
-from typing import Tuple
+from typing import List, Tuple
 from pathlib import Path
 from time import time as tm
 import torch
@@ -122,7 +122,7 @@ class GcnnNet(AbstractNet):
         no_metrics: bool = False,
         verbose: int = 1,
         profiler: BatchProfiler = None,
-    ) -> Tuple[torch.Tensor, list[Tuple[float, float]], float]:
+    ) -> Tuple[torch.Tensor, List[Tuple[float, float]], float]:
         """Gcnn network inference.
 
         Parameters

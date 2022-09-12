@@ -1,6 +1,7 @@
 from logging import Logger
 from math import sqrt
 import torch
+from typing import List
 from .losses import get_metric
 
 DN_METRICS = ["ssim", "psnr", "mse", "imae"]
@@ -19,11 +20,11 @@ class MetricsList:
     >>> MetricsList(metrics)
     """
 
-    def __init__(self, metrics: list[str]):
+    def __init__(self, metrics: List[str]):
         """
         Parameters
         ----------
-        metrics: list[str]
+        metrics: List[str]
             The list of metrics names.
         """
         self.metrics = [get_metric(metric)(reduction="none") for metric in metrics]
