@@ -1,3 +1,4 @@
+from pathlib import Path
 import torch
 from typing import Tuple
 import numpy as np
@@ -9,23 +10,24 @@ class PlanesDataset(torch.utils.data.Dataset):
 
     def __init__(
         self,
-        noisy_planes: np.ndarray,
-        clear_planes: np.ndarray = None,
-        setup: dict = None,
+        data_path: Path,
+        should_load_target: bool = False,
     ):
         """
         Parameters
         ----------
-        noisy_events: np.ndarray
+        data_folder: np.ndarray
             The noisy events, of shape=(nb wires, nb tdc ticks).
-        setup: dict
-            The dataset settings dictionary.
-        clear_events: np.ndarray
+        should_load_target: np.ndarray
             The event ground truths, if available. Of shape=(nb wires, nb tdc ticks).
         """
-        self.noisy_planes = noisy_planes
-        self.clear_planes = clear_planes if clear_planes is not None else None
-        self.batch_size = setup["batch_size"]
+        self.data_path = data_path
+        self.noisy_planes = np.load(data_path)
+        if should_load_target:
+            clear_path = data_path.name.replace("noisy", "clear")
+            self.clear_planes = np.load(data_path.parent / clear_path)
+        else:
+            self.clear_planes = None
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, int]:
         """

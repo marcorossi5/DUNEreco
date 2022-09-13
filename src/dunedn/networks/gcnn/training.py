@@ -67,9 +67,7 @@ def gcnn_training(modeltype: str, setup: dict):
     assert modeltype in ["cnn", "gcnn"]
     msetup = setup["model"][modeltype]
     channel = "collection"
-    network = load_and_compile_gcnn_network(
-        channel, msetup, setup["dev"], msetup["ckpt"]
-    )
+    network = load_and_compile_gcnn_network(channel, msetup, msetup["ckpt"])
 
     # TODO: remove channel (collection | induction) hard coding
     # data loading

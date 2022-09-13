@@ -1,5 +1,4 @@
 """ This module provides functions for USCG network training and loading."""
-from .uscg_dataloading import UscgDataset
 import logging
 from pathlib import Path
 import torch
