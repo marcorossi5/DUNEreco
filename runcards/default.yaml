@@ -81,3 +81,12 @@ model:
       dropout: 0.5
       enhance_diag: true
       aux_pred: true
+  performer:
+    loss_fn: mse
+    batch_size: 32
+    lr: 1e-3
+    ckpt: null
+    net_dict:
+      input_channels: 1
+      hidden_channels: 32
+
