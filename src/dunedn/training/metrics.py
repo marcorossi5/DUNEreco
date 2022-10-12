@@ -1,10 +1,12 @@
 from logging import Logger
 from math import sqrt
+from dunedn.geometry.helpers import evt2planes
+import numpy as np
 import torch
 from typing import List
 from .losses import get_metric
 
-DN_METRICS = ["ssim", "psnr", "mse", "imae"]
+DN_METRICS = ["psnr", "mse", "mae", "imae"]
 
 ROI_METRICS = ["xent", "softdice"]
 
@@ -63,8 +65,22 @@ class MetricsList:
                 res[name + "_std"] = (ivalue_std + cvalue_std) * 0.5
         return res
 
+    def compute_plane_metrics(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> dict:
+        results = np.stack([metric(y_pred, y_true) for metric in self.metrics], axis=0)
+        res_mean = results.mean(-1)
+        sqrtn = sqrt(len(res_mean))
+        res_std = results.std(-1) / sqrtn
+        res_metrics = {name: mean.item() for name, mean in zip(self.names, res_mean)}
+        res_metrics.update(
+            {f"{name}_std": std.item() for name, std in zip(self.names, res_std)}
+        )
+        return res_metrics
+
     def compute_metrics(self, y_pred: torch.Tensor, y_true: torch.Tensor) -> dict:
         """Computes values from the stored list of metrics.
+
+        The inputs must be full events arrays, use ``compute_plane_metrics``
+        function otherwise.
 
         Parameters
         ----------
@@ -78,16 +94,13 @@ class MetricsList:
         res_metrics: dict
             The computed metrics results in dictionary form.
         """
-        results = torch.stack(
-            [metric(y_pred, y_true) for metric in self.metrics], dim=0
-        )
-        res_mean = results.mean(-1)
-        sqrtn = sqrt(len(res_mean))
-        res_std = results.std(-1) / sqrtn
-        res_metrics = {name: mean.item() for name, mean in zip(self.names, res_mean)}
-        res_metrics.update(
-            {f"{name}_std": std.item() for name, std in zip(self.names, res_std)}
-        )
+        # TODO: fix consistency of this function calls in the package
+        ipred, cpred = evt2planes(y_pred)
+        itrue, ctrue = evt2planes(y_true)
+        imetrics = self.compute_plane_metrics(ipred, itrue)
+        res_metrics = {f"induction_{k}": v for k, v in imetrics.items()}
+        cmetrics = self.compute_plane_metrics(cpred, ctrue)
+        res_metrics.update({f"collection_{k}": v for k, v in cmetrics.items()})
         return res_metrics
 
     def print_metrics(self, logger: Logger, logs: dict):
@@ -100,9 +113,16 @@ class MetricsList:
         logs: dict
             The computed metrics values to be logged.
         """
-        msg = "Prediction metrics:\n"
+        msg = "Prediction metrics:\nInduction planes:\n"
         for name in self.names:
-            mean = logs.get(name)
-            std = logs.get(f"{name}_std")
-            msg += f"{name:>10}: {mean:.3f} +/- {std:.3f}\n"
+            mean = logs.get(f"induction_{name}")
+            std = logs.get(f"induction_{name}_std")
+            if mean is not None and std is not None:
+                msg += f"{name:>10}: {mean:.3f} +/- {std:.3f}\n"
+        msg += "Collection:\n"
+        for name in self.names:
+            mean = logs.get(f"collection_{name}")
+            std = logs.get(f"collection_{name}_std")
+            if mean is not None and std is not None:
+                msg += f"{name:>10}: {mean:.3f} +/- {std:.3f}\n"
         logger.info(msg.strip("\n"))

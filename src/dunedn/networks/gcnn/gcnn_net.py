@@ -4,21 +4,22 @@
     GcnnNet implements also the CNN variant.
 """
 import logging
-from typing import List, Tuple
 from pathlib import Path
 from time import time as tm
+from typing import List, Tuple
 import torch
 from torch import nn
 from ..abstract_net import AbstractNet
 from ..utils import BatchProfiler
 from .gcnn_dataloading import BaseGcnnDataset
 from .gcnn_net_blocks import (
-    PreProcessBlock,
-    ROI,
+    Conv,
     HPF,
+    GConv,
     LPF,
-    PostProcessBlock,
     NonLocalGraph,
+    PreProcessBlock,
+    PostProcessBlock,
 )
 from .utils import gcnn_inference_pass
 from dunedn import PACKAGE
@@ -31,61 +32,52 @@ class GcnnNet(AbstractNet):
 
     def __init__(
         self,
-        model: str,
-        task: str,
-        crop_edge: int,
         input_channels: int,
         hidden_channels: int,
+        nb_lpfs: int = 4,
         k: int = None,
+        name: str = "gcnn",
     ):
         """
         Parameters
         ----------
-        model: str
-            Available options cnn | gcnn.
-        task: str
-            Available options dn | roi.
-        crop_edge: int
-            Crop edge size.
         input_channels: int
             Inputh channel dimension size.
         hidden_channels: int
             Convolutions hidden filters number.
+        nb_lpfs: int
+            The number of low-pass filter blocks
         k: int
-            Nearest neighbor number. None if model is cnn..
+            The number of neares neighbors to convolute with. ``None`` reduces
+            to a CNN.
         """
         super(GcnnNet, self).__init__()
-        self.crop_size = (crop_edge,) * 2
-        self.model = model
-        self.task = task
+        self.ic = input_channels
+        self.hc = hidden_channels
+        self.nb_lpfs = nb_lpfs
+        self.k = k
+        self.name = name
+
+        # aliases
         ic = input_channels
         hc = hidden_channels
-        self.k = k
 
-        self.input_shape = (1,) + self.crop_size
+        self.getgraph_fn = NonLocalGraph(k) if self.k is not None else lambda x: None
+        self.conv_fn = GConv if self.k is not None else Conv
 
-        self.getgraph_fn = (
-            NonLocalGraph(k, self.crop_size) if self.model == "gcnn" else lambda x: None
-        )
-        # self.norm_fn = choose_norm(dataset_dir, channel, normalization)
-        self.roi = ROI(7, ic, hc, self.getgraph_fn, self.model)
-        self.pre_process_blocks = nn.ModuleList(
-            [
-                PreProcessBlock(5, ic, hc, self.getgraph_fn, self.model),
-                PreProcessBlock(7, ic, hc, self.getgraph_fn, self.model),
-                PreProcessBlock(9, ic, hc, self.getgraph_fn, self.model),
-            ]
+        self.pre_process_block = PreProcessBlock(
+            3, ic, hc, self.getgraph_fn, self.conv_fn
         )
         self.lpfs = nn.ModuleList(
             [
-                LPF(hc * 3 + 1, hc * 3 + 1, self.getgraph_fn, self.model)
-                for _ in range(4)
+                LPF(3, hc, hc, self.getgraph_fn, self.conv_fn)
+                for _ in range(self.nb_lpfs)
             ]
         )
-        self.hpf = HPF(hc * 3 + 1, hc * 3 + 1, self.getgraph_fn, self.model)
-        self.post_process_block = PostProcessBlock(ic, hc, self.getgraph_fn, self.model)
-        self.aa = nn.Parameter(torch.Tensor([0]), requires_grad=False)
-        self.bb = nn.Parameter(torch.Tensor([1]), requires_grad=False)
+        self.hpf = HPF(3, hc, hc, self.getgraph_fn, self.conv_fn)
+        self.post_process_block = PostProcessBlock(
+            3, hc, ic, self.getgraph_fn, self.conv_fn
+        )
 
         self.combine = lambda x, y: x + y
 
@@ -102,12 +94,7 @@ class GcnnNet(AbstractNet):
         output: torch.Tensor
             Output tensor of shape=(N,C,H,W).
         """
-        # x = self.norm_fn(x)
-        hits = self.roi(x)
-        if self.task == "roi":
-            return hits
-        y = torch.cat([block(x) for block in self.pre_process_blocks], dim=1)
-        y = torch.cat([y, hits], 1)
+        y = self.pre_process_block(x)
         y_hpf = self.hpf(y)
         y = self.combine(y, y_hpf)
         for lpf in self.lpfs:
@@ -167,14 +154,14 @@ class GcnnNet(AbstractNet):
         output = gcnn_inference_pass(test_loader, self, dev, verbose, profiler=profiler)
         inference_time = tm() - start
 
-        # convert back to planes
-        y_pred = generator.converter.tiles2planes(output)
-        generator.to_planes()
+        # convert back to events
+        y_pred = generator.converter.crops2image(output).numpy()
 
         if no_metrics:
             return y_pred
 
         # compute metrics
+        generator.to_events()
         y_true = generator.clear
         logs = self.metrics_list.compute_metrics(y_pred, y_true)
         logs.update({"time": inference_time})
@@ -237,7 +224,7 @@ class GcnnNet(AbstractNet):
         loss.mean().backward()
         self.optimizer.step()
 
-        step_logs = self.metrics_list.compute_metrics(y_pred, clear)
+        step_logs = self.metrics_list.compute_plane_metrics(y_pred.detach(), clear)
         step_logs.update({"loss": loss.item()})
         return step_logs
 

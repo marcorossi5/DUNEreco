@@ -38,6 +38,49 @@ class Loss(ABC):
         pass
 
 
+class LossMae(Loss):
+    """Mean squared error loss function.
+
+    Computes ``L2(y_true, y_pred) = mean((y_true - y_pred)**2)``.
+    """
+
+    def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
+        super(LossMae, self).__init__(reduction=reduction)
+        # self.loss = nn.L1Loss(reduction="none")
+        self.name = "MAE"
+
+    def __call__(self, y_pred, y_true):
+        """
+        Parameters
+        ----------
+        y_pred: torch.Tensor
+            Predicted tensor, of shape=(N,C,W,H).
+        y_true: torch.Tensor
+            Target tensor, of shape=(N,C,W,H).
+        """
+        if isinstance(y_pred, torch.Tensor) and isinstance(y_true, torch.Tensor):
+            return self.call_torch(y_pred, y_true)
+        elif isinstance(y_pred, np.ndarray) and isinstance(y_true, np.ndarray):
+            return self.call_numpy(y_pred, y_true)
+        else:
+            raise NotImplementedError(
+                f"Expected torch.Tensor or numpy.ndarray, got {type(y_pred)} "
+                f"and {type(y_true)}"
+            )
+
+    def call_torch(self, y_pred, y_true):
+        loss = nn.L1Loss(reduction="none")(y_pred, y_true)
+        if self.reduction == "mean":
+            return loss.mean()
+        return loss.mean([1, 2, 3])
+
+    def call_numpy(self, y_pred, y_true):
+        loss = np.abs(y_pred - y_true)
+        if self.reduction == "mean":
+            return loss.mean()
+        return loss.mean((1, 2, 3))
+
+
 class LossMse(Loss):
     """Mean squared error loss function.
 
@@ -46,7 +89,7 @@ class LossMse(Loss):
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super(LossMse, self).__init__(reduction=reduction)
-        self.loss = nn.MSELoss(reduction="none")
+        # self.loss = nn.MSELoss(reduction="none")
         self.name = "MSE"
 
     def __call__(self, y_pred, y_true):
@@ -58,10 +101,27 @@ class LossMse(Loss):
         y_true: torch.Tensor
             Target tensor, of shape=(N,C,W,H).
         """
-        loss = self.loss(y_pred, y_true)
+        if isinstance(y_pred, torch.Tensor) and isinstance(y_true, torch.Tensor):
+            return self.call_torch(y_pred, y_true)
+        elif isinstance(y_pred, np.ndarray) and isinstance(y_true, np.ndarray):
+            return self.call_numpy(y_pred, y_true)
+        else:
+            raise NotImplementedError(
+                f"Expected torch.Tensor or numpy.ndarray, got {type(y_pred)} "
+                f"and {type(y_true)}"
+            )
+
+    def call_torch(self, y_pred, y_true):
+        loss = nn.MSELoss(reduction="none")(y_pred, y_true)
         if self.reduction == "mean":
             return loss.mean()
         return loss.mean([1, 2, 3])
+
+    def call_numpy(self, y_pred, y_true):
+        loss = (y_pred - y_true) ** 2
+        if self.reduction == "mean":
+            return loss.mean()
+        return loss.mean((1, 2, 3))
 
 
 class LossImae(Loss):
@@ -72,7 +132,7 @@ class LossImae(Loss):
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super(LossImae, self).__init__(reduction=reduction)
-        self.loss = nn.L1Loss(reduction="none")
+        # self.loss = nn.L1Loss(reduction="none")
         self.name = "IMAE"
 
     def __call__(self, y_pred, y_true):
@@ -84,7 +144,24 @@ class LossImae(Loss):
         y_true: torch.Tensor
             Target tensor, of shape=(N,C,W,H).
         """
-        loss = self.loss(y_pred.sum(-1), y_true.sum(-1))
+        if isinstance(y_pred, torch.Tensor) and isinstance(y_true, torch.Tensor):
+            return self.call_torch(y_pred, y_true)
+        elif isinstance(y_pred, np.ndarray) and isinstance(y_true, np.ndarray):
+            return self.call_numpy(y_pred, y_true)
+        else:
+            raise NotImplementedError(
+                f"Expected torch.Tensor or numpy.ndarray, got {type(y_pred)} "
+                f"and {type(y_true)}"
+            )
+
+    def call_torch(self, y_pred, y_true):
+        loss = nn.L1Loss(reduction="none")(y_pred.sum(-1), y_true.sum(-1))
+        if self.reduction == "mean":
+            return loss.mean()
+        return loss.reshape([loss.shape[0], -1]).mean(-1)
+
+    def call_numpy(self, y_pred, y_true):
+        loss = np.abs((y_pred - y_true).sum(-1))
         if self.reduction == "mean":
             return loss.mean()
         return loss.reshape([loss.shape[0], -1]).mean(-1)
@@ -93,6 +170,8 @@ class LossImae(Loss):
 class LossSsim(Loss):
     """Statistical structural similarity loss function.
 
+    This loss function can be computed for ``torch.Tensor`` inputs only.
+
     Computes ``Lssim(y_true, y_pred) = 1 - stat-ssim(y_true, y_pred)``.
     """
 
@@ -100,7 +179,7 @@ class LossSsim(Loss):
         super(LossSsim, self).__init__(a, data_range, reduction)
         self.name = "Lssim"
 
-    def __call__(self, x_pred, y_true):
+    def __call__(self, y_pred, y_true):
         """
         Parameters
         ----------
@@ -109,8 +188,17 @@ class LossSsim(Loss):
         y_true: torch.Tensor
             Target tensor, of shape=(N,C,W,H).
         """
+        if isinstance(y_pred, torch.Tensor) and isinstance(y_true, torch.Tensor):
+            return self.call_torch(y_pred, y_true)
+        else:
+            raise NotImplementedError(
+                f"Expected torch.Tensor or numpy.ndarray, got {type(y_pred)} "
+                f"and {type(y_true)}"
+            )
+
+    def call_torch(self, y_pred, y_true):
         return 1 - stat_ssim(
-            x_pred, y_true, data_range=self.data_range, reduction=self.reduction
+            y_pred, y_true, data_range=self.data_range, reduction=self.reduction
         )
 
 
@@ -320,7 +408,7 @@ class LossPsnr(Loss):
         self.mse = nn.MSELoss(reduction="none")
         self.name = "psnr"
 
-    def __call__(self, y_noisy, y_clear):
+    def __call__(self, y_pred, y_true):
         """
         Parameters
         ----------
@@ -329,14 +417,38 @@ class LossPsnr(Loss):
         y_true: torch.Tensor
             Target tensor, of shape=(N,C,W,H).
         """
-        nimages = y_clear.shape[0]
-        x1 = y_clear.reshape(nimages, -1)
-        x2 = y_noisy.reshape(nimages, -1)
-        mse = self.mse(x1, x2).mean(-1)
+        if isinstance(y_pred, torch.Tensor) and isinstance(y_true, torch.Tensor):
+            return self.call_torch(y_pred, y_true)
+        elif isinstance(y_pred, np.ndarray) and isinstance(y_true, np.ndarray):
+            return self.call_numpy(y_pred, y_true)
+        else:
+            raise NotImplementedError(
+                f"Expected torch.Tensor or numpy.ndarray, got {type(y_pred)} "
+                f"and {type(y_true)}"
+            )
+
+    def call_torch(self, y_pred, y_true):
+        nimages = y_true.shape[0]
+        x1 = y_true.reshape(nimages, -1)
+        x2 = y_pred.reshape(nimages, -1)
+        mse = ((x1 - x2) ** 2).mean(-1)
         m2 = x1.max(-1).values ** 2
         zero = torch.Tensor([0.0]).to(x1.device)
         eps = EPS.to(x1.device)
         psnr = torch.where(m2 == 0, zero, 10 * torch.log10(m2 / (mse + eps)))
+        if self.reduction == "none":
+            return psnr
+        return psnr.mean()
+
+    def call_numpy(self, y_pred, y_true):
+        nimages = y_true.shape[0]
+        x1 = y_true.reshape(nimages, -1)
+        x2 = y_pred.reshape(nimages, -1)
+        mse = ((x1 - x2) ** 2).mean(-1)
+        m2 = x1.max(-1) ** 2
+        zero = np.array([0.0])
+        eps = np.array(EPS)
+        psnr = np.where(m2 == 0, zero, 10 * np.log10(m2 / (mse + eps)))
         if self.reduction == "none":
             return psnr
         return psnr.mean()
@@ -375,7 +487,7 @@ def get_loss(loss):
     Parameters
     ----------
     loss: str
-        Available options:
+        Available options (case insensitive):
 
         - mse
         - imae
@@ -405,25 +517,25 @@ def get_loss(loss):
         - softdice
         - cfnm
     """
-    if loss == "mse":
+    if loss.lower() == "mse":
         return LossMse
-    elif loss == "imae":
+    elif loss.lower() == "imae":
         return LossImae
-    elif loss == "ssim":
+    elif loss.lower() == "ssim":
         return LossSsim
-    elif loss == "ssim_l2":
+    elif loss.lower() == "ssim_l2":
         return LossSsimL2
-    elif loss == "ssim_l1":
+    elif loss.lower() == "ssim_l1":
         return LossSsimL1
-    elif loss == "bce":
+    elif loss.lower() == "bce":
         return LossBce
-    elif loss == "softdice":
+    elif loss.lower() == "softdice":
         return LossSoftDice
-    elif loss == "bce_dice":
+    elif loss.lower() == "bce_dice":
         return LossBceDice
-    elif loss == "psnr":
+    elif loss.lower() == "psnr":
         return LossPsnr
-    elif loss == "cfnm":
+    elif loss.lower() == "cfnm":
         return LossCfnm
     else:
         raise NotImplementedError("Loss function not implemented")
@@ -437,6 +549,7 @@ def get_metric(metric):
     metric: str
         Available options:
 
+        - mae
         - mse
         - imae
         - ssim
@@ -462,7 +575,9 @@ def get_metric(metric):
         - softdice
         - cfnm
     """
-    if metric == "mse":
+    if metric == "mae":
+        return LossMae
+    elif metric == "mse":
         return LossMse
     elif metric == "imae":
         return LossImae

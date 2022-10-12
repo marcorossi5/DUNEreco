@@ -99,6 +99,7 @@ class AbstractNet(torch.nn.Module, ABC):
         # TODO: pass non defaults arguments to loss function
         self.optimizer = optimizer
         self.metrics_list = MetricsList(metrics)
+        self.metrics_names = metrics
         self.is_compiled = True
 
     def fit(
@@ -114,7 +115,7 @@ class AbstractNet(torch.nn.Module, ABC):
         Example
         -------
 
-        Wcample with a GCNN network.
+        Example with a GCNN network.
 
         Load a runcard.
 
@@ -177,13 +178,13 @@ class AbstractNet(torch.nn.Module, ABC):
         self.callback_list.on_train_begin()
 
         for epoch in range(epochs):
-            logger.info(f"Epoch {epoch}/{epochs}")
+            logger.info(f"Epoch {epoch + 1}/{epochs}")
 
             self.callback_list.on_epoch_begin()
 
             # training epoch
             start = tm()
-            # epoch_logs = self.train_epoch(train_loader, dev)
+            epoch_logs = self.train_epoch(train_loader, dev)
             epoch_logs = {}
             epoch_time = tm() - start
             epoch_logs.update({"epoch": epoch, "epoch_time": epoch_time})

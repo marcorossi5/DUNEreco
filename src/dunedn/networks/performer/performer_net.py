@@ -21,7 +21,7 @@ logger = logging.getLogger(PACKAGE + ".performer")
 
 
 class PerformerNet(AbstractNet):
-    def __init__(self, input_channels: int, hidden_channels: int):
+    def __init__(self, input_channels: int, hidden_channels: int, nb_lpfs: int = 4):
         """
         Example
         -------
@@ -33,19 +33,26 @@ class PerformerNet(AbstractNet):
         >>> print(model(x).shape)
         """
         super().__init__()
+        self.ic = ic
+        self.hc = hc
+        self.nb_lpfs = nb_lpfs
+
+        # aliases
         ic = input_channels
         hc = hidden_channels
-        self.pre_process_blocks = nn.ModuleList(
-            [
-                PreProcessBlock(3, ic, hc),
-                PreProcessBlock(5, ic, hc),
-                PreProcessBlock(7, ic, hc),
-                PreProcessBlock(9, ic, hc),
-            ]
-        )
-        self.lpfs = nn.ModuleList([LPF(7, hc * 4, hc * 4) for _ in range(4)])
-        self.hpf = HPF(3, hc * 4, hc * 4)
-        self.post_process_block = PostProcessBlock(3, ic, hc)
+
+        self.pre_process_block = PreProcessBlock(3, ic, hc)
+        # self.pre_process_blocks = nn.ModuleList(
+        #     [
+        #         PreProcessBlock(3, ic, hc),
+        #         PreProcessBlock(5, ic, hc),
+        #         PreProcessBlock(7, ic, hc),
+        #         PreProcessBlock(9, ic, hc),
+        #     ]
+        # )
+        self.lpfs = nn.ModuleList([LPF(3, hc, hc) for _ in range(self.nb_lpfs)])
+        self.hpf = HPF(3, hc, hc)
+        self.post_process_block = PostProcessBlock(3, hc, ic)
 
         self.combine = lambda x, y: x + y
 
@@ -64,13 +71,11 @@ class PerformerNet(AbstractNet):
         """
         # median subtraction
         b = inputs.shape[0]
-        original_shape = inputs.shape
         medians = torch.quantile(inputs.view(b, -1), 0.5, dim=1, keepdim=True)
+        medians = medians.unsqueeze(-1).unsqueeze(-1)
 
-        # TODO: input normalization?
-
-        x = inputs - medians.view(original_shape)
-        y = torch.cat([block(x) for block in self.pre_process_blocks], dim=1)
+        x = inputs - torch.broadcast_to(medians, inputs.shape)
+        y = self.pre_process_block(x)
         y_hpf = self.hpf(y)
         y = self.combine(y, y_hpf)
         for lpf in self.lpfs:
@@ -187,7 +192,12 @@ class PerformerNet(AbstractNet):
         """
         noisy = noisy.to(dev)
         self.optimizer.zero_grad()
+        from time import time as tm
+
+        print("starting forward")
+        start = tm()
         y_pred = self.forward(noisy)
+        exit(f"l. 190, predicted shape {y_pred.shape} in {tm()-start} s")
 
         loss = self.loss_fn(y_pred, clear)
         loss.mean().backward()
@@ -195,6 +205,8 @@ class PerformerNet(AbstractNet):
 
         step_logs = self.metrics_list.compute_metrics(y_pred, clear)
         step_logs.update({"loss": loss.item()})
+        print(step_logs)
+        exit("Everything's fine here")
         return step_logs
 
     def onnx_export(self, fname: Path):

@@ -69,7 +69,9 @@ class LPF(nn.Module):
         ks = kernel_size
         kso2 = kernel_size // 2
         self.conv = nn.Sequential(
-            nn.Conv2d(ic, ic, 5, padding=2), nn.BatchNorm2d(ic), nn.LeakyReLU(0.05)
+            nn.Conv2d(ic, ic, ks, padding=(kso2, kso2)),
+            nn.BatchNorm2d(ic),
+            nn.LeakyReLU(0.05),
         )
         self.atns = nn.Sequential(
             AttentionLayer(ic),
@@ -90,18 +92,28 @@ class LPF(nn.Module):
 
 
 class PostProcessBlock(nn.Module):
-    def __init__(self, kernel_size, ic, hc):
+    def __init__(self, kernel_size: int, hc: int, oc: int):
+        """
+        Parameters
+        ----------
+        kernel_size: int
+            The kernel size in pixels.
+        hc: int
+            The hidden filter dimensionality.
+        oc: int
+            The output filter dimensionality.
+        """
         super().__init__()
         ks = kernel_size
         kso2 = kernel_size // 2
         self.pipeline = nn.Sequential(
-            nn.Conv2d(hc * 4, hc * 2, ks, padding=(kso2, kso2)),
-            nn.BatchNorm2d(hc * 2),
-            nn.LeakyReLU(0.05),
-            nn.Conv2d(hc * 2, hc, ks, padding=(kso2, kso2)),
-            nn.BatchNorm2d(hc),
-            nn.LeakyReLU(0.05),
-            nn.Conv2d(hc, ic, ks, padding=(kso2, kso2)),
+            # nn.Conv2d(hc * 4, hc * 2, ks, padding=(kso2, kso2)),
+            # nn.BatchNormkernel2d(hc * 2),
+            # nn.LeakyReLU(0.05),
+            # nn.Conv2d(hc * 2, hc, ks, padding=(kso2, kso2)),
+            # nn.BatchNorm2d(hc),
+            # nn.LeakyReLU(0.05),
+            nn.Conv2d(hc, oc, ks, padding=(kso2, kso2)),
         )
 
     def forward(self, x):

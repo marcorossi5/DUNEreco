@@ -14,7 +14,7 @@ logger = logging.getLogger(PACKAGE + ".performer")
 def load_and_compile_performer_network(
     msetup: dict, checkpoint_filepath: Path = None
 ) -> PerformerNet:
-    """Loads a USCG network.
+    """Loads a Performer network.
 
     Parameters
     ---------
@@ -65,37 +65,42 @@ def performer_training(setup: dict):
         "dsetup": setup["dataset"],
     }
     data_folder = setup["dataset"]["data_folder"]
-    train_igenerator = PlanesDataset(
-        data_folder / "train/planes/induction_noisy.npy", should_load_target=True
-    )
-    train_cgenerator = PlanesDataset(
-        data_folder / "train/planes/collection_noisy.npy", should_load_target=True
-    )
-    val_igenerator = PlanesDataset(
-        data_folder / "val/planes/induction_noisy.npy", should_load_target=True
-    )
-    val_cgenerator = PlanesDataset(
-        data_folder / "val/planes/collection_noisy.npy", should_load_target=True
-    )
-    test_igenerator = PlanesDataset(
-        data_folder / "test/planes/induction_noisy.npy", should_load_target=True
-    )
-    test_cgenerator = PlanesDataset(
-        data_folder / "test/planes/collection_noisy.npy", should_load_target=True
-    )
+    from dunedn.networks.gcnn.gcnn_dataloading import TilingDataset
 
-    train_generators = (train_igenerator, train_cgenerator)
-    val_generators = (val_igenerator, val_cgenerator)
-    test_generators = (test_igenerator, test_cgenerator)
+    train_generator = TilingDataset(
+        data_folder / "train/evts/rawdigit_evt0.npy",
+        batch_size=msetup["batch_size"],
+        crop_size=msetup["crop_size"],
+        has_target=True,
+    )
+    print(train_generator.clear_crops.shape, train_generator.noisy_crops.shape)
+    print(train_generator.nb_icrops, train_generator.nb_ccrops)
+    exit()
+    # train_generator = PlanesDataset(
+    #     data_folder / "train/planes", setup["model"]["performer"]["batch_size"], has_target=True
+    # )
+    val_generator = None
+    test_generator = None
+    # val_generator = PlanesDataset(
+    #     data_folder / "val/planes", setup["model"]["performer"]["batch_size"], has_target=True
+    # )
+    # test_generator = PlanesDataset(
+    #     data_folder / "test/planes", setup["model"]["performer"]["batch_size"], has_target=True
+    # )
+
+    # logger.info(
+    #     f"Dataset loaded: train / validate / test on "
+    #     f"{len(train_generator)} / {len(val_generator)} / {len(test_generator)} events"
+    # )
 
     # training
     network.fit(
-        train_generators,
+        train_generator,
         epochs=setup["model"]["epochs"],
-        val_generator=val_generators,
+        val_generator=val_generator,
         dev=setup["dev"],
     )
 
     # testing
-    _, logs = network.predict(test_generators)
+    _, logs = network.predict(test_generator)
     network.metrics_list.print_metrics(logger, logs)

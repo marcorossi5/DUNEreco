@@ -155,4 +155,19 @@ def test_networks():
 
 
 if __name__ == "__main__":
+    from dunedn.networks.gcnn.gcnn_net import GcnnNet
+    import torch.autograd.profiler as profiler
+
+    x = torch.randn(4, 1, 80, 128).float()
+    gcnn = GcnnNet(1, 16, k=8)
+    cnn = GcnnNet(1, 16)
+    print("cnn output shape:", cnn(x).shape)
+    with profiler.profile(with_stack=True, profile_memory=True) as prof:
+        print("gcnn output shape:", gcnn(x).shape)
+    print(
+        prof.key_averages(group_by_stack_n=5).table(
+            sort_by="self_cpu_time_total", row_limit=5
+        )
+    )
+    exit()
     test_networks()
