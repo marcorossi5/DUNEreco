@@ -168,7 +168,7 @@ class AbstractNet(torch.nn.Module, ABC):
             callbacks = []
         self.history = History()
         callbacks.append(self.history)
-        self.callback_list = CallbackList(callbacks)
+        self.callback_list = CallbackList(callbacks, model=self)
 
         # model on device
         self.to(dev)
@@ -180,14 +180,14 @@ class AbstractNet(torch.nn.Module, ABC):
         for epoch in range(epochs):
             logger.info(f"Epoch {epoch + 1}/{epochs}")
 
-            self.callback_list.on_epoch_begin()
+            self.callback_list.on_epoch_begin(epoch)
 
             # training epoch
             start = tm()
-            epoch_logs = self.train_epoch(train_loader, dev)
+            epoch_logs = self.train_epoch(epoch, train_loader, dev)
             epoch_logs = {}
             epoch_time = tm() - start
-            epoch_logs.update({"epoch": epoch, "epoch_time": epoch_time})
+            epoch_logs.update({"epoch_time": epoch_time})
 
             # validation
             if val_generator is not None:
@@ -197,7 +197,7 @@ class AbstractNet(torch.nn.Module, ABC):
 
             print_epoch_logs(logger, self.metrics_names, epoch_logs)
 
-            self.callback_list.on_epoch_end(epoch_logs)
+            self.callback_list.on_epoch_end(epoch, epoch_logs)
 
         training_logs = None
         self.callback_list.on_train_end(training_logs)

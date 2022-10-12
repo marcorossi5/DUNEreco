@@ -47,7 +47,7 @@ class LossMae(Loss):
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super(LossMae, self).__init__(reduction=reduction)
         # self.loss = nn.L1Loss(reduction="none")
-        self.name = "MAE"
+        self.name = "mae"
 
     def __call__(self, y_pred, y_true):
         """
@@ -90,7 +90,7 @@ class LossMse(Loss):
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super(LossMse, self).__init__(reduction=reduction)
         # self.loss = nn.MSELoss(reduction="none")
-        self.name = "MSE"
+        self.name = "mse"
 
     def __call__(self, y_pred, y_true):
         """
@@ -133,7 +133,7 @@ class LossImae(Loss):
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super(LossImae, self).__init__(reduction=reduction)
         # self.loss = nn.L1Loss(reduction="none")
-        self.name = "IMAE"
+        self.name = "imae"
 
     def __call__(self, y_pred, y_true):
         """
@@ -177,7 +177,7 @@ class LossSsim(Loss):
 
     def __init__(self, a=0.84, data_range=1.0, reduction="mean"):
         super(LossSsim, self).__init__(a, data_range, reduction)
-        self.name = "Lssim"
+        self.name = "lssim"
 
     def __call__(self, y_pred, y_true):
         """

@@ -158,7 +158,11 @@ def print_epoch_logs(logger: Logger, metrics_names: List[str], logs: dict):
         The computed metrics values to be logged.
     """
     msg = f"Took {logs['epoch_time']:.0f} s, "
-    all_metrics_names = metrics_names + [f"val_{name}" for name in metrics_names]
+    all_metrics_names = (
+        metrics_names
+        + [f"val_induction_{name}" for name in metrics_names]
+        + [f"val_collection_{name}" for name in metrics_names]
+    )
     for name in all_metrics_names:
         mean = logs.get(name)
         std = logs.get(f"{name}_std")

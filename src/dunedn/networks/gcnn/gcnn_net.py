@@ -169,6 +169,7 @@ class GcnnNet(AbstractNet):
 
     def train_epoch(
         self,
+        epoch: int,
         train_loader: torch.utils.data.DataLoader,
         dev: str = "cpu",
     ) -> dict:
@@ -176,6 +177,8 @@ class GcnnNet(AbstractNet):
 
         Parameters
         ----------
+        epoch: int
+            The current epoch number.
         train_loader: torch.utils.data.DataLoader
             The training dataloader.
         validation_data: torch.utils.data.DataLoader
@@ -191,10 +194,15 @@ class GcnnNet(AbstractNet):
         logger.debug("Training epoch")
         self.train()
 
-        for clear, noisy in train_loader:
-            self.callback_list.on_train_batch_begin()
+        steps_done = len(train_loader) * epoch
+
+        for batch, (clear, noisy) in enumerate(train_loader):
+            if batch == 2:
+                break
+            step = steps_done + batch
+            self.callback_list.on_train_batch_begin(step)
             step_logs = self.train_batch(noisy, clear, dev)
-            self.callback_list.on_train_batch_end(step_logs)
+            self.callback_list.on_train_batch_end(step, step_logs)
 
         epoch_logs = {}
         return epoch_logs
@@ -224,7 +232,9 @@ class GcnnNet(AbstractNet):
         loss.mean().backward()
         self.optimizer.step()
 
-        step_logs = self.metrics_list.compute_plane_metrics(y_pred.detach().cpu(), clear)
+        step_logs = self.metrics_list.compute_plane_metrics(
+            y_pred.detach().cpu(), clear
+        )
         step_logs.update({"loss": loss.item()})
         return step_logs
 

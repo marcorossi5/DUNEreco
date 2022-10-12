@@ -101,6 +101,13 @@ class MetricsList:
         res_metrics = {f"induction_{k}": v for k, v in imetrics.items()}
         cmetrics = self.compute_plane_metrics(cpred, ctrue)
         res_metrics.update({f"collection_{k}": v for k, v in cmetrics.items()})
+        for name in self.names:
+            ires = res_metrics.get(f"induction_{name}")
+            ires_std = res_metrics.get(f"induction_{name}_std")
+            cres = res_metrics.get(f"collection_{name}")
+            cres_std = res_metrics.get(f"collection_{name}_std")
+            res_std = sqrt(cres_std**2 + ires_std**2)
+            res_metrics.update({name: (ires + cres) * 0.5, f"{name}_std": res_std})
         return res_metrics
 
     def print_metrics(self, logger: Logger, logs: dict):

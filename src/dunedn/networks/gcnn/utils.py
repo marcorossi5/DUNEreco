@@ -99,5 +99,5 @@ def gcnn_inference_pass(
             out = network(noisy.to(dev)).detach().cpu()
         outs.append(out)
     output = torch.cat(outs)
-    network.to("cpu")
+    # network.to("cpu")
     return output

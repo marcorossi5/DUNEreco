@@ -5,6 +5,7 @@ import torch
 from .gcnn_dataloading import TilingDataset
 from .gcnn_net import GcnnNet
 from dunedn import PACKAGE
+from dunedn.training.callbacks import ModelCheckpoint
 from dunedn.training.losses import get_loss
 from dunedn.training.metrics import DN_METRICS
 
@@ -86,11 +87,20 @@ def gcnn_training(modeltype: str, setup: dict):
     )
 
     # training
+    callbacks = [
+        ModelCheckpoint(
+            setup["output"] / "models" / modeltype / f"{modeltype}.pth",
+            "val_psnr",
+            save_best_only=True,
+            mode="max",
+        )
+    ]
     network.fit(
         train_generator,
         epochs=setup["model"]["epochs"],
         val_generator=val_generator,
         dev=setup["dev"],
+        callbacks=callbacks,
     )
 
     # testing
