@@ -93,6 +93,7 @@ def gcnn_training(modeltype: str, setup: dict):
             "val_psnr",
             save_best_only=True,
             mode="max",
+            verbose=1,
         )
     ]
     network.fit(
