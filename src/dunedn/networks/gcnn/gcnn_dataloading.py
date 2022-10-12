@@ -57,6 +57,7 @@ def load_data_from_file(data_path: Path, should_subtract: bool) -> np.ndarray:
     np.ndarray:
         The events array, of shape=(nb_events, 1, H, W).
     """
+    logger.info(f"Loading event from:\n{data_path.as_posix()}")
     events = np.load(data_path)[None, None, :, 2:]
     if should_subtract:
         events = subtract_events(events)
@@ -85,8 +86,10 @@ def load_data_from_folder(
     paths = [
         f
         for f in data_folder.iterdir()
-        if re.match(filter_key, f.name) and f.suffix == ".npy"
+        if re.search(filter_key, f.name) and f.suffix == ".npy"
     ]
+    msg = "Loading events from:\n" + "\n".join(map(lambda x: x.as_posix(), paths))
+    logger.info(msg.strip("\n"))
     events = np.stack([np.load(f) for f in paths], axis=0)[:, None, :, 2:]
     if should_subtract:
         events = subtract_events(events)

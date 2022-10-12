@@ -220,11 +220,11 @@ class GcnnNet(AbstractNet):
         self.optimizer.zero_grad()
         y_pred = self.forward(noisy)
 
-        loss = self.loss_fn(y_pred, clear)
+        loss = self.loss_fn(y_pred, clear.to(dev))
         loss.mean().backward()
         self.optimizer.step()
 
-        step_logs = self.metrics_list.compute_plane_metrics(y_pred.detach(), clear)
+        step_logs = self.metrics_list.compute_plane_metrics(y_pred.detach().cpu(), clear)
         step_logs.update({"loss": loss.item()})
         return step_logs
 

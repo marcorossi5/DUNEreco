@@ -66,15 +66,20 @@ def gcnn_training(modeltype: str, setup: dict):
     # data loading
     data_folder = setup["dataset"]["data_folder"]
 
+    train_folder = data_folder / "train/evts"
+    val_folder = data_folder / "val/evts"
+
+    logger.info(f"Loading training dataset from {train_folder}")
     train_generator = TilingDataset(
-        data_folder / "train/evts",
+        train_folder,
         batch_size=msetup["batch_size"],
         crop_size=msetup["crop_size"],
         has_target=True,
     )
 
+    logger.info(f"Loading training dataset from {val_folder}")
     val_generator = TilingDataset(
-        data_folder / "val/evts",
+        val_folder,
         batch_size=msetup["batch_size"],
         crop_size=msetup["crop_size"],
         has_target=True,
@@ -89,9 +94,11 @@ def gcnn_training(modeltype: str, setup: dict):
     )
 
     # testing
+    test_folder = data_folder / "test/evts"
     logger.info("Stop training, now testing")
+    logger.info(f"Loading training dataset from {test_folder}")
     test_generator = TilingDataset(
-        data_folder / "test/evts",
+        test_folder,
         batch_size=msetup["batch_size"],
         crop_size=msetup["crop_size"],
         has_target=True,
