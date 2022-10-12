@@ -14,7 +14,7 @@ from dunedn.utils.utils import load_runcard
 logger = logging.getLogger(PACKAGE + ".test")
 
 
-def run_test_uscg(setup: dict):
+def run_uscg(setup: dict):
     """Run USCG network test.
 
     Parameters
@@ -55,7 +55,7 @@ def run_test_uscg(setup: dict):
         raise err
 
 
-def run_test_cnn(setup: dict):
+def run_cnn(setup: dict):
     """Run CNN network test.
 
     Parameters
@@ -91,7 +91,7 @@ def run_test_cnn(setup: dict):
         raise err
 
 
-def run_test_gcnn(setup: dict):
+def run_gcnn(setup: dict):
     """Run GCNN network test.
 
     Parameters
@@ -127,7 +127,7 @@ def run_test_gcnn(setup: dict):
         raise err
 
 
-def run_test(modeltype: str):
+def run(modeltype: str):
     """
     Run the appropriate test for the supported model.
 
@@ -139,11 +139,11 @@ def run_test(modeltype: str):
     setup = load_runcard(Path("runcards/default.yaml"))
     logger.info("Running forward-pass test on %s model", modeltype)
     if modeltype == "cnn":
-        run_test_cnn(setup)
+        run_cnn(setup)
     elif modeltype == "gcnn":
-        run_test_gcnn(setup)
+        run_gcnn(setup)
     elif modeltype == "uscg":
-        run_test_uscg(setup)
+        run_uscg(setup)
     else:
         raise NotImplementedError(f"Modeltype not implemented, got {modeltype}")
 
@@ -151,23 +151,9 @@ def run_test(modeltype: str):
 def test_networks():
     """Test wrapper function."""
     for modeltype in get_supported_models():
-        run_test(modeltype)
+        continue
+        run(modeltype)
 
 
 if __name__ == "__main__":
-    from dunedn.networks.gcnn.gcnn_net import GcnnNet
-    import torch.autograd.profiler as profiler
-
-    x = torch.randn(4, 1, 80, 128).float()
-    gcnn = GcnnNet(1, 16, k=8)
-    cnn = GcnnNet(1, 16)
-    print("cnn output shape:", cnn(x).shape)
-    with profiler.profile(with_stack=True, profile_memory=True) as prof:
-        print("gcnn output shape:", gcnn(x).shape)
-    print(
-        prof.key_averages(group_by_stack_n=5).table(
-            sort_by="self_cpu_time_total", row_limit=5
-        )
-    )
-    exit()
     test_networks()
