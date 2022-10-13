@@ -23,8 +23,15 @@
 
         optional arguments:
           -h, --help            show this help message and exit
+    
+    Launch a training from scratch with a runcard:
 
+    .. code-block:: text
 
+        $ dunedn train -o <output folder> -m <model type> -r <runcard file>
+    
+    The ``--force`` flag might be useful to overwrite ``<output folder>``
+    directory content if already exists.
 """
 import argparse
 from time import time as tm

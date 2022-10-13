@@ -59,6 +59,7 @@ def add_arguments_training(parser):
     )
     parser.add_argument(
         "--runcard",
+        "-r",
         type=Path,
         help="uses runcard and initializes new output folder from scratch",
         default=None,
