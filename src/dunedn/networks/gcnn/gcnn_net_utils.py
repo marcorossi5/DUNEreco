@@ -6,11 +6,11 @@ import numpy as np
 import torch
 
 
-def normalize_fn(self, x: torch.Tensor, parameter: float):
+def normalize_fn(x: torch.Tensor, parameter: float):
     return x / parameter
 
 
-def normalize_back_fn(self, x: torch.Tensor, parameter: float):
+def normalize_back_fn(x: torch.Tensor, parameter: float):
     return x * parameter
 
 
