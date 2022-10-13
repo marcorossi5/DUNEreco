@@ -21,3 +21,6 @@ geometry = {
     "nb_event_channels": nb_event_channels,
     "ElectronsToADC": ElectronsToADC,
 }
+
+MAX_SIGNAL = 3595  # 3197 dunetpc v08 | 3595 dunetpc v09
+STD_SIGNAL = 14.729  # 10.465 dunetpc v08 | 14.729 dunetpc v09

@@ -6,6 +6,14 @@ import numpy as np
 import torch
 
 
+def normalize_fn(self, x: torch.Tensor, parameter: float):
+    return x / parameter
+
+
+def normalize_back_fn(self, x: torch.Tensor, parameter: float):
+    return x * parameter
+
+
 def pairwise_dist(arr: torch.Tensor, k: int):
     """Computes pairwise euclidean distances between pixels.
 

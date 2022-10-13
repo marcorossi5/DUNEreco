@@ -92,12 +92,9 @@ def gcnn_inference_pass(
     wrap = tqdm(test_loader, desc="gcnn.predict") if verbose else test_loader
     if profiler is not None:
         wrap = profiler.set_iterable(wrap)
-    for i, (noisy, _) in enumerate(wrap):
-        if i >= 2:
-            out = noisy.cpu()
-        else:
-            out = network(noisy.to(dev)).detach().cpu()
-        outs.append(out)
+    for noisy, _ in enumerate(wrap):
+        out = network(noisy.to(dev)).detach().cpu()
+        outs.append(network.normalize_back(out))
     output = torch.cat(outs)
     # network.to("cpu")
     return output

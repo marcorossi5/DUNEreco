@@ -21,8 +21,10 @@ from .gcnn_net_blocks import (
     PreProcessBlock,
     PostProcessBlock,
 )
+from .gcnn_net_utils import normalize_back_fn, normalize_fn
 from .utils import gcnn_inference_pass
 from dunedn import PACKAGE
+from dunedn.geometry.pdune import MAX_SIGNAL, STD_SIGNAL
 
 logger = logging.getLogger(PACKAGE + ".gcnn")
 
@@ -62,6 +64,11 @@ class GcnnNet(AbstractNet):
         ic = input_channels
         hc = hidden_channels
 
+        # input normalization constants
+        self.normalization_mode = "std"
+        self._normalization_max = MAX_SIGNAL
+        self._normalization_std = STD_SIGNAL
+
         self.getgraph_fn = NonLocalGraph(k) if self.k is not None else lambda x: None
         self.conv_fn = GConv if self.k is not None else Conv
 
@@ -81,6 +88,26 @@ class GcnnNet(AbstractNet):
 
         self.combine = lambda x, y: x + y
 
+    def normalize(self, x: torch.Tensor):
+        if self.normalization_mode == "max":
+            return normalize_fn(x, self._normalization_max)
+        elif self.normalization_mode == "std":
+            return normalize_fn(x, self._normalization_std)
+        else:
+            raise NotImplementedError(
+                f"Normalization type not recognized, got {self.normalization_mode}"
+            )
+
+    def normalize_back(self, x: torch.Tensor):
+        if self.normalization_mode == "max":
+            return normalize_back_fn(x, self._normalization_max)
+        elif self.normalization_mode == "std":
+            return normalize_back_fn(x, self._normalization_std)
+        else:
+            raise NotImplementedError(
+                f"Normalization type not recognized, got {self.normalization_mode}"
+            )
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Gcnn forward pass.
 
@@ -94,6 +121,7 @@ class GcnnNet(AbstractNet):
         output: torch.Tensor
             Output tensor of shape=(N,C,H,W).
         """
+        x = self.normalize(x)
         y = self.pre_process_block(x)
         y_hpf = self.hpf(y)
         y = self.combine(y, y_hpf)
@@ -226,7 +254,8 @@ class GcnnNet(AbstractNet):
         self.optimizer.zero_grad()
         y_pred = self.forward(noisy)
 
-        loss = self.loss_fn(y_pred, clear.to(dev))
+        y_true = self.normalize(clear.to(dev))
+        loss = self.loss_fn(y_pred, y_true)
         loss.mean().backward()
         self.optimizer.step()
 
