@@ -106,8 +106,16 @@ class MetricsList:
             ires_std = res_metrics.get(f"induction_{name}_std")
             cres = res_metrics.get(f"collection_{name}")
             cres_std = res_metrics.get(f"collection_{name}_std")
+            res_mean = (ires + cres) * 0.5
             res_std = sqrt(cres_std**2 + ires_std**2)
-            res_metrics.update({name: (ires + cres) * 0.5, f"{name}_std": res_std})
+            res_metrics.update(
+                {
+                    name: res_mean,
+                    f"{name}_std": res_std,
+                    f"{name}_low_bound": res_mean - res_std,
+                    f"{name}_up_bound": res_mean + res_std,
+                }
+            )
         return res_metrics
 
     def print_metrics(self, logger: Logger, logs: dict):

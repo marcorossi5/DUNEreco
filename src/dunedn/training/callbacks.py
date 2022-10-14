@@ -186,19 +186,23 @@ class ModelCheckpoint(Callback):
 
         if mode == "min":
             self.monitor_op = np.less
+            self.monitor_ext = "up_bound"
             if self.best is None:
                 self.best = np.Inf
         elif mode == "max":
             self.monitor_op = np.greater
+            self.monitor_ext = "low_bound"
             if self.best is None:
                 self.best = -np.Inf
         else:
             if "acc" in self.monitor or self.monitor.startswith("fmeasure"):
                 self.monitor_op = np.greater
+                self.monitor_ext = "low_bound"
                 if self.best is None:
                     self.best = -np.Inf
             else:
                 self.monitor_op = np.less
+                self.monitor_ext = "up_bound"
                 if self.best is None:
                     self.best = np.Inf
 
@@ -234,7 +238,9 @@ class ModelCheckpoint(Callback):
             file_path = self._get_file_path(epoch, batch, logs)
 
             if self.save_best_only:
-                current = logs.get(self.monitor)
+                current = logs.get(f"{self.monitor}_{self.monitor_ext}")
+                if current is None:
+                    current = logs.get(self.monitor)
                 if current is None:
                     logger.warning(
                         "Can save best model only with %s available, " "skipping.",
