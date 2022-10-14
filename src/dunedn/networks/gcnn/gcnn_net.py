@@ -11,7 +11,6 @@ import torch
 from torch import nn
 from ..abstract_net import AbstractNet
 from ..utils import BatchProfiler
-from .gcnn_dataloading import BaseGcnnDataset
 from .gcnn_net_blocks import (
     Conv,
     HPF,
@@ -132,7 +131,7 @@ class GcnnNet(AbstractNet):
 
     def predict(
         self,
-        generator: BaseGcnnDataset,
+        generator: torch.utils.data.Dataset,
         dev: str = "cpu",
         no_metrics: bool = False,
         verbose: int = 1,

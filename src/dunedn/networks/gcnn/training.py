@@ -20,7 +20,13 @@ def load_and_compile_gcnn_network(
     Parameters
     ----------
     msetup: dict
-        The model setup dictionary.
+        The model setup dictionary, which should contain:
+
+        - ``net_dict``: nested dictionary with ``input_channels``,
+          ``hidden_channels``, ``nb_lpfs``, ``k``, ``name``
+        - ``loss_fn`` (optional): the objective function name for training purposes
+        - ``lr`` (optional): the learning rate for training purposes
+
     checkpoint_filepath: Path
         The `.pth` checkpoint containing network weights to be loaded.
 
@@ -34,15 +40,19 @@ def load_and_compile_gcnn_network(
     if checkpoint_filepath:
         logger.info(f"Loading weights at {checkpoint_filepath}")
         state_dict = torch.load(checkpoint_filepath, map_location=torch.device("cpu"))
-        # new_state_dict = make_dict_compatible(state_dict)
         network.load_state_dict(state_dict)
 
     # loss
-    loss = get_loss(msetup["loss_fn"])()
+    loss_name = msetup.get("loss_fn")
+    if loss_name is None:
+        loss_name = "mse"
+    loss = get_loss(loss_name)()
 
     # optimizer
-    optimizer = torch.optim.Adam(list(network.parameters()), msetup["lr"])
-
+    lr = msetup.get("lr")
+    if lr is None:
+        lr = float("1e-3")
+    optimizer = torch.optim.Adam(list(network.parameters()), lr)
     network.compile(loss, optimizer, DN_METRICS)
 
     return network

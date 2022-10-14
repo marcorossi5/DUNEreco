@@ -119,17 +119,17 @@ def training_main(modeltype: str, setup: dict):
     setup: dict
         Settings dictionary.
     """
-    from dunedn.networks.gcnn.training import gcnn_training
-    from dunedn.networks.uscg.training import uscg_training
-    from dunedn.networks.performer.training import performer_training
 
     if modeltype in ["cnn", "gcnn"]:
+        from dunedn.networks.gcnn.training import gcnn_training
         logger.info(f"Training {modeltype} network")
         gcnn_training(modeltype, setup)
     elif modeltype == "uscg":
+        from dunedn.networks.uscg.training import uscg_training
         logger.info("Training USCG network")
         uscg_training(setup)
     elif modeltype == "performer":
+        from dunedn.networks.performer.training import performer_training
         logger.info("Training performer network")
         performer_training(setup)
     else:
