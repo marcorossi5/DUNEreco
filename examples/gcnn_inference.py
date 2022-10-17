@@ -26,6 +26,7 @@ def main():
 
     modeltype = "cnn"
     setup = load_runcard(args.runcard_path)
+    print(f"Loadedd setup config from runcard at {args.runcard_path}")
     msetup = setup["model"][modeltype]
     pprint.pprint(msetup, indent=2)
 

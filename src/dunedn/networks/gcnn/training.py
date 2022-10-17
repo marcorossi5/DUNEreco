@@ -51,8 +51,8 @@ def load_and_compile_gcnn_network(
     # optimizer
     lr = msetup.get("lr")
     if lr is None:
-        lr = float("1e-3")
-    optimizer = torch.optim.Adam(list(network.parameters()), lr)
+        lr = "1e-3"
+    optimizer = torch.optim.Adam(list(network.parameters()), float(lr))
     network.compile(loss, optimizer, DN_METRICS)
 
     return network
