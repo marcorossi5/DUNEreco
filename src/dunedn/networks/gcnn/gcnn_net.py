@@ -264,16 +264,18 @@ class GcnnNet(AbstractNet):
         step_logs.update({"loss": loss.item()})
         return step_logs
 
-    def onnx_export(self, fname: Path):
+    def onnx_export(self, fname: Path, crop_size: Tuple[int, int] = [80, 256]):
         """Export model to ONNX format.
 
         Parameters
         ----------
         fname: Path
             The path to save the `.onnx` network.
+        crop_size: Tuple[int, int]
+            The crop edge heigh and width.
         """
         # produce dummy inputs
-        inputs = torch.randn(1, 1, *self.crop_size)
+        inputs = torch.randn(1, 1, *crop_size)
 
         # export network
         torch.onnx.export(

@@ -22,6 +22,7 @@ def main():
     parser.add_argument("-r", "--runcard", type=Path, help="The runcard file path", dest="runcard_path")
     parser.add_argument("-e", "--event", type=Path, dest="event_path")
     parser.add_argument("-d", "--device", help="The device hosting the computation", dest="dev")
+    parser.add_argument("-o", "--output", type=Path, default=None, help="The denoised event output path", dest="out_path")
     args = parser.parse_args()
 
     modeltype = "cnn"
@@ -37,8 +38,10 @@ def main():
 
     pprint.pprint(logs, indent=2)
 
-    out_path = args.ckpt_path.parent / f"{args.event_path.stem}_gcnn_dn{args.event_path.suffix}"
-    np.save(out_path, y_pred[0,0])
+    if args.out_path is None:
+        args.out_path = args.ckpt_path.parent / f"{args.event_path.stem}_gcnn_dn{args.event_path.suffix}"
+    np.save(args.out_path, y_pred[0,0])
+    print(f"Saved output file at {args.out_path}")
 
 if __name__ == "__main__":
     main()

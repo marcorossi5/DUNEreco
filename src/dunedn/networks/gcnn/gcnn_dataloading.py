@@ -304,6 +304,9 @@ class TilingDataset(torch.utils.data.Dataset):
     The ``has_target`` replaces the matched ``rawdigit`` subtring in the
     matched file names in data path with ``rawdigit_noiseoff``, to identify
     events containing ground truth information.
+
+    When loading, this class performs median subtraction on each APA plane
+    independently.
     """
 
     def __init__(
@@ -326,6 +329,8 @@ class TilingDataset(torch.utils.data.Dataset):
             The event ground truths, if available. Of shape=(nb wires, nb tdc ticks).
         """
         # super().__init__()
+        if not isinstance(data_path, Path):
+            data_path = Path(data_path)
         self.data_path = data_path
         self.batch_size = batch_size
         self.crop_size = crop_size

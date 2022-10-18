@@ -1,7 +1,8 @@
 from pathlib import Path
+from time import time as tm
 from typing import List
 import torch
-from ..gcnn.gcnn_dataloading import GcnnDataset
+from ..gcnn.gcnn_dataloading import GcnnDataset, TilingDataset
 from .onnx_abstract_net import OnnxNetwork
 from .utils import gcnn_onnx_inference_pass
 from dunedn.networks.utils import BatchProfiler
@@ -25,7 +26,11 @@ class OnnxGcnnNetwork(OnnxNetwork):
         super().__init__(ckpt, metrics, providers=providers)
 
     def predict(
-        self, generator: GcnnDataset, profiler: BatchProfiler = None
+        self,
+        generator: TilingDataset,
+        no_metrics: bool = False,
+        verbose: int = 1,
+        profiler: BatchProfiler = None,
     ) -> torch.Tensor:
         """ONNX GCNN network inference.
 
@@ -46,7 +51,21 @@ class OnnxGcnnNetwork(OnnxNetwork):
             dataset=generator,
             batch_size=generator.batch_size,
         )
-        output = gcnn_onnx_inference_pass(test_loader, self, profiler=profiler)
-        y_pred = generator.converter.tiles2planes(output)
-        generator.to_planes()
-        return y_pred
+
+        # inference pass
+        start = tm()
+        output = gcnn_onnx_inference_pass(test_loader, self, verbose, profiler=profiler)
+        inference_time = tm() - start
+
+        # convert back to events
+        y_pred = generator.converter.crops2image(output).numpy()
+
+        if no_metrics:
+            return y_pred
+
+        # compute metrics
+        generator.to_events()
+        y_true = generator.clear
+        logs = self.metrics_list.compute_metrics(y_pred, y_true)
+        logs.update({"time": inference_time})
+        return y_pred, logs

@@ -5,11 +5,21 @@ import torch
 from .gcnn_dataloading import TilingDataset
 from .gcnn_net import GcnnNet
 from dunedn import PACKAGE
+from dunedn.networks.onnx.onnx_gcnn_net import OnnxGcnnNetwork
 from dunedn.training.callbacks import ModelCheckpoint
 from dunedn.training.losses import get_loss
 from dunedn.training.metrics import DN_METRICS
 
 logger = logging.getLogger(PACKAGE + ".gcnn")
+
+
+def load_and_compile_gcnn_onnx_network(checkpoint_path: Path):
+    logger.info(f"Loading Gcnn ONNX network weights at {checkpoint_path}")
+    return OnnxGcnnNetwork(
+        checkpoint_path.as_posix(),
+        DN_METRICS,
+        # providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
+    )
 
 
 def load_and_compile_gcnn_network(
@@ -38,7 +48,7 @@ def load_and_compile_gcnn_network(
     network = GcnnNet(**msetup["net_dict"])
 
     if checkpoint_filepath:
-        logger.info(f"Loading weights at {checkpoint_filepath}")
+        logger.info(f"Loading Gcnn network weights at {checkpoint_filepath}")
         state_dict = torch.load(checkpoint_filepath, map_location=torch.device("cpu"))
         network.load_state_dict(state_dict)
 
